@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "spino-mobile",
+    "scheme": "your-app-scheme",
     "slug": "spino-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,7 +28,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-router"
     ]
   }
 }
