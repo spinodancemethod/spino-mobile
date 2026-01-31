@@ -15,9 +15,6 @@ const RootLayout = () => {
                 backgroundColor: colors.navBackground,
             },
             headerTintColor: colors.title,
-            headerTitleStyle: {
-                // fontWeight: 'bold',
-            },
             contentStyle: {
                 backgroundColor: colors.background,
             },

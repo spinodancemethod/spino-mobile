@@ -3,6 +3,7 @@ import { StyleSheet, View, FlatList, Text, useColorScheme } from 'react-native'
 import { supabase } from '@/lib/supabase';
 import { Colors } from 'constants/Colors';
 import ThemedButton from 'Components/ThemedButton';
+import ThemedView from 'Components/ThemedView';
 
 export default function Positions() {
     const [instruments, setInstruments] = useState<any>([])
@@ -22,7 +23,7 @@ export default function Positions() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ThemedView>
             <FlatList
                 data={instruments}
                 keyExtractor={(item) => item.id.toString()}
@@ -33,7 +34,7 @@ export default function Positions() {
                 )}
             />
             <ThemedButton title="Add Position" onPress={() => { console.log("") }} />
-        </View>
+        </ThemedView>
     )
 }
 
