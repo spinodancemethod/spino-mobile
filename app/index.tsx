@@ -20,6 +20,7 @@ export default function App() {
           router.push('/(positions)/Positions');
           console.log("Navigate to /(positions)/Positions");
         }}
+        style={{ width: "100%" }}
       />
     </ThemedView>
   );
