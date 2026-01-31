@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
     TouchableOpacity,
     Text,
@@ -7,7 +7,7 @@ import {
     TextStyle,
 } from 'react-native';
 import { useTheme } from '../constants/useTheme';
-import { createStyles } from '../constants/styles';
+import { useStyles } from '../constants/styles';
 
 type Variant = 'primary' | 'warning' | 'ghost';
 
@@ -30,10 +30,8 @@ const ThemedButton: React.FC<Props> = ({
     style,
     textStyle,
 }) => {
-    const colors = useTheme();
-
-    // 🔑 Memoised stylesheet
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const { colors } = useTheme();
+    const styles = useStyles();
 
     return (
         <TouchableOpacity
@@ -50,7 +48,7 @@ const ThemedButton: React.FC<Props> = ({
         >
             {loading ? (
                 <ActivityIndicator
-                    color={variant === 'ghost' ? colors.text : '#FFFFFF'}
+                    color={variant === 'ghost' ? colors.text : colors.onPrimary}
                 />
             ) : (
                 <Text

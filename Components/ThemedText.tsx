@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text, TextStyle } from 'react-native';
 import { useTheme } from '../constants/useTheme';
-import { createStyles } from '../constants/styles';
+import { createStyles, useStyles } from '../constants/styles';
 type Variant = 'title' | 'subheader' | 'large' | 'small';
 
 interface Props {
@@ -17,10 +17,7 @@ const ThemedText: React.FC<Props> = ({
     style,
     numberOfLines,
 }) => {
-    const colors = useTheme();
-
-    // 🔑 Memoised stylesheet
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const styles = useStyles();
 
     return (
         <Text

@@ -1,5 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { ThemeColors } from './Colors';
+import { useMemo } from 'react';
+import { useTheme } from './useTheme';
 
 export const createStyles = (colors: ThemeColors) =>
     StyleSheet.create({
@@ -20,8 +22,8 @@ export const createStyles = (colors: ThemeColors) =>
             width: '100%',
         },
         buttonText: {
-            color: '#FFFFFF',
-            fontWeight: 600,
+            color: colors.onPrimary,
+            fontWeight: '600',
         },
         button: {
             backgroundColor: colors.primary,
@@ -73,4 +75,13 @@ export const createStyles = (colors: ThemeColors) =>
             fontWeight: '400',
             opacity: 0.8,
         },
+        icon: {
+            color: "pink",
+            backgroundColor: "blue",
+        },
     });
+
+export const useStyles = () => {
+    const { colors } = useTheme();
+    return useMemo(() => createStyles(colors), [colors]);
+};

@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, View, FlatList, Text, useColorScheme } from 'react-native'
+import { StyleSheet, FlatList, Text } from 'react-native'
 import { supabase } from '@/lib/supabase';
-import { Colors } from 'constants/Colors';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedView from 'Components/ThemedView';
+import { useTheme } from 'constants/useTheme';
 
 export default function Positions() {
     const [instruments, setInstruments] = useState<any>([])
 
-    const colorScheme = useColorScheme();
-    //@ts-ignore
-    const theme = Colors[colorScheme] ?? Colors.light
+    const { colors } = useTheme();
 
     useEffect(() => {
         getInstruments()
@@ -23,12 +21,12 @@ export default function Positions() {
     }
 
     return (
-        <ThemedView>
+        <ThemedView safe={true}>
             <FlatList
                 data={instruments}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                    <Text style={[styles.item, { color: theme.text }]}>
+                    <Text style={[{ color: colors.text }]}>
                         {item.name}
                     </Text>
                 )}

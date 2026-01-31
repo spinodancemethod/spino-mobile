@@ -8,18 +8,23 @@ export default function App() {
 
   return (
     <ThemedView>
-      <ThemedText variant="title">Hello</ThemedText>
-      <ThemedText variant="subheader">World.</ThemedText>
+      <ThemedText variant="title">Log In</ThemedText>
+      <ThemedText variant="subheader">Page.</ThemedText>
+      <ThemedText variant="subheader">Maybe this will be moved and a generic landing page instead?</ThemedText>
       <Spacer />
       <ThemedText> ciao.</ThemedText>
       <Spacer />
 
       <ThemedButton
-        title="Go to Positions"
-        onPress={() => {
-          router.push('/(positions)/Positions');
-          console.log("Navigate to /(positions)/Positions");
-        }}
+        title="Go to a Page"
+        onPress={() => router.push('/(positions)/Positions')}
+        style={{ width: "100%" }}
+      />
+
+      <Spacer />
+      <ThemedButton
+        title="Go to Your Workspace"
+        onPress={() => router.push('/inprogress')}
         style={{ width: "100%" }}
       />
     </ThemedView>

@@ -6,7 +6,7 @@ import { useTheme } from 'constants/useTheme'
 
 const RootLayout = () => {
 
-    const colors = useTheme(); // Manually Colouring Stack
+    const { colors } = useTheme();
 
     // Memoize screen options 
     const screenOptions = useMemo(
@@ -27,12 +27,13 @@ const RootLayout = () => {
             <StatusBar />
             <Stack screenOptions={screenOptions}>
                 <Stack.Screen name="index" options={{ title: "Home" }} />
+                <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
                 <Stack.Screen
                     name="(positions)/Positions"
                     options={{ title: 'Positions' }}
                 />
-            </Stack>
 
+            </Stack>
         </View>
     )
 }
