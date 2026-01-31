@@ -76,9 +76,13 @@ export const createStyles = (colors: ThemeColors) =>
             opacity: 0.8,
         },
         icon: {
-            color: "pink",
-            backgroundColor: "blue",
+            color: colors.iconColorFocused,
+            backgroundColor: colors.uiBackground,
         },
+        inactiveIcon: {
+            color: colors.iconColor,
+            backgroundColor: colors.uiBackground,
+        }
     });
 
 export const useStyles = () => {

@@ -26,7 +26,7 @@ export default function Positions() {
                 data={instruments}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                    <Text style={[{ color: colors.text }]}>
+                    <Text style={[{ color: colors.text, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
                         {item.name}
                     </Text>
                 )}
@@ -35,18 +35,3 @@ export default function Positions() {
         </ThemedView>
     )
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        // backgroundColor: '#fff',
-        paddingTop: 50,
-        paddingBottom: 100,
-        paddingHorizontal: 16,
-    },
-    item: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#ccc',
-    },
-})

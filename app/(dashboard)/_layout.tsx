@@ -11,8 +11,7 @@ export default function DashboardLayout() {
                 headerShown: false,
                 tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
                 tabBarActiveTintColor: styles.icon.color,
-                tabBarInactiveTintColor: styles.icon.backgroundColor,
-
+                tabBarInactiveTintColor: styles.inactiveIcon.color,
             }}
         >
             <Tabs.Screen
@@ -22,7 +21,7 @@ export default function DashboardLayout() {
                         <Ionicons
                             size={24}
                             name={focused ? 'star' : 'star-outline'}
-                            color={focused ? styles.icon.color : styles.icon.backgroundColor}
+                            color={focused ? styles.icon.color : styles.inactiveIcon.color}
                         />
                     )
                 }}
@@ -34,7 +33,7 @@ export default function DashboardLayout() {
                         <Ionicons
                             size={24}
                             name={focused ? 'library' : 'library-outline'}
-                            color={focused ? styles.icon.color : styles.icon.backgroundColor}
+                            color={focused ? styles.icon.color : styles.inactiveIcon.color}
                         />
                     )
                 }}
@@ -46,7 +45,7 @@ export default function DashboardLayout() {
                         <Ionicons
                             size={24}
                             name={focused ? 'save' : 'save-outline'}
-                            color={focused ? styles.icon.color : styles.icon.backgroundColor}
+                            color={focused ? styles.icon.color : styles.inactiveIcon.color}
                         />
                     )
                 }}
