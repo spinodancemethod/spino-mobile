@@ -39,12 +39,12 @@ export default function DashboardLayout() {
                 }}
             />
             <Tabs.Screen
-                name="saved"
+                name="favourites"
                 options={{
-                    title: "Saved", tabBarIcon: ({ focused }) => (
+                    title: "Favourites", tabBarIcon: ({ focused }) => (
                         <Ionicons
                             size={24}
-                            name={focused ? 'save' : 'save-outline'}
+                            name={focused ? 'heart' : 'heart-outline'}
                             color={focused ? styles.icon.color : styles.inactiveIcon.color}
                         />
                     )

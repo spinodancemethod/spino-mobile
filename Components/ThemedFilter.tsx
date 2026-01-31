@@ -29,10 +29,9 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items }) => {
                 <Text style={[styles.filterButtonText, !selected && { opacity: 0.6 }]}>{selected?.name ?? 'Select Position'}</Text>
             </TouchableOpacity>
 
-            <Modal isVisible={open} onBackdropPress={() => setOpen(false)} backdropOpacity={0.3}>
-                <View style={{ marginHorizontal: 16 }}>
-                    <View style={{ borderRadius: 12, overflow: 'hidden' }}>
-                        <ScrollView style={{ maxHeight: 300 }}>
+            <Modal isVisible={open} onBackdropPress={() => setOpen(false)} backdropOpacity={0.85} style={{ justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ width: '90%', maxHeight: '70%', borderRadius: 16, overflow: 'hidden', backgroundColor: colors.card }}>
+                    <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ padding: 12 }}>
                             {loading ? (
                                 <View style={[styles.filterButton, { padding: 16, justifyContent: 'center', alignItems: 'center' }]}>
                                     <ActivityIndicator color={colors.primary} />
@@ -55,8 +54,7 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items }) => {
                                     );
                                 })
                             ))}
-                        </ScrollView>
-                    </View>
+                    </ScrollView>
                 </View>
             </Modal>
         </View>

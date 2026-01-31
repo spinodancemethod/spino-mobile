@@ -4,11 +4,11 @@ import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { router } from 'expo-router/build/exports'
 
-const Saved = () => {
+const Favourites = () => {
     return (
         <ThemedView>
             <ThemedText>
-                Saved
+                Favourites
             </ThemedText>
             <Spacer />
             <ThemedButton
@@ -22,4 +22,4 @@ const Saved = () => {
     )
 }
 
-export default Saved
+export default Favourites
