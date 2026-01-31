@@ -79,6 +79,34 @@ export const createStyles = (colors: ThemeColors) =>
             color: colors.iconColorFocused,
             backgroundColor: colors.uiBackground,
         },
+        filterContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            width: '100%',
+            marginVertical: 8,
+            alignItems: 'center',
+            alignSelf: 'stretch',
+        },
+        filterButton: {
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 20,
+            backgroundColor: colors.uiBackground,
+            marginRight: 8,
+            marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        filterButtonActive: {
+            backgroundColor: colors.primary,
+            borderColor: colors.primary,
+        },
+        filterButtonText: {
+            color: colors.text,
+        },
+        filterButtonTextActive: {
+            color: colors.onPrimary,
+        },
         inactiveIcon: {
             color: colors.iconColor,
             backgroundColor: colors.uiBackground,

@@ -1,24 +1,13 @@
 import { useEffect, useState } from 'react'
 import { StyleSheet, FlatList, Text } from 'react-native'
-import { supabase } from '@/lib/supabase';
+import { usePositions } from 'lib/hooks/usePositions';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedView from 'Components/ThemedView';
 import { useTheme } from 'constants/useTheme';
 
 export default function Positions() {
-    const [instruments, setInstruments] = useState<any>([])
-
+    const { data: instruments = [], isLoading } = usePositions(undefined);
     const { colors } = useTheme();
-
-    useEffect(() => {
-        getInstruments()
-    }, [])
-
-    async function getInstruments() {
-        const { data } = await supabase.from('positions').select()
-
-        setInstruments(data)
-    }
 
     return (
         <ThemedView safe={true}>
