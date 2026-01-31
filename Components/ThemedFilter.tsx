@@ -32,28 +32,28 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items }) => {
             <Modal isVisible={open} onBackdropPress={() => setOpen(false)} backdropOpacity={0.85} style={{ justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ width: '90%', maxHeight: '70%', borderRadius: 16, overflow: 'hidden', backgroundColor: colors.card }}>
                     <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ padding: 12 }}>
-                            {loading ? (
-                                <View style={[styles.filterButton, { padding: 16, justifyContent: 'center', alignItems: 'center' }]}>
-                                    <ActivityIndicator color={colors.primary} />
-                                </View>
-                            ) : ((items ?? []).length === 0 ? (
-                                <View style={[styles.filterButton, { padding: 16 }]}>
-                                    <Text style={styles.small}>No positions</Text>
-                                </View>
-                            ) : (
-                                (items ?? []).map((c) => {
-                                    const active = selected?.id === c.id;
-                                    return (
-                                        <TouchableOpacity
-                                            key={c.id}
-                                            onPress={() => { toggle(c); setOpen(false); }}
-                                            style={[styles.filterButton, active && styles.filterButtonActive, { marginBottom: 6 }]}
-                                        >
-                                            <Text style={[styles.filterButtonText, active && styles.filterButtonTextActive]}>{c.name}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })
-                            ))}
+                        {loading ? (
+                            <View style={[styles.filterButton, { padding: 16, justifyContent: 'center', alignItems: 'center' }]}>
+                                <ActivityIndicator color={colors.primary} />
+                            </View>
+                        ) : ((items ?? []).length === 0 ? (
+                            <View style={[styles.filterButton, { padding: 16 }]}>
+                                <Text style={styles.small}>No positions</Text>
+                            </View>
+                        ) : (
+                            (items ?? []).map((c) => {
+                                const active = selected?.id === c.id;
+                                return (
+                                    <TouchableOpacity
+                                        key={c.id}
+                                        onPress={() => { toggle(c); setOpen(false); }}
+                                        style={[styles.filterButton, active && styles.filterButtonActive, { marginBottom: 6 }]}
+                                    >
+                                        <Text style={[styles.filterButtonText, active && styles.filterButtonTextActive]}>{c.name}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })
+                        ))}
                     </ScrollView>
                 </View>
             </Modal>
