@@ -1,5 +1,6 @@
 import Spacer from 'Components/Spacer'
 import ThemedButton from 'Components/ThemedButton'
+import ThemedPill from 'Components/ThemedPill'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { router } from 'expo-router'
@@ -15,6 +16,7 @@ const InProgress = () => {
             <ThemedText>
                 HERE ARE YOUR chosen CLASSES
             </ThemedText>
+            <ThemedPill color="red" size='small'>Test</ThemedPill>
             <Spacer />
             <ThemedText>
                 There will be a maximum of 3 saved classes for free users.

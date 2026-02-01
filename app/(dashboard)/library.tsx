@@ -7,6 +7,7 @@ import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { View, FlatList, TouchableOpacity } from 'react-native'
 import { useTheme } from 'constants/useTheme'
+import ThemedPill from 'Components/ThemedPill'
 
 const Library = () => {
     const { data: positions = [], isLoading } = usePositions(undefined);
@@ -25,7 +26,7 @@ const Library = () => {
         }
     }, [selected]);
 
-    const numColumns = 2;
+    const numColumns = 1;
     const GAP = 12;
     const HORIZONTAL_PADDING = 10;
 
@@ -33,15 +34,19 @@ const Library = () => {
 
     const renderTile = ({ item, index }: { item: typeof mockVideos[number]; index: number }) => (
         <TouchableOpacity
-            style={{ flex: 1, marginRight: index % numColumns === numColumns - 1 ? 0 : GAP, borderRadius: 8, overflow: 'hidden' }}
+            style={{ width: '100%', marginBottom: GAP, borderRadius: 8, overflow: 'hidden' }}
             activeOpacity={0.8}
             onPress={() => console.log('Tapped', item.id)}
         >
-            <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.uiBackground, alignItems: 'center', justifyContent: 'center' }}>
-                <ThemedText variant="subheader">{item.title}</ThemedText>
-            </View>
+            <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.uiBackground }} />
+
             <View style={{ paddingVertical: 8, paddingHorizontal: 6 }}>
-                <ThemedText variant="small">{item.duration}</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <ThemedPill color="primary" size="small">In Progress</ThemedPill>
+                    <ThemedText variant="small">{item.duration}</ThemedText>
+                </View>
+
+                <ThemedText variant="subheader" style={{ marginTop: 8 }}>{item.title}</ThemedText>
             </View>
         </TouchableOpacity>
     );
@@ -68,7 +73,6 @@ const Library = () => {
                 renderItem={renderTile}
                 numColumns={numColumns}
                 contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 12, paddingBottom: 32 }}
-                columnWrapperStyle={{ justifyContent: 'flex-start', alignItems: 'stretch', marginBottom: GAP }}
                 showsVerticalScrollIndicator={true}
             />
         </ThemedView>
