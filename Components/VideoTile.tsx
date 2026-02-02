@@ -5,6 +5,7 @@ import ThemedPill from 'Components/ThemedPill';
 import ThemedLike from 'Components/ThemedLike';
 import ThemedStar from 'Components/ThemedStar';
 import { useTheme } from 'constants/useTheme';
+import { showSnack } from 'lib/snackbarService';
 import { useToggleFavourite } from 'lib/hooks/useToggleFavourite';
 import { useToggleDeck } from '../lib/hooks/useToggleDeck';
 
@@ -46,7 +47,14 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {showFavouriteToggle ? (
                             <ThemedLike liked={liked} onPress={async () => {
                                 try {
-                                    await toggleFav.mutateAsync(item.id);
+                                    const res = await toggleFav.mutateAsync(item.id);
+                                    // show undo snack
+                                    showSnack(res?.action === 'deleted' ? 'Removed from favourites' : 'Added to favourites', {
+                                        actionTitle: 'Undo',
+                                        onAction: async () => {
+                                            try { await toggleFav.mutateAsync(item.id); } catch (e) { /* ignore */ }
+                                        }
+                                    });
                                 } catch (e) {
                                     console.warn('Toggle favourite failed', e);
                                 }
@@ -56,7 +64,13 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {showDeckToggle ? (
                             <ThemedStar starred={decked} onPress={async () => {
                                 try {
-                                    await toggleDeck.mutateAsync(item.id);
+                                    const res = await toggleDeck.mutateAsync(item.id);
+                                    showSnack(res?.action === 'deleted' ? 'Removed from deck' : 'Added to deck', {
+                                        actionTitle: 'Undo',
+                                        onAction: async () => {
+                                            try { await toggleDeck.mutateAsync(item.id); } catch (e) { /* ignore */ }
+                                        }
+                                    });
                                 } catch (e) {
                                     console.warn('Toggle deck failed', e);
                                 }

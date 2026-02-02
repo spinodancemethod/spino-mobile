@@ -20,6 +20,7 @@ import { queryClient } from 'lib/queryClient';
         from a ThemeProvider when available, otherwise it falls back to system color scheme.
 */
 import { ThemeProvider } from 'constants/ThemeProvider';
+import Snackbar from 'Components/Snackbar';
 
 const RootLayout = () => {
 
@@ -53,6 +54,7 @@ const RootLayout = () => {
                         />
 
                     </Stack>
+                    <Snackbar />
                 </View>
             </ThemeProvider>
         </QueryClientProvider>
