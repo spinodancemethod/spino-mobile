@@ -17,17 +17,14 @@ export function useToggleFavourite(userId?: string | null) {
         mutationFn: async (videoId: string) => {
             // NOTE: Development convenience - a hard-coded test user id is used here
             // so you can toggle favourites during local development without a real
-            // authenticated session. Replace this with your env/config or remove
+            // authenticated session. Keep this in place for dev; replace or remove
             // before shipping to production.
-            // Example replacement: const actualUserId = process.env.EXPO_PUBLIC_DEV_USER_ID || (await supabase.auth.getUser()).data?.user?.id
             let actualUserId: any = "371b9ee4-3660-4deb-bbfb-b0f7d77e8962";
             // If for some reason the hard-coded id is empty, fall back to auth
             if (!actualUserId) {
                 const { data: ud } = await supabase.auth.getUser();
                 actualUserId = ud?.user?.id;
             }
-
-            if (!actualUserId) throw new Error('Not authenticated');
 
             // Check existing favourite
             const { data: existing, error: fetchErr } = await supabase

@@ -15,7 +15,14 @@ const ThemedStar: React.FC<Props> = ({ starred = false, size = 20, onPress }) =>
     const outlineColor = colors.primary ? `${colors.primary}99` : '#FDE68A';
 
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={starred ? 'Remove from deck' : 'Add to deck'}
+            testID={`deck-button-${starred ? 'active' : 'idle'}`}
+        >
             <Ionicons
                 name={starred ? 'star' : 'star-outline'}
                 size={size}

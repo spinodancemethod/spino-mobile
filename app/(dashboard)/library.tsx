@@ -9,6 +9,7 @@ import { View, FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
+import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
 
 const Library = () => {
     const { data: positions = [] } = usePositions(undefined);
@@ -16,7 +17,10 @@ const Library = () => {
 
     const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id } : undefined);
     const { data: favouriteIds = [] } = useFavouritesByUser();
+    const { data: deckIds = [] } = useDeckByUser();
+
     const videos = videosData;
+
 
     const getPosition = (id: string) => {
         return positions.find((position: any) => position.id === id) || null;
@@ -36,6 +40,7 @@ const Library = () => {
             item={item}
             positionName={getPosition(item.position_id)?.name}
             liked={favouriteIds.includes(item.id)}
+            decked={deckIds.includes(item.id)}
             onPress={() => console.log('Tapped', item.id)}
         />
     );
@@ -65,6 +70,7 @@ const Library = () => {
                     data={videos}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
+                    extraData={{ favouriteIds, deckIds }}
                     numColumns={numColumns}
                     contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 12, paddingBottom: 32 }}
                     showsVerticalScrollIndicator={true}
