@@ -11,12 +11,16 @@ import ThemedPill from 'Components/ThemedPill'
 import ThemedLike from 'Components/ThemedLike'
 import ThemedStar from 'Components/ThemedStar'
 import { useVideos } from '@/lib/hooks/useVideos'
+import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
+import { useToggleFavourite } from 'lib/hooks/useToggleFavourite'
 
 const Library = () => {
     const { data: positions = [], isLoading } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
     const { data: videosData = [], isLoading: videosLoading } = useVideos(selected ? { positionId: selected.id } : undefined);
+    const { data: favouriteIds = [] } = useFavouritesByUser();
+    const toggleFav = useToggleFavourite();
     const videos = videosData;
 
     const getPosition = (id: string) => {
@@ -47,7 +51,14 @@ const Library = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <ThemedPill color="primary" size="small">{getPosition(item.position_id)?.name}</ThemedPill>
 
-                    <ThemedLike liked={false} />
+                    <ThemedLike liked={favouriteIds.includes(item.id)} onPress={async () => {
+                        try {
+                            await toggleFav.mutateAsync(item.id);
+                        } catch (e) {
+                            // toast in future?
+                            console.warn('Toggle favourite failed', e);
+                        }
+                    }} />
                     <ThemedStar starred={true} />
 
                 </View>
