@@ -5,20 +5,17 @@ import { router } from 'expo-router/build/exports'
 import { useEffect, useState } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
-import { View, FlatList, TouchableOpacity } from 'react-native'
-import { useTheme } from 'constants/useTheme'
+import { View, FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
-import { useToggleFavourite } from 'lib/hooks/useToggleFavourite'
 
 const Library = () => {
-    const { data: positions = [], isLoading } = usePositions(undefined);
+    const { data: positions = [] } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
-    const { data: videosData = [], isLoading: videosLoading } = useVideos(selected ? { positionId: selected.id } : undefined);
+    const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id } : undefined);
     const { data: favouriteIds = [] } = useFavouritesByUser();
-    const toggleFav = useToggleFavourite();
     const videos = videosData;
 
     const getPosition = (id: string) => {
@@ -32,12 +29,9 @@ const Library = () => {
     }, [selected]);
 
     const numColumns = 1;
-    const GAP = 12;
     const HORIZONTAL_PADDING = 10;
 
-    const { colors } = useTheme();
-
-    const renderTile = ({ item, index }: { item: any; index: number }) => (
+    const renderTile = ({ item }: { item: any }) => (
         <VideoTile
             item={item}
             positionName={getPosition(item.position_id)?.name}
