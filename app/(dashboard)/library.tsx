@@ -7,9 +7,7 @@ import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { View, FlatList, TouchableOpacity } from 'react-native'
 import { useTheme } from 'constants/useTheme'
-import ThemedPill from 'Components/ThemedPill'
-import ThemedLike from 'Components/ThemedLike'
-import ThemedStar from 'Components/ThemedStar'
+import VideoTile from 'Components/VideoTile'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useToggleFavourite } from 'lib/hooks/useToggleFavourite'
@@ -40,32 +38,12 @@ const Library = () => {
     const { colors } = useTheme();
 
     const renderTile = ({ item, index }: { item: any; index: number }) => (
-        <TouchableOpacity
-            style={{ width: '100%', marginBottom: GAP, borderRadius: 8, overflow: 'hidden' }}
-            activeOpacity={1}
+        <VideoTile
+            item={item}
+            positionName={getPosition(item.position_id)?.name}
+            liked={favouriteIds.includes(item.id)}
             onPress={() => console.log('Tapped', item.id)}
-        >
-            <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.uiBackground }} />
-
-            <View style={{ paddingVertical: 8, paddingHorizontal: 6 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <ThemedPill color="primary" size="small">{getPosition(item.position_id)?.name}</ThemedPill>
-
-                    <ThemedLike liked={favouriteIds.includes(item.id)} onPress={async () => {
-                        try {
-                            await toggleFav.mutateAsync(item.id);
-                        } catch (e) {
-                            // toast in future?
-                            console.warn('Toggle favourite failed', e);
-                        }
-                    }} />
-                    <ThemedStar starred={true} />
-
-                </View>
-
-                <ThemedText variant="subheader" style={{ marginTop: 8 }}>{item.title}</ThemedText>
-            </View>
-        </TouchableOpacity>
+        />
     );
 
     return (
