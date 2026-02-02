@@ -52,25 +52,54 @@ export function useToggleFavourite(userId?: string | null) {
             return { action: 'inserted' as const };
         },
         onMutate: async (videoId: string) => {
-            // Optimistic update: immediately update local cache so UI responds
-            // instantly. We cancel ongoing queries for the key, snapshot the
-            // previous value, and then set the new value (add/remove id).
+            // Optimistic update: update favourites cache and also remove the
+            // video from any cached videos lists so UI doesn't flash empty.
             await qc.cancelQueries({ queryKey: key });
+            await qc.cancelQueries({ queryKey: ['videosByIds'] });
+
             const previous = qc.getQueryData<string[]>(key) || [];
             const exists = previous.includes(videoId);
             const next = exists ? previous.filter((id) => id !== videoId) : [...previous, videoId];
             qc.setQueryData(key, next);
-            // Return the previous cache snapshot so onError can rollback.
-            return { previous };
+
+            // Snapshot and update videosByIds caches
+            const videosQueries = qc.getQueriesData({ queryKey: ['videosByIds'] }) || [];
+            const previousVideos: Record<string, any> = {};
+            for (const [qk] of videosQueries) {
+                try {
+                    const cacheKey = qk as any;
+                    const old = qc.getQueryData(cacheKey as any);
+                    previousVideos[JSON.stringify(cacheKey)] = old;
+                    if (Array.isArray(old)) {
+                        const filtered = (old as any[]).filter(v => v.id !== videoId);
+                        qc.setQueryData(cacheKey as any, filtered);
+                    }
+                } catch (e) {
+                    // ignore any cache manipulation errors
+                }
+            }
+
+            return { previous, previousVideos };
         },
         onError: (err, _videoId, context: any) => {
-            // Rollback: if the server call failed, restore the previous cache.
+            // Rollback: restore favourites cache and any videos caches we modified.
             if (context?.previous) qc.setQueryData(key, context.previous);
+            if (context?.previousVideos) {
+                for (const k of Object.keys(context.previousVideos)) {
+                    try {
+                        const parsed = JSON.parse(k);
+                        qc.setQueryData(parsed as any, context.previousVideos[k]);
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            }
             console.warn('[useToggleFavourite] error', err);
         },
         onSettled: () => {
-            // Revalidate in the background to ensure cache matches server state.
+            // Revalidate in the background to ensure server and cache match.
             qc.invalidateQueries({ queryKey: key });
+            qc.invalidateQueries({ queryKey: ['videosByIds'] });
         }
     });
 }

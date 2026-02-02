@@ -14,11 +14,15 @@ async function fetchVideosByIds({ queryKey }: any) {
 }
 
 export function useVideosByIds(ids?: string[] | null) {
-    const enabled = !!(ids && ids.length > 0);
-    return useQuery({
+    // Keep previous data during refetches so UI doesn't briefly clear while
+    // favourite/deck ids update. The fetcher already returns an empty array
+    // when ids is empty, so it's safe to always enable the query.
+    return useQuery<any[], Error>({
         queryKey: ['videosByIds', ids || []],
         queryFn: fetchVideosByIds,
-        enabled,
+        enabled: true,
+        keepPreviousData: true,
         staleTime: 1000 * 60 * 2,
-    });
+        refetchOnWindowFocus: false,
+    } as any);
 }

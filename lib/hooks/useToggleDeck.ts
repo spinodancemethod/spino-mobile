@@ -38,19 +38,53 @@ export function useToggleDeck(userId?: string | null) {
             return { action: 'inserted' as const };
         },
         onMutate: async (videoId: string) => {
+            // Optimistic update: update deck cache and remove video from any
+            // cached videosByIds entries so UI updates immediately.
             await qc.cancelQueries({ queryKey: key });
+            await qc.cancelQueries({ queryKey: ['videosByIds'] });
+
             const previous = qc.getQueryData<string[]>(key) || [];
             const exists = previous.includes(videoId);
             const next = exists ? previous.filter((id) => id !== videoId) : [...previous, videoId];
             qc.setQueryData(key, next);
-            return { previous };
+
+            // Snapshot and update videosByIds caches
+            const videosQueries = qc.getQueriesData({ queryKey: ['videosByIds'] }) || [];
+            const previousVideos: Record<string, any> = {};
+            for (const [qk] of videosQueries) {
+                try {
+                    const cacheKey = qk as any;
+                    const old = qc.getQueryData(cacheKey as any);
+                    previousVideos[JSON.stringify(cacheKey)] = old;
+                    if (Array.isArray(old)) {
+                        const filtered = (old as any[]).filter(v => v.id !== videoId);
+                        qc.setQueryData(cacheKey as any, filtered);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            return { previous, previousVideos };
         },
         onError: (err, _videoId, context: any) => {
+            // Rollback
             if (context?.previous) qc.setQueryData(key, context.previous);
+            if (context?.previousVideos) {
+                for (const k of Object.keys(context.previousVideos)) {
+                    try {
+                        const parsed = JSON.parse(k);
+                        qc.setQueryData(parsed as any, context.previousVideos[k]);
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            }
             console.warn('[useToggleDeck] error', err);
         },
         onSettled: () => {
             qc.invalidateQueries({ queryKey: key });
+            qc.invalidateQueries({ queryKey: ['videosByIds'] });
         }
     });
 }
