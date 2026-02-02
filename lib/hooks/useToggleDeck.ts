@@ -48,12 +48,19 @@ export function useToggleDeck(userId?: string | null) {
             const next = exists ? previous.filter((id) => id !== videoId) : [...previous, videoId];
             qc.setQueryData(key, next);
 
-            // Snapshot and update videosByIds caches
+            // Snapshot and update videosByIds caches, but only those that match
+            // the current deck ids (previous). This prevents removing the video
+            // from unrelated lists such as favourites.
             const videosQueries = qc.getQueriesData({ queryKey: ['videosByIds'] }) || [];
             const previousVideos: Record<string, any> = {};
+            const prevKeyJson = JSON.stringify(previous);
             for (const [qk] of videosQueries) {
                 try {
                     const cacheKey = qk as any;
+                    const ids = Array.isArray(cacheKey) ? cacheKey[1] : undefined;
+                    // Only modify cached videos lists that have the same ids as the previous deck
+                    if (!ids || JSON.stringify(ids) !== prevKeyJson) continue;
+
                     const old = qc.getQueryData(cacheKey as any);
                     previousVideos[JSON.stringify(cacheKey)] = old;
                     if (Array.isArray(old)) {
