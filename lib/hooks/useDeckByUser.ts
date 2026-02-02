@@ -8,18 +8,7 @@ import { supabase } from '../supabase';
  */
 async function fetchDeck({ queryKey }: any) {
     const [_key, userId] = queryKey;
-    let actualUserId = userId;
-    const DEV_USER_ID = process.env.EXPO_PUBLIC_DEV_USER_ID || process.env.DEV_USER_ID || '';
-    if (!actualUserId) {
-        if (DEV_USER_ID) {
-            actualUserId = DEV_USER_ID;
-        } else {
-            const { data: ud } = await supabase.auth.getUser();
-            actualUserId = ud?.user?.id;
-        }
-    }
-
-    if (!actualUserId) return [];
+    const actualUserId = '371b9ee4-3660-4deb-bbfb-b0f7d77e8962';
 
     const { data, error } = await supabase
         .from('deck')
