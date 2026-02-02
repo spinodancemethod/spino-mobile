@@ -40,7 +40,6 @@ const Favourites = () => {
                         decked={deckIds.includes(item.id)}
                     />
                 )}
-                extraData={{ favIds, deckIds }}
                 contentContainerStyle={{ padding: 12 }}
             />
         </ThemedView>

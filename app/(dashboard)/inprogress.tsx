@@ -47,7 +47,6 @@ const InProgress = () => {
                             showFavouriteToggle={false}
                         />
                     )}
-                    extraData={{ deckIds }}
                     contentContainerStyle={{ padding: 12 }}
                     ListEmptyComponent={() => (
                         <ThemedView style={{ padding: 12 }}>

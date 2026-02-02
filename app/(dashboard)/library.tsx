@@ -70,7 +70,6 @@ const Library = () => {
                     data={videos}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
-                    extraData={{ favouriteIds, deckIds }}
                     numColumns={numColumns}
                     contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 12, paddingBottom: 32 }}
                     showsVerticalScrollIndicator={true}
