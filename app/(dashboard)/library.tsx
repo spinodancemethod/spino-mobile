@@ -73,8 +73,8 @@ const Library = () => {
 
             {/* Grid of videos from the DB. Placed after header so it scrolls independently. */}
             {!selected ? (
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ThemedText variant="large">Please select a position</ThemedText>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+                    <ThemedText variant="large">We have categorized videos based on position. This allows you to build optionality when dancing so you can remember variations easily and use them to express yourself in the moment rather than being limited by a prescribed routine.</ThemedText>
                 </View>
             ) : (
                 <FlatList

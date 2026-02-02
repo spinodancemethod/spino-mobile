@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 
+/*
+    Hook: usePositions
+
+    - Returns a list of positions (used to populate the category selector).
+    - Supports optional filtering by `position` (category) and `search` term.
+    - Uses React Query to cache results and avoid unnecessary network requests.
+*/
 async function fetchPositions({ queryKey }: any) {
     const [_key, params] = queryKey;
     const { position, search } = params || {};

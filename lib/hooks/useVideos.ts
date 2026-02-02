@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 
+/*
+    Hook: useVideos
+
+    - Fetches rows from the `videos` table.
+    - Accepts an optional params object with `positionId` to filter results.
+    - The query is disabled unless `positionId` is provided (avoids fetching all videos on app start).
+    - React Query options set `staleTime` so results are treated as fresh for a short period and
+        unnecessary refetches are avoided.
+*/
+
 async function fetchVideos({ queryKey }: any) {
     const [_key, params] = queryKey;
     const { positionId } = params || {};
