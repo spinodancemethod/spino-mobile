@@ -35,6 +35,18 @@ export default function DashboardLayout() {
                 }}
             >
                 <Tabs.Screen
+                    name="home"
+                    options={{
+                        title: "Home", tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                size={24}
+                                name={focused ? 'home' : 'home-outline'}
+                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
+                            />
+                        )
+                    }}
+                />
+                <Tabs.Screen
                     name="inprogress"
                     options={{
                         title: "On Deck", tabBarIcon: ({ focused }) => (

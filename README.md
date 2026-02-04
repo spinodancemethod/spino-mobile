@@ -42,3 +42,14 @@ TODO (previous notes)
 - Page to explain positions.
 - Make users able to set a video as complete.
 - We will need levels for each class maybe 1-5 remember this is a beginners app only, not really interested in advanced dancers. 
+
+
+Bachata can get complicated real fast. 
+Simplifying the basics is the best way to build a solid foundation
+So you can focus more on movement QUALITY and less on remembering the moves. 
+
+Its much easier to remember moves from positions. If you have 3 positions each with 3 variations you are able to perform 9 different combos. That is the idea. 
+
+Pick a position, pick 3 variations, learn them, and master them on your social night out. After each night, add notes, what works, what doesn't. And repeat for new positions/variations. 
+
+Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines. 
