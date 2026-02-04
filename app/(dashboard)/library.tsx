@@ -2,7 +2,7 @@ import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { router } from 'expo-router/build/exports'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { View, FlatList } from 'react-native'
@@ -10,6 +10,7 @@ import VideoTile from 'Components/VideoTile'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
+import { useState } from 'react'
 
 const Library = () => {
     const { data: positions = [] } = usePositions(undefined);
@@ -20,6 +21,16 @@ const Library = () => {
     const { data: deckIds = [] } = useDeckByUser();
 
     const videos = videosData;
+
+    // Level filter (client-side). 5 levels
+    const LEVELS = [
+        { id: 'beginner', name: 'Beginner', value: 1 },
+        { id: 'improver', name: 'Improver', value: 2 },
+        { id: 'improver_plus', name: 'Improver +', value: 3 },
+        { id: 'intermediate', name: 'Intermediate', value: 4 },
+        { id: 'advance', name: 'Advance', value: 5 },
+    ];
+    const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
 
 
     const getPosition = (id: string) => {
@@ -54,9 +65,14 @@ const Library = () => {
                 <View style={{ width: 88 }} />
             </View>
 
-            {/* Position selector stays below header and remains visible above list */}
-            <View style={{ paddingHorizontal: 8, paddingTop: 12 }}>
-                <ThemedFilter selected={selected} setSelected={setSelected} items={positions} />
+            {/* Filter row: Position selector + Level selector */}
+            <View style={{ paddingHorizontal: 8, paddingTop: 12, flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                    <ThemedFilter placeholder="Select a position" selected={selected} setSelected={setSelected} items={positions} />
+                </View>
+                <View style={{ width: 140 }}>
+                    <ThemedFilter placeholder="Select a level" selected={selectedLevel as any} setSelected={setSelectedLevel as any} items={LEVELS as any} />
+                </View>
             </View>
 
             {/* Grid of videos from the DB. Placed after header so it scrolls independently. */}
@@ -67,7 +83,7 @@ const Library = () => {
             ) : (
                 <FlatList
                     style={{ flex: 1 }}
-                    data={videos}
+                    data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value)}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
                     numColumns={numColumns}

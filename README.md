@@ -42,6 +42,7 @@ TODO (previous notes)
 - Page to explain positions.
 - Make users able to set a video as complete.
 - We will need levels for each class maybe 1-5 remember this is a beginners app only, not really interested in advanced dancers. 
+- Mark as complete option so that user no longer sees these. Can be accessed in filters, include completed. 
 
 
 Bachata can get complicated real fast. 

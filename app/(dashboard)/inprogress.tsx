@@ -74,7 +74,7 @@ const InProgress = () => {
                 />
             )}
 
-            <Spacer />
+            {/* <Spacer />
             <ThemedText>
                 There will be a maximum of 3 saved classes for free users.
             </ThemedText>
@@ -84,7 +84,7 @@ const InProgress = () => {
                     router.push('/');
                 }}
                 style={{ width: "100%" }}
-            />
+            /> */}
 
         </ThemedView>
     )

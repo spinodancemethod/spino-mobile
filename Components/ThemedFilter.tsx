@@ -8,9 +8,10 @@ interface Props {
     selected: { id: string; name: string } | null;
     setSelected: (position: { id: string; name: string } | null) => void;
     items?: { id: string; name: string }[]; // optional: if not provided the component will fetch positions instead
+    placeholder?: string;
 }
 
-const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items }) => {
+const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items, placeholder = 'Select an Item' }) => {
     const styles = useStyles();
     const { colors } = useTheme();
     const [open, setOpen] = useState(false);
@@ -26,7 +27,7 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items }) => {
                 onPress={() => setOpen(true)}
                 style={[styles.filterButton, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
             >
-                <Text style={[styles.filterButtonText, !selected && { opacity: 0.6 }]}>{selected?.name ?? 'Select Position'}</Text>
+                <Text style={[styles.filterButtonText, !selected && { opacity: 0.6 }]}>{selected?.name ?? placeholder}</Text>
             </TouchableOpacity>
 
             <Modal isVisible={open} onBackdropPress={() => setOpen(false)} backdropOpacity={0.85} style={{ justifyContent: 'center', alignItems: 'center' }}>
