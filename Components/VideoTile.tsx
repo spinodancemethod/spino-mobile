@@ -5,6 +5,8 @@ import ThemedPill from 'Components/ThemedPill';
 import ThemedLike from 'Components/ThemedLike';
 import ThemedStar from 'Components/ThemedStar';
 import { useTheme } from 'constants/useTheme';
+import { useQueryClient } from '@tanstack/react-query';
+import { DECK_LIMIT } from 'constants/Config';
 import { showSnack } from 'lib/snackbarService';
 import { useToggleFavourite } from 'lib/hooks/useToggleFavourite';
 import { useToggleDeck } from '../lib/hooks/useToggleDeck';
@@ -32,6 +34,9 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
     const { colors } = useTheme();
     const toggleFav = useToggleFavourite();
     const toggleDeck = useToggleDeck();
+    const qc = useQueryClient();
+    const deckKey = ['deck', 'current'];
+    const FREE_LIMIT = DECK_LIMIT;
 
     // render inner content, wrapper chosen based on whether an onPress was provided
     const content = (
@@ -64,6 +69,14 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {showDeckToggle ? (
                             <ThemedStar starred={decked} onPress={async () => {
                                 try {
+                                    // client-side pre-check for free limit
+                                    const currentDeck: string[] = qc.getQueryData(deckKey) || [];
+                                    const isAlready = currentDeck.includes(item.id);
+                                    if (!isAlready && currentDeck.length >= FREE_LIMIT) {
+                                        showSnack('The deck is full. Focus on mastering those.', { duration: 3000 });
+                                        return;
+                                    }
+
                                     const res = await toggleDeck.mutateAsync(item.id);
                                     showSnack(res?.action === 'deleted' ? 'Removed from deck' : 'Added to deck', {
                                         actionTitle: 'Undo',

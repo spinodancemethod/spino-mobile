@@ -41,3 +41,4 @@ TODO (previous notes)
 - Create coloured pills for each video category.
 - Page to explain positions.
 - Make users able to set a video as complete.
+- We will need levels for each class maybe 1-5 remember this is a beginners app only, not really interested in advanced dancers. 

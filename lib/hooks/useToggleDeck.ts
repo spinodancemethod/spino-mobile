@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
+import { showSnack } from 'lib/snackbarService';
+import { DECK_LIMIT } from 'constants/Config';
 
 /**
  * useToggleDeck
@@ -15,6 +17,7 @@ export function useToggleDeck(userId?: string | null) {
             // NOTE: development hard-coded id for local testing
             let actualUserId: any = "371b9ee4-3660-4deb-bbfb-b0f7d77e8962";
 
+            // check server-side whether the video exists in deck
             const { data: existing, error: fetchErr } = await supabase
                 .from('deck')
                 .select('id')
@@ -31,6 +34,21 @@ export function useToggleDeck(userId?: string | null) {
                     .eq('user_id', actualUserId);
                 if (delErr) throw delErr;
                 return { action: 'deleted' as const };
+            }
+
+            // enforce code-level limit
+            const { data: rows, error: countErr } = await supabase
+                .from('deck')
+                .select('video_id', { count: 'exact' })
+                .eq('user_id', actualUserId);
+            if (countErr) throw countErr;
+
+            const currentCount = Array.isArray(rows) ? rows.length : 0;
+            if (currentCount >= DECK_LIMIT) {
+                showSnack(`You can only save up to ${DECK_LIMIT} classes.`, { duration: 3000 });
+                const err: any = new Error('deck limit reached');
+                err.code = 'DECK_LIMIT';
+                throw err;
             }
 
             const { error: insErr } = await supabase.from('deck').insert({ video_id: videoId, user_id: actualUserId });
