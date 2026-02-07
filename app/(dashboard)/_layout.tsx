@@ -1,11 +1,7 @@
-import { Tabs, useRouter } from "expo-router"
+import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
-import { View, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
-import ThemedText from 'Components/ThemedText'
-import { useThemeContext } from 'constants/ThemeProvider'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import React, { useState } from 'react'
+import React from 'react'
 
 /*
     Dashboard tab layout.
@@ -23,10 +19,7 @@ import React, { useState } from 'react'
 
 export default function DashboardLayout() {
     const styles = useStyles();
-    const { mode, toggle } = useThemeContext();
-    const insets = useSafeAreaInsets();
-    const [menuOpen, setMenuOpen] = useState(false);
-    const router = useRouter();
+
 
     return (
         <>
