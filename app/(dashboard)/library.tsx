@@ -56,7 +56,7 @@ const Library = () => {
     );
 
     return (
-        <ThemedView style={{ flex: 1 }}>
+        <ThemedView>
             {/* Fixed header area: Back, Title, spacer */}
             <ThemedText variant="title" style={{ padding: 12 }}>
                 Library
@@ -79,7 +79,7 @@ const Library = () => {
                 </View>
             ) : (
                 <FlatList
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, width: '100%' }}
                     data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}

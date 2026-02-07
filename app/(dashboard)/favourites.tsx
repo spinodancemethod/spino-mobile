@@ -41,7 +41,7 @@ const Favourites = () => {
     const loading = isLoading && displayedVideos.length === 0;
 
     return (
-        <ThemedView style={{ flex: 1 }}>
+        <ThemedView>
             <ThemedText variant="title" style={{ padding: 12 }}>
                 Favourites
             </ThemedText>
@@ -50,6 +50,7 @@ const Favourites = () => {
                 <ActivityIndicator style={{ marginTop: 24 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1, width: '100%' }}
                     data={displayedVideos}
                     keyExtractor={(i: any) => i.id}
                     renderItem={({ item }: { item: any }) => (
@@ -61,7 +62,7 @@ const Favourites = () => {
                         />
                     )}
                     extraData={{ favIds, deckIds, displayedVideos }}
-                    contentContainerStyle={{ padding: 12 }}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
                     ListEmptyComponent={() => (
                         <ThemedView style={{ padding: 12 }}>
                             <ThemedText>No favourites yet.</ThemedText>

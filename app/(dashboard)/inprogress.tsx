@@ -45,7 +45,7 @@ const InProgress = () => {
     const loading = (isDeckLoading || isVideosLoading) && displayedVideos.length === 0;
 
     return (
-        <ThemedView style={{ flex: 1 }}>
+        <ThemedView>
             <ThemedText variant="title" style={{ padding: 12 }}>
                 In Progress
             </ThemedText>
@@ -54,6 +54,7 @@ const InProgress = () => {
                 <ActivityIndicator style={{ marginTop: 24 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1, width: '100%' }}
                     data={displayedVideos}
                     keyExtractor={(i: any) => i.id}
                     renderItem={({ item }: { item: any }) => (
@@ -65,7 +66,7 @@ const InProgress = () => {
                             showFavouriteToggle={false}
                         />
                     )}
-                    contentContainerStyle={{ padding: 12 }}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
                     ListEmptyComponent={() => (
                         <ThemedView style={{ padding: 12 }}>
                             <ThemedText>No classes saved yet. Add some to your deck.</ThemedText>

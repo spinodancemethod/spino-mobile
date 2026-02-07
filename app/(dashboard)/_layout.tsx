@@ -75,6 +75,18 @@ export default function DashboardLayout() {
                         )
                     }}
                 />
+                <Tabs.Screen
+                    name="positions"
+                    options={{
+                        title: "Positions", tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                size={24}
+                                name={focused ? 'accessibility' : 'accessibility-outline'}
+                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
+                            />
+                        )
+                    }}
+                />
             </Tabs>
         </>
     )
