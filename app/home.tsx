@@ -1,6 +1,8 @@
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
+import ThemedButton from 'Components/ThemedButton'
 import { ScrollView } from 'react-native'
+import { router } from 'expo-router'
 
 const Home = () => {
     return (
@@ -23,6 +25,12 @@ const Home = () => {
                 <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
                     Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines.
                 </ThemedText>
+
+                <ThemedButton
+                    title="Go to your Workspace"
+                    onPress={() => router.push('/inprogress')}
+                    style={{ width: '100%', marginTop: 12 }}
+                />
             </ScrollView>
         </ThemedView>
     )

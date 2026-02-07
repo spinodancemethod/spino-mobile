@@ -76,62 +76,6 @@ export default function DashboardLayout() {
                     }}
                 />
             </Tabs>
-            <View style={{ position: 'absolute', top: insets.top + 8, right: insets.right + 12 }}>
-                <TouchableOpacity onPress={() => setMenuOpen(true)} style={{ padding: 8 }}>
-                    <Ionicons name={'menu'} size={24} color={styles.icon.color} />
-                </TouchableOpacity>
-            </View>
-
-            <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
-                <TouchableWithoutFeedback onPress={() => setMenuOpen(false)}>
-                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} />
-                </TouchableWithoutFeedback>
-                <View style={{ position: 'absolute', top: insets.top + 56, right: 12, width: 220, backgroundColor: styles.card.backgroundColor, borderRadius: 12, padding: 8, elevation: 6 }}>
-                    <TouchableOpacity onPress={() => { setMenuOpen(false); router.push('/home'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-                        <Ionicons name={'home-outline'} size={18} color={styles.icon.color} />
-                        <View style={{ width: 12 }} />
-                        <ThemedText variant="subheader">Home</ThemedText>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => { toggle(); setMenuOpen(false); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-                        <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={18} color={styles.icon.color} />
-                        <View style={{ width: 12 }} />
-                        <View>
-                            <View style={{}}>
-                                <View style={{}}>
-                                    <View>
-                                        <Ionicons />
-                                    </View>
-                                </View>
-                            </View>
-                            <View>
-                                <View />
-                            </View>
-                        </View>
-                        <View style={{ position: 'absolute', left: 36 }}>
-                            <View />
-                        </View>
-                        <View style={{ position: 'absolute', right: 12 }} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => { setMenuOpen(false); router.push('profile'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-                        <Ionicons name={'person-circle-outline'} size={18} color={styles.icon.color} />
-                        <View style={{ width: 12 }} />
-                        <View>
-                            <View style={{}}>
-                                <View>
-                                    <View style={{}}>
-                                        <View />
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                        <View style={{ position: 'absolute', right: 12 }}>
-                            <View />
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            </Modal>
         </>
     )
 }
