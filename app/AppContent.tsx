@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from 'constants/useTheme';
 import { useStyles } from 'constants/styles';
@@ -10,6 +10,9 @@ import GlobalMenu from 'Components/GlobalMenu';
 const AppContent: React.FC = () => {
     const { colors } = useTheme();
     const styles = useStyles();
+    const segments = useSegments();
+    // hide the global menu on the root/login page (index or empty segments)
+    const showGlobalMenu = !(Number(segments.length) === 0 || segments[0] === '/');
 
     const screenOptions = useMemo(
         () => ({
@@ -35,7 +38,7 @@ const AppContent: React.FC = () => {
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>
             <Snackbar />
-            <GlobalMenu />
+            {showGlobalMenu && <GlobalMenu />}
         </View>
     );
 };

@@ -44,6 +44,11 @@ const GlobalMenu: React.FC = () => {
                         <View style={{ width: 12 }} />
                         <ThemedText variant="subheader">Profile</ThemedText>
                     </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setOpen(false); router.push('/'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name={'log-out-outline'} size={18} color={styles.icon.color} />
+                        <View style={{ width: 12 }} />
+                        <ThemedText variant="subheader">Sign out</ThemedText>
+                    </TouchableOpacity>
                 </View>
             </Modal>
         </>
