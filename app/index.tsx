@@ -15,7 +15,7 @@ export default function App() {
       <ThemedText> ciao.</ThemedText>
       <Spacer />
 
-  <Spacer />
+      <Spacer />
       <ThemedButton
         title="Go to Your Workspace"
         onPress={() => router.push('/inprogress')}
