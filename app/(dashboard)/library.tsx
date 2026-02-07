@@ -58,13 +58,11 @@ const Library = () => {
     );
 
     return (
-        <ThemedView style={{ flex: 1, alignItems: 'stretch' }}>
+        <ThemedView style={{ flex: 1 }}>
             {/* Fixed header area: Back, Title, spacer */}
-            <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingTop: 8 }}>
-                <ThemedButton title="Back" onPress={() => router.push('/')} style={{ minWidth: 88 }} />
-                <ThemedText variant="title">Library</ThemedText>
-                <View style={{ width: 88 }} />
-            </View>
+            <ThemedText variant="title" style={{ padding: 12 }}>
+                Library
+            </ThemedText>
 
             {/* Filter row: Position selector + Level selector */}
             <View style={{ paddingHorizontal: 8, paddingTop: 12, flexDirection: 'row', gap: 8 }}>
