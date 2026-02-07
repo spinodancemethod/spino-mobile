@@ -34,15 +34,11 @@ If you want a condensed list of remaining TODOs or prefer I add documentation fo
 TODO (previous notes)
 
 - Connect up a video page to the library - Include Notes section and comments for private viewing, CRUD style.
-- Seed video files.
-- Add like functionality to store to favourites.
-- Add the functionality to add/remove from deck.
-- Wire up the filter logic for the categories.
-- Create coloured pills for each video category.
 - Page to explain positions.
-- Make users able to set a video as complete.
-- We will need levels for each class maybe 1-5 remember this is a beginners app only, not really interested in advanced dancers. 
 - Mark as complete option so that user no longer sees these. Can be accessed in filters, include completed. 
+- 3 types of videos - reminder, counts, music, explanation (or maybe just description is enough)
+
+
 
 
 Bachata can get complicated real fast. 

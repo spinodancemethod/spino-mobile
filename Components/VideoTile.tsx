@@ -46,7 +46,25 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
 
             <View style={{ paddingVertical: 8, paddingHorizontal: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <ThemedPill color="primary" size="small">{positionName}</ThemedPill>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {/* level pill (left) */}
+                        {typeof item?.level === 'number' ? (
+                            (() => {
+                                const lvl = item.level as number;
+                                const mapping: Record<number, { label: string; color: string }> = {
+                                    1: { label: 'Beginner', color: '#10B981' }, // green
+                                    2: { label: 'Improver', color: '#34D399' },
+                                    3: { label: 'Improver +', color: '#FBBF24' },
+                                    4: { label: 'Intermediate', color: '#F97316' },
+                                    5: { label: 'Advance', color: '#EF4444' }, // red
+                                };
+                                const info = mapping[lvl] || { label: String(lvl), color: '#8B5CF6' };
+                                return <ThemedPill color={info.color} size="small">{info.label}</ThemedPill>;
+                            })()
+                        ) : null}
+
+                        <ThemedPill color="primary" size="small">{positionName}</ThemedPill>
+                    </View>
 
                     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                         {showFavouriteToggle ? (
