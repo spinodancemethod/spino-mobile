@@ -4,7 +4,7 @@ import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import VideoTile from 'Components/VideoTile'
-import { FlatList, ActivityIndicator } from 'react-native'
+import { ActivityIndicator, FlatList } from 'react-native'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
 import { useEffect, useState } from 'react'
 
@@ -52,7 +52,7 @@ const Favourites = () => {
                 <FlatList
                     data={displayedVideos}
                     keyExtractor={(i: any) => i.id}
-                    renderItem={({ item }) => (
+                    renderItem={({ item }: { item: any }) => (
                         <VideoTile
                             item={item}
                             positionName={getPosition(item.position_id)?.name}

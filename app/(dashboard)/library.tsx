@@ -5,7 +5,8 @@ import { router } from 'expo-router/build/exports'
 import { useEffect } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
-import { View, FlatList } from 'react-native'
+import { View } from 'react-native'
+import { FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
@@ -88,7 +89,7 @@ const Library = () => {
                     renderItem={renderTile}
                     numColumns={numColumns}
                     contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 12, paddingBottom: 32 }}
-                    showsVerticalScrollIndicator={true}
+                    showsVerticalScrollIndicator={false}
                 />
             )}
         </ThemedView>

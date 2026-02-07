@@ -7,7 +7,7 @@ import { router } from 'expo-router'
 import { useDeckByUser } from 'lib/hooks/useDeckByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import VideoTile from 'Components/VideoTile'
-import { FlatList, ActivityIndicator } from 'react-native'
+import { ActivityIndicator, FlatList } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useEffect, useState } from 'react'
 
@@ -56,7 +56,7 @@ const InProgress = () => {
                 <FlatList
                     data={displayedVideos}
                     keyExtractor={(i: any) => i.id}
-                    renderItem={({ item }) => (
+                    renderItem={({ item }: { item: any }) => (
                         <VideoTile
                             item={item}
                             positionName={getPosition(item.position_id)?.name}
@@ -71,6 +71,7 @@ const InProgress = () => {
                             <ThemedText>No classes saved yet. Add some to your deck.</ThemedText>
                         </ThemedView>
                     )}
+                    showsVerticalScrollIndicator={false}
                 />
             )}
 

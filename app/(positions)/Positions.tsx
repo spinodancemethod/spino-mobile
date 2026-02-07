@@ -9,12 +9,12 @@ export default function Positions() {
     const { data: instruments = [], isLoading } = usePositions(undefined);
     const { colors } = useTheme();
 
-    return (
-        <ThemedView safe={true}>
-            <FlatList
-                data={instruments}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
+       return (
+           <ThemedView safe={true}>
+               <FlatList
+                   data={instruments}
+                   keyExtractor={(item: any) => item.id.toString()}
+                   renderItem={({ item }: { item: any }) => (
                     <Text style={[{ color: colors.text, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
                         {item.name}
                     </Text>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
 import { useStyles } from '../constants/styles';
 import { useTheme } from '../constants/useTheme';
@@ -32,7 +33,7 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items, placehold
 
             <Modal isVisible={open} onBackdropPress={() => setOpen(false)} backdropOpacity={0.85} style={{ justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ width: '90%', maxHeight: '70%', borderRadius: 16, overflow: 'hidden', backgroundColor: colors.card }}>
-                    <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ padding: 12 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} style={{ maxHeight: 400 }} contentContainerStyle={{ padding: 12 }}>
                         {loading ? (
                             <View style={[styles.filterButton, { padding: 16, justifyContent: 'center', alignItems: 'center' }]}>
                                 <ActivityIndicator color={colors.primary} />

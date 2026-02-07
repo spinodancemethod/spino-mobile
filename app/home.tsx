@@ -7,7 +7,7 @@ import { router } from 'expo-router'
 const Home = () => {
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={{ padding: 16 }}>
+            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 16 }}>
                 <ThemedText variant="title" style={{ marginBottom: 12 }}>Welcome</ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
