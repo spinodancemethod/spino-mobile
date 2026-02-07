@@ -15,13 +15,7 @@ export default function App() {
       <ThemedText> ciao.</ThemedText>
       <Spacer />
 
-      <ThemedButton
-        title="Go to a Page"
-        onPress={() => router.push('/(positions)/Positions')}
-        style={{ width: "100%" }}
-      />
-
-      <Spacer />
+  <Spacer />
       <ThemedButton
         title="Go to Your Workspace"
         onPress={() => router.push('/inprogress')}
