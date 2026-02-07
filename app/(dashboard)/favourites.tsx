@@ -67,6 +67,7 @@ const Favourites = () => {
                             <ThemedText>No favourites yet.</ThemedText>
                         </ThemedView>
                     )}
+                    showsVerticalScrollIndicator={false}
                 />
             )}
         </ThemedView>
