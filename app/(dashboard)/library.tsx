@@ -1,7 +1,5 @@
-import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
-import { router } from 'expo-router/build/exports'
 import { useEffect } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
@@ -25,6 +23,7 @@ const Library = () => {
 
     // Level filter (client-side). 5 levels
     const LEVELS = [
+        { id: 'all', name: 'All levels', value: 0 },
         { id: 'beginner', name: 'Beginner', value: 1 },
         { id: 'improver', name: 'Improver', value: 2 },
         { id: 'improver_plus', name: 'Improver +', value: 3 },
@@ -45,7 +44,6 @@ const Library = () => {
     }, [selected]);
 
     const numColumns = 1;
-    const HORIZONTAL_PADDING = 10;
 
     const renderTile = ({ item }: { item: any }) => (
         <VideoTile
@@ -70,7 +68,7 @@ const Library = () => {
                     <ThemedFilter placeholder="Select a position" selected={selected} setSelected={setSelected} items={positions} />
                 </View>
                 <View style={{ width: 140 }}>
-                    <ThemedFilter placeholder="Select a level" selected={selectedLevel as any} setSelected={setSelectedLevel as any} items={LEVELS as any} />
+                    <ThemedFilter placeholder="Filter by level" selected={selectedLevel as any} setSelected={setSelectedLevel as any} items={LEVELS as any} />
                 </View>
             </View>
 
@@ -82,11 +80,11 @@ const Library = () => {
             ) : (
                 <FlatList
                     style={{ flex: 1 }}
-                    data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value)}
+                    data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
                     numColumns={numColumns}
-                    contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 12, paddingBottom: 32 }}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
                     showsVerticalScrollIndicator={false}
                 />
             )}
