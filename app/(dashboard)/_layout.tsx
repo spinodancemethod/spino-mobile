@@ -2,6 +2,7 @@ import { Tabs, useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
 import { View, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
+import ThemedText from 'Components/ThemedText'
 import { useThemeContext } from 'constants/ThemeProvider'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import React, { useState } from 'react'
@@ -37,18 +38,7 @@ export default function DashboardLayout() {
                     tabBarInactiveTintColor: styles.inactiveIcon.color,
                 }}
             >
-                <Tabs.Screen
-                    name="home"
-                    options={{
-                        title: "Home", tabBarIcon: ({ focused }) => (
-                            <Ionicons
-                                size={24}
-                                name={focused ? 'home' : 'home-outline'}
-                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
-                            />
-                        )
-                    }}
-                />
+                {/* home moved into the burger menu */}
                 <Tabs.Screen
                     name="inprogress"
                     options={{
@@ -97,6 +87,12 @@ export default function DashboardLayout() {
                     <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} />
                 </TouchableWithoutFeedback>
                 <View style={{ position: 'absolute', top: insets.top + 56, right: 12, width: 220, backgroundColor: styles.card.backgroundColor, borderRadius: 12, padding: 8, elevation: 6 }}>
+                    <TouchableOpacity onPress={() => { setMenuOpen(false); router.push('/home'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name={'home-outline'} size={18} color={styles.icon.color} />
+                        <View style={{ width: 12 }} />
+                        <ThemedText variant="subheader">Home</ThemedText>
+                    </TouchableOpacity>
+
                     <TouchableOpacity onPress={() => { toggle(); setMenuOpen(false); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                         <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={18} color={styles.icon.color} />
                         <View style={{ width: 12 }} />
