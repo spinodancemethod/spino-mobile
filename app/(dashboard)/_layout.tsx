@@ -1,9 +1,10 @@
-import { Tabs } from "expo-router"
+import { Tabs, useRouter } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
-import { View, TouchableOpacity } from 'react-native'
+import { View, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native'
 import { useThemeContext } from 'constants/ThemeProvider'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import React, { useState } from 'react'
 
 /*
     Dashboard tab layout.
@@ -23,6 +24,8 @@ export default function DashboardLayout() {
     const styles = useStyles();
     const { mode, toggle } = useThemeContext();
     const insets = useSafeAreaInsets();
+    const [menuOpen, setMenuOpen] = useState(false);
+    const router = useRouter();
 
     return (
         <>
@@ -84,10 +87,55 @@ export default function DashboardLayout() {
                 />
             </Tabs>
             <View style={{ position: 'absolute', top: insets.top + 8, right: insets.right + 12 }}>
-                <TouchableOpacity onPress={toggle} style={{ padding: 8 }}>
-                    <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={20} color={styles.icon.color} />
+                <TouchableOpacity onPress={() => setMenuOpen(true)} style={{ padding: 8 }}>
+                    <Ionicons name={'menu'} size={24} color={styles.icon.color} />
                 </TouchableOpacity>
             </View>
+
+            <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+                <TouchableWithoutFeedback onPress={() => setMenuOpen(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} />
+                </TouchableWithoutFeedback>
+                <View style={{ position: 'absolute', top: insets.top + 56, right: 12, width: 220, backgroundColor: styles.card.backgroundColor, borderRadius: 12, padding: 8, elevation: 6 }}>
+                    <TouchableOpacity onPress={() => { toggle(); setMenuOpen(false); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={18} color={styles.icon.color} />
+                        <View style={{ width: 12 }} />
+                        <View>
+                            <View style={{}}>
+                                <View style={{}}>
+                                    <View>
+                                        <Ionicons />
+                                    </View>
+                                </View>
+                            </View>
+                            <View>
+                                <View />
+                            </View>
+                        </View>
+                        <View style={{ position: 'absolute', left: 36 }}>
+                            <View />
+                        </View>
+                        <View style={{ position: 'absolute', right: 12 }} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => { setMenuOpen(false); router.push('profile'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name={'person-circle-outline'} size={18} color={styles.icon.color} />
+                        <View style={{ width: 12 }} />
+                        <View>
+                            <View style={{}}>
+                                <View>
+                                    <View style={{}}>
+                                        <View />
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={{ position: 'absolute', right: 12 }}>
+                            <View />
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </>
     )
 }
