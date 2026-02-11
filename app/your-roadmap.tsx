@@ -12,7 +12,6 @@ const MAX_SCALE = 3
 
 // Surface center defaults
 const SURFACE_WIDTH = 1800
-const SURFACE_HEIGHT = 1400
 const START_X = SURFACE_WIDTH / 2
 const START_Y = 200
 
@@ -24,10 +23,11 @@ const NODE_WIDTH = 160
 const NODE_HEIGHT = 44
 const VIDEO_W = 120
 const VIDEO_H = 66
-// reduced vertical gap between video leaves
-const VIDEO_MARGIN = 6
+// increased vertical gap between video leaves (doubled)
+const VIDEO_MARGIN = 12
 // gap between the end of a stem and the top of a position node
-const STEM_GAP = 0
+// increased so the connector line sits visibly below the position node
+const STEM_GAP = 16
 // extra vertical offset to nudge position nodes lower on the canvas
 const POSITION_NODE_OFFSET = 20
 
@@ -164,8 +164,7 @@ const YourRoadmap = () => {
     const groupStartX = START_X - groupWidth / 2 + NODE_WIDTH / 2
 
     // compute vertical gap below Start so videos don't overlap with nodes
-    // videoStackHeight is used conceptually; individual offsets are applied below
-    const videoStackHeight = videosPerNode * (VIDEO_H + VIDEO_MARGIN)
+    // (individual offsets are applied where needed)
 
     // helper to render a simple connector line between two points
     // Helper: render a connector line between two surface coordinates.
@@ -337,8 +336,6 @@ const YourRoadmap = () => {
                             const stemEndY = videoContainerTop
                             return (
                                 <React.Fragment key={p.id}>
-                                    {/* vertical connector from node bottom to video stack top */}
-                                    {renderLine(x, stemStartY, x, stemEndY, `node-child-${p.id || i}`)}
 
                                     <View style={{ position: 'absolute', left: nodeLeft, top: nodeTop }}>
                                         <TouchableOpacity onPress={() => onNodePress(p)} activeOpacity={0.85}>
@@ -352,8 +349,8 @@ const YourRoadmap = () => {
                                             </View>
                                         </TouchableOpacity>
 
-                                        {/* videos as leaf nodes below (increased vertical gap) */}
-                                        <View style={{ marginTop: 16, alignItems: 'center' }}>
+                                        {/* videos as leaf nodes below (video-to-video gap increased, node-to-first-child reduced) */}
+                                        <View style={{ marginTop: 8, alignItems: 'center' }}>
                                             {Array.from({ length: videosPerNode }).map((_, vi) => (
                                                 <TouchableOpacity key={vi} onPress={() => onVideoPress(p, vi)} activeOpacity={0.85}>
                                                     <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2 }]}>
@@ -393,34 +390,7 @@ const styles = StyleSheet.create({
         // make the canvas background transparent so it matches the surrounding page
         backgroundColor: 'transparent',
     },
-    node: {
-        position: 'absolute',
-        width: 80,
-        height: 48,
-        borderRadius: 8,
-        backgroundColor: '#fff',
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-    },
-    videoPlaceholder: {
-        width: 160,
-        height: 90,
-        borderRadius: 8,
-        backgroundColor: '#fff',
-        marginVertical: 6,
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 1 },
-    },
+    // ...removed unused helper styles (node, videoPlaceholder)
     nodeText: {
         color: '#0f172a',
         fontWeight: '600',
