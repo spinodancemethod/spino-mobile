@@ -47,10 +47,20 @@ const YourRoadmap = () => {
 
     const panResponder = useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
-            onStartShouldSetPanResponderCapture: () => true,
-            onMoveShouldSetPanResponder: () => true,
-            onMoveShouldSetPanResponderCapture: () => true,
+            // Do not claim the responder on touch start so child touchables (nodes)
+            // can receive taps. Claim the responder when the user moves a finger
+            // (drag) past a small threshold or when using two fingers (pinch).
+            onStartShouldSetPanResponder: () => false,
+            onStartShouldSetPanResponderCapture: () => false,
+            onMoveShouldSetPanResponder: (evt, gestureState) => {
+                const touches = evt.nativeEvent.touches
+                // claim when two-finger gestures (pinch/drag) or significant move
+                return (touches && touches.length === 2) || Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6
+            },
+            onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+                const touches = evt.nativeEvent.touches
+                return (touches && touches.length === 2) || Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6
+            },
 
             onPanResponderGrant: (evt, gestureState) => {
                 const touches = evt.nativeEvent.touches
@@ -247,6 +257,14 @@ const YourRoadmap = () => {
         Alert.alert(title, id ? `ID: ${id}` : undefined)
     }, [])
 
+    // Handle click on a child video under a position
+    const onVideoPress = useCallback((pos: any, index: number) => {
+        const posTitle = pos?.name || pos?.title || 'Position'
+        const vidLabel = `Video ${index + 1}`
+        const id = pos?.id ? String(pos.id) : ''
+        Alert.alert(vidLabel, `${posTitle}${id ? ` (position ID: ${id})` : ''}`)
+    }, [])
+
     return (
         <ThemedView style={{ flex: 1 }}>
 
@@ -304,7 +322,7 @@ const YourRoadmap = () => {
 
                         {/* Root box */}
                         <View style={[styles.rootBox, { left: START_X - ROOT_WIDTH / 2, top: START_Y - ROOT_HEIGHT / 2 }]}>
-                            <ThemedText variant="subheader" style={styles.rootText}>Start</ThemedText>
+                            <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
                         </View>
 
                         {/* Child circular nodes and video leaves */}
@@ -337,9 +355,11 @@ const YourRoadmap = () => {
                                         {/* videos as leaf nodes below (increased vertical gap) */}
                                         <View style={{ marginTop: 16, alignItems: 'center' }}>
                                             {Array.from({ length: videosPerNode }).map((_, vi) => (
-                                                <View key={vi} style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2 }]}>
-                                                    <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>Video {vi + 1}</ThemedText>
-                                                </View>
+                                                <TouchableOpacity key={vi} onPress={() => onVideoPress(p, vi)} activeOpacity={0.85}>
+                                                    <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2 }]}>
+                                                        <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>Video {vi + 1}</ThemedText>
+                                                    </View>
+                                                </TouchableOpacity>
                                             ))}
                                         </View>
                                     </View>
