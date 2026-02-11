@@ -25,6 +25,8 @@ const VIDEO_W = 120
 const VIDEO_H = 66
 // increased vertical gap between video leaves (doubled)
 const VIDEO_MARGIN = 12
+// size of the completion indicator shown on each video leaf
+const ICON_SIZE = 18
 // gap between the end of a stem and the top of a position node
 // increased so the connector line sits visibly below the position node
 const STEM_GAP = 16
@@ -351,13 +353,23 @@ const YourRoadmap = () => {
 
                                         {/* videos as leaf nodes below (video-to-video gap increased, node-to-first-child reduced) */}
                                         <View style={{ marginTop: 8, alignItems: 'center' }}>
-                                            {Array.from({ length: videosPerNode }).map((_, vi) => (
-                                                <TouchableOpacity key={vi} onPress={() => onVideoPress(p, vi)} activeOpacity={0.85}>
-                                                    <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2 }]}>
-                                                        <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>Video {vi + 1}</ThemedText>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            ))}
+                                            {Array.from({ length: videosPerNode }).map((_, vi) => {
+                                                // determine completion state: use explicit list if provided
+                                                const isComplete = Array.isArray(p?.completedVideoIds)
+                                                    ? p.completedVideoIds.includes(vi)
+                                                    : vi % 2 === 0 // fallback demo pattern
+                                                const bgColor = isComplete ? '#16a34a' : '#94a3b8'
+                                                return (
+                                                    <TouchableOpacity key={vi} onPress={() => onVideoPress(p, vi)} activeOpacity={0.85}>
+                                                        <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                                                            <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>Video {vi + 1}</ThemedText>
+                                                            <View style={{ width: ICON_SIZE, height: ICON_SIZE, borderRadius: ICON_SIZE / 2, backgroundColor: bgColor, alignItems: 'center', justifyContent: 'center' }}>
+                                                                <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                                            </View>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                )
+                                            })}
                                         </View>
                                     </View>
                                 </React.Fragment>
