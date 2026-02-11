@@ -35,6 +35,7 @@ const AppContent: React.FC = () => {
             <Stack screenOptions={screenOptions}>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="home" options={{ headerShown: false }} />
+                <Stack.Screen name="your-roadmap" options={{ title: 'Your Roadmap' }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>
             <Snackbar />

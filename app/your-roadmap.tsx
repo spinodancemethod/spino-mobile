@@ -1,7 +1,6 @@
 import React, { useRef, useCallback, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
-import GlobalMenu from 'Components/GlobalMenu'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useTheme } from 'constants/useTheme'
@@ -386,7 +385,7 @@ const YourRoadmap = () => {
                         onRequestClose={closeModal}
                     >
                         <Pressable style={styles.modalBackdrop} onPress={closeModal}>
-                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}> 
+                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}>
                                 <ThemedText variant="title" style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}>{selectedPos?.name || selectedPos?.title || 'Position'}</ThemedText>
                                 <ThemedText variant="subheader" style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}>{selectedPos?.description || 'No description available.'}</ThemedText>
                                 <TouchableOpacity onPress={closeModal} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
@@ -403,7 +402,7 @@ const YourRoadmap = () => {
                         onRequestClose={closeVideoModal}
                     >
                         <Pressable style={styles.modalBackdrop} onPress={closeVideoModal}>
-                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}> 
+                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}>
                                 <ThemedText variant="title" style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}>{selectedVideo ? `Video ${selectedVideo.index + 1}` : ''}</ThemedText>
                                 <ThemedText variant="subheader" style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}>{selectedVideo?.pos?.name || 'No position'}</ThemedText>
                                 <TouchableOpacity onPress={closeVideoModal} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
