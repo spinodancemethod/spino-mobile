@@ -1,9 +1,10 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import GlobalMenu from 'Components/GlobalMenu'
-import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
+import { useTheme } from 'constants/useTheme'
 
 // Scale bounds for pinch-to-zoom (lower MIN_SCALE allows zooming out further)
 const MIN_SCALE = 0.2
@@ -35,6 +36,7 @@ const POSITION_NODE_OFFSET = 20
 
 
 const YourRoadmap = () => {
+    const { mode, colors } = useTheme()
     // Animated state
     const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
     const scale = useRef(new Animated.Value(1)).current
@@ -252,27 +254,27 @@ const YourRoadmap = () => {
     // reduced vertical offset for the spine to compact layout
     const spineY = START_Y + ROOT_HEIGHT / 2 + 8
 
+    // modal state for showing node details
+    const [selectedPos, setSelectedPos] = useState<any | null>(null)
+
     const onNodePress = useCallback((pos: any) => {
-        const title = pos?.name || pos?.title || 'Position'
-        const id = pos?.id ? String(pos.id) : ''
-        Alert.alert(title, id ? `ID: ${id}` : undefined)
+        // open modal showing node data instead of a simple alert
+        setSelectedPos(pos)
     }, [])
 
-    // Handle click on a child video under a position
+    // Handle click on a child video under a position — open a modal
+    const [selectedVideo, setSelectedVideo] = useState<{ pos: any; index: number } | null>(null)
     const onVideoPress = useCallback((pos: any, index: number) => {
-        const posTitle = pos?.name || pos?.title || 'Position'
-        const vidLabel = `Video ${index + 1}`
-        const id = pos?.id ? String(pos.id) : ''
-        Alert.alert(vidLabel, `${posTitle}${id ? ` (position ID: ${id})` : ''}`)
+        setSelectedVideo({ pos, index })
     }, [])
+
+    const closeModal = useCallback(() => setSelectedPos(null), [])
+    const closeVideoModal = useCallback(() => setSelectedVideo(null), [])
 
     return (
         <ThemedView style={{ flex: 1 }}>
 
-            <GlobalMenu />
-
             <View style={styles.headerContainer}>
-                <ThemedText variant="title" style={{ marginBottom: 4 }}>Your roadmap</ThemedText>
                 <ThemedText variant="subheader">Pinch to zoom, drag with one or two fingers to move the canvas.</ThemedText>
             </View>
 
@@ -376,6 +378,40 @@ const YourRoadmap = () => {
                             )
                         })}
                     </View>
+                    {/* Modal for selected position details */}
+                    <Modal
+                        visible={selectedPos != null}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={closeModal}
+                    >
+                        <Pressable style={styles.modalBackdrop} onPress={closeModal}>
+                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}> 
+                                <ThemedText variant="title" style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}>{selectedPos?.name || selectedPos?.title || 'Position'}</ThemedText>
+                                <ThemedText variant="subheader" style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}>{selectedPos?.description || 'No description available.'}</ThemedText>
+                                <TouchableOpacity onPress={closeModal} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
+                                    <ThemedText style={{ color: '#fff' }}>Close</ThemedText>
+                                </TouchableOpacity>
+                            </View>
+                        </Pressable>
+                    </Modal>
+                    {/* Video modal */}
+                    <Modal
+                        visible={selectedVideo != null}
+                        transparent
+                        animationType="fade"
+                        onRequestClose={closeVideoModal}
+                    >
+                        <Pressable style={styles.modalBackdrop} onPress={closeVideoModal}>
+                            <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}> 
+                                <ThemedText variant="title" style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}>{selectedVideo ? `Video ${selectedVideo.index + 1}` : ''}</ThemedText>
+                                <ThemedText variant="subheader" style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}>{selectedVideo?.pos?.name || 'No position'}</ThemedText>
+                                <TouchableOpacity onPress={closeVideoModal} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
+                                    <ThemedText style={{ color: '#fff' }}>Close</ThemedText>
+                                </TouchableOpacity>
+                            </View>
+                        </Pressable>
+                    </Modal>
                 </Animated.View>
             </View>
         </ThemedView>
@@ -450,6 +486,34 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 3,
         shadowOffset: { width: 0, height: 1 },
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContainer: {
+        width: 320,
+        padding: 20,
+        // slightly lighter/off-white to sit above the page background
+        backgroundColor: '#f7fafc',
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalCloseBtn: {
+        marginTop: 8,
+        backgroundColor: '#111827',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    modalTitleText: {
+        color: '#0f172a',
+        fontWeight: '700',
+    },
+    modalBodyText: {
+        color: '#0f172a',
     },
 })
 
