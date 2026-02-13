@@ -6,6 +6,7 @@ import { usePositions } from '@/lib/hooks/usePositions'
 import { View } from 'react-native'
 import { FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
+import { router } from 'expo-router'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
@@ -51,7 +52,7 @@ const Library = () => {
             positionName={getPosition(item.position_id)?.name}
             liked={favouriteIds.includes(item.id)}
             decked={deckIds.includes(item.id)}
-            onPress={() => console.log('Tapped', item.id)}
+            onPress={() => router.push(`/video/${item.id}`)}
         />
     );
 

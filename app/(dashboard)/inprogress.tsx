@@ -3,6 +3,7 @@ import ThemedView from 'Components/ThemedView'
 import { useDeckByUser } from 'lib/hooks/useDeckByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import VideoTile from 'Components/VideoTile'
+import { router } from 'expo-router'
 import { ActivityIndicator, FlatList } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useEffect, useState } from 'react'
@@ -60,6 +61,7 @@ const InProgress = () => {
                             showDeckToggle={true}
                             decked={deckIds.includes(item.id)}
                             showFavouriteToggle={false}
+                            onPress={() => router.push(`/video/${item.id}`)}
                         />
                     )}
                     contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}

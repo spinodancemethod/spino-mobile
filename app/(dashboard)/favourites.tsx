@@ -4,6 +4,7 @@ import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import VideoTile from 'Components/VideoTile'
+import { router } from 'expo-router'
 import { ActivityIndicator, FlatList } from 'react-native'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
 import { useEffect, useState } from 'react'
@@ -59,6 +60,7 @@ const Favourites = () => {
                             positionName={getPosition(item.position_id)?.name}
                             liked={favIds.includes(item.id)}
                             decked={deckIds.includes(item.id)}
+                            onPress={() => router.push(`/video/${item.id}`)}
                         />
                     )}
                     extraData={{ favIds, deckIds, displayedVideos }}

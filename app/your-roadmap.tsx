@@ -3,6 +3,7 @@ import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
+import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
 // Scale bounds for pinch-to-zoom (lower MIN_SCALE allows zooming out further)
@@ -261,7 +262,7 @@ const YourRoadmap = () => {
         setSelectedPos(pos)
     }, [])
 
-    // Handle click on a child video under a position — open a modal
+    // Handle click on a child video under a position — open the video modal
     const [selectedVideo, setSelectedVideo] = useState<{ pos: any; index: number } | null>(null)
     const onVideoPress = useCallback((pos: any, index: number) => {
         setSelectedVideo({ pos, index })
@@ -395,7 +396,7 @@ const YourRoadmap = () => {
                             </View>
                         </Pressable>
                     </Modal>
-                    {/* Video modal */}
+                    {/* Video modal for placeholder/demo videos */}
                     <Modal
                         visible={selectedVideo != null}
                         transparent
@@ -406,7 +407,14 @@ const YourRoadmap = () => {
                             <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}>
                                 <ThemedText variant="title" style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}>{selectedVideo ? `Video ${selectedVideo.index + 1}` : ''}</ThemedText>
                                 <ThemedText variant="subheader" style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}>{selectedVideo?.pos?.name || 'No position'}</ThemedText>
-                                <TouchableOpacity onPress={closeVideoModal} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
+                                <TouchableOpacity onPress={() => {
+                                    // navigate to the video detail route using the same id scheme as before
+                                    const videoId = `${selectedVideo?.pos?.id || 'pos'}-v${selectedVideo?.index}`
+                                    router.push(`/video/${videoId}`)
+                                }} style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
+                                    <ThemedText style={{ color: '#fff' }}>Go to video</ThemedText>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={closeVideoModal} style={[styles.modalCloseBtn, { marginTop: 8, backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}>
                                     <ThemedText style={{ color: '#fff' }}>Close</ThemedText>
                                 </TouchableOpacity>
                             </View>
