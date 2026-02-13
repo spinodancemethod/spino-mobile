@@ -5,7 +5,6 @@ import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedPill from 'Components/ThemedPill'
 import { getLevelLabel, getLevelInfo } from 'constants/Levels'
-// ...existing code...
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
 import { usePositions } from 'lib/hooks/usePositions'
@@ -154,7 +153,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
     card: { padding: 16, borderRadius: 12, alignItems: 'flex-start' },
     thumb: { width: '100%', aspectRatio: 16 / 9, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
-    notesTitle: { marginBottom: 8 },
+    notesTitle: { marginBottom: 8, fontSize: 16 },
     noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
     noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
     noteScroll: { maxHeight: 300 },
