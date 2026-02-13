@@ -1,34 +1,40 @@
-# GitHub Copilot / Automated Assistant Instructions for spino-mobile
+## Copilot / Automated Assistant Instructions — spino-mobile
 
 Purpose
-- Short guide for any automated assistant (Copilot-style) that will edit or review this repository.
+- Short, action-oriented guidance for automated assistants editing this repo. Keep changes minimal, explicit, and easy to review.
 
-Repository overview
-- Tech: React Native (Expo), TypeScript.
-- Where the app lives: `app/` (screens/components). Key files: `app/your-roadmap.tsx` (roadmap canvas), `lib/hooks/` (data hooks), `Components/` (UI primitives), `constants/` (theme + styles).
+Big picture (read these files first)
+- Runtime: Expo + React Native (TypeScript). Main app code: `app/` and feature screens under `app/(dashboard)/`.
+- Theming: `constants/ThemeProvider.tsx` + `constants/useTheme.ts` + `constants/Colors.tsx`. UI primitives (`ThemedText`, `ThemedView`) read theme via `useTheme()` — prefer them over raw Views/Text for color correctness.
+- Data layer: React Query hooks live in `lib/hooks/` (notably `useVideos`, `usePositions`, `useFavouritesByUser`, `useToggleFavourite`). Supabase client config: `lib/supabase.ts` and `lib/api/`.
 
-Goals for automated edits
-- Make minimal, well-scoped edits. Prefer small patches that are easy to review.
-- Preserve existing patterns: use `useTheme()` for colors, `ThemedText`/`ThemedView` for UI, and existing hooks (`usePositions`, `useVideos`) for data.
-- Run a quick typecheck after edits: `npx -y tsc --noEmit`.
-- If UI changes are made, prefer runtime-safe defaults and keep platform parity (iOS/Android).
+What to change and what to avoid
+- Small, scoped edits only. If you must refactor, open a PR with a short design note.
+- Do not add new dependencies without explicit owner approval. If needed, propose which package and why.
+- Never hardcode secrets. Use existing environment conventions: `EXPO_PUBLIC_DEV_USER_ID` (Expo) or `DEV_USER_ID` for local dev fallbacks.
 
-Style and safety
-- Do not add or leak secrets (API keys, tokens, or .env values). If credentials are required, request them explicitly from maintainers.
-- Prefer existing project conventions over adding new libraries. If a dependency is necessary, add it only after confirming with a human and update `package.json`.
-- Keep edits backward-compatible. Avoid large refactors without approval.
+Patterns & conventions (examples)
+- Themed styling: use `useTheme()` to get `{ mode, colors }` and apply `colors.card`, `colors.text`, etc. Example: `app/your-roadmap.tsx` modal uses `colors.card` in dark mode.
+- Data fetching: create small hooks under `lib/hooks/` and use React Query for caching/invalidation. Check `lib/queryClient.ts` for setup.
+- Optimistic updates: `useToggleFavourite` performs optimistic updates to the favourites cache — preserve this pattern when modifying favourites logic.
+- UI/gesture code: animated canvas uses React Native `Animated` + `PanResponder` (see `app/your-roadmap.tsx`) — keep gesture handling touch-friendly (don't intercept taps unnecessarily).
 
-Testing & validation
-- Typecheck: `npx -y tsc --noEmit`.
-- Dev run: `npx expo start -c` (clear cache) and test on device/emulator.
+Critical files to inspect when editing
+- `app/your-roadmap.tsx` — complex canvas, gesture, and layout math (node positioning, stems, scale/pan). Small UI changes here affect layout math.
+- `lib/hooks/*.ts` — where data contracts and query keys live; keep query keys stable.
+- `lib/supabase.ts` and `sql/*.sql` — Supabase integration and server-side helpers.
+- `Components/` — reusable Themed components; prefer these for consistent look-and-feel.
 
-Files & commits
-- When creating files, place them in the appropriate folder. Config for Copilot helpers belongs under `.github/`.
-- Keep commit messages short and descriptive: e.g., `your-roadmap: make node modal theme-aware`.
+Dev workflows & validation
+- Typecheck: `npx -y tsc --noEmit` (run after edits).
+- Start app: `npx expo start -c` (clear cache). Test on device/emulator.
+- If touching queries/hooks, run a smoke test that fetches data or mock `lib/supabase` locally.
 
-If you need additional context
-- Read `AGENTS.md` and the `constants/` (ThemeProvider, useTheme) for theme behavior.
-- Ask the repo owner before making large UI/UX changes or adding new dependencies.
+PR guidance
+- Keep PRs small. Title format: `<area>: concise description` (e.g., `your-roadmap: add video modal`).
+- Include a developer note if you changed query keys or added invalidations.
 
----
-Generated: minimal Copilot instructions for quick edit guidance.
+If uncertain
+- Read `AGENTS.md` and `README.md` for context. Ask maintainers before large UI, dependency, or data-model changes.
+
+Last updated: auto-merged from repository context.
