@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native'
+import { useVideos } from 'lib/hooks/useVideos'
 import { usePositions } from 'lib/hooks/usePositions'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
@@ -268,6 +269,36 @@ const YourRoadmap = () => {
         setSelectedVideo({ pos, index })
     }, [])
 
+    // Small component that fetches videos for a position and renders up to videosPerNode
+    const PositionVideoStack: React.FC<{ pos: any; videosPerNode: number }> = ({ pos, videosPerNode }) => {
+        const { data: videos = [], isLoading } = useVideos(pos?.id ? { positionId: pos.id } : undefined)
+        const items = (videos && videos.length > 0) ? videos.slice(0, videosPerNode) : Array.from({ length: videosPerNode })
+
+        return (
+            <View style={{ marginTop: 8, alignItems: 'center' }}>
+                {items.map((v: any, vi: number) => {
+                    const key = v?.id ?? vi
+                    const title = v?.title ?? `Video ${vi + 1}`
+                    const isComplete = Array.isArray(pos?.completedVideoIds) ? pos.completedVideoIds.includes(v?.id ?? vi) : vi % 2 === 0
+                    const bgColor = isComplete ? '#16a34a' : '#94a3b8'
+                    return (
+                        <TouchableOpacity key={key} onPress={() => {
+                            if (v?.id) router.push(`/video/${v.id}`)
+                            else onVideoPress(pos, vi)
+                        }} activeOpacity={0.85}>
+                            <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                                <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>{title}</ThemedText>
+                                <View style={{ width: ICON_SIZE, height: ICON_SIZE, borderRadius: ICON_SIZE / 2, backgroundColor: bgColor, alignItems: 'center', justifyContent: 'center' }}>
+                                    <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    )
+                })}
+            </View>
+        )
+    }
+
     const closeModal = useCallback(() => setSelectedPos(null), [])
     const closeVideoModal = useCallback(() => setSelectedVideo(null), [])
 
@@ -354,26 +385,8 @@ const YourRoadmap = () => {
                                             </View>
                                         </TouchableOpacity>
 
-                                        {/* videos as leaf nodes below (video-to-video gap increased, node-to-first-child reduced) */}
-                                        <View style={{ marginTop: 8, alignItems: 'center' }}>
-                                            {Array.from({ length: videosPerNode }).map((_, vi) => {
-                                                // determine completion state: use explicit list if provided
-                                                const isComplete = Array.isArray(p?.completedVideoIds)
-                                                    ? p.completedVideoIds.includes(vi)
-                                                    : vi % 2 === 0 // fallback demo pattern
-                                                const bgColor = isComplete ? '#16a34a' : '#94a3b8'
-                                                return (
-                                                    <TouchableOpacity key={vi} onPress={() => onVideoPress(p, vi)} activeOpacity={0.85}>
-                                                        <View style={[styles.leafBox, { width: VIDEO_W, height: VIDEO_H, marginVertical: VIDEO_MARGIN / 2, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                                                            <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>Video {vi + 1}</ThemedText>
-                                                            <View style={{ width: ICON_SIZE, height: ICON_SIZE, borderRadius: ICON_SIZE / 2, backgroundColor: bgColor, alignItems: 'center', justifyContent: 'center' }}>
-                                                                <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
-                                                            </View>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                )
-                                            })}
-                                        </View>
+                                        {/* videos as leaf nodes below (fetch from backend) */}
+                                        <PositionVideoStack pos={p} videosPerNode={videosPerNode} />
                                     </View>
                                 </React.Fragment>
                             )

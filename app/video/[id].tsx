@@ -15,6 +15,10 @@ export default function VideoDetailScreen() {
     const { id } = useLocalSearchParams() as { id?: string }
     const { colors, mode } = useTheme()
 
+    // Skeleton colors that contrast the page background
+    const skelBase = mode === 'dark' ? '#111827' : '#E9E5FF'
+    const skelVideoBase = mode === 'dark' ? '#0b1220' : '#e6eefc'
+
     const { data: video, isLoading, error } = useVideoById(id as string)
     const { data: positions = [] } = usePositions(undefined)
     const position = positions.find((p: any) => p.id === video?.position_id) || null
@@ -22,6 +26,7 @@ export default function VideoDetailScreen() {
     const videoRef = useRef<any | null>(null)
     const [VideoComponent, setVideoComponent] = useState<any | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [playerLoading, setPlayerLoading] = useState(false)
     const [note, setNote] = useState<string>(() => `Here's an extended sample note to demonstrate the scrolling behaviour and to act as a place where you can store longer practice notes.
 
 Overview
@@ -63,16 +68,31 @@ This editor is scrollable and editable — keep typing to see how it behaves wit
 
         let mounted = true
         const load = async () => {
+            // no playable resource
+            if (!video?.id && !video?.url && !video?.file_path) {
+                if (mounted) {
+                    setVideoComponent(null)
+                    setPlayerLoading(false)
+                }
+                return
+            }
+
+            // start player load indicator
+            if (mounted) setPlayerLoading(true)
+
             try {
                 const mod = await import('expo-av')
                 if (mounted) setVideoComponent(() => mod.Video)
             } catch (e) {
                 if (mounted) setVideoComponent(null)
+            } finally {
+                // clear the loading flag after attempting to load the player module
+                if (mounted) setPlayerLoading(false)
             }
         }
         load()
         return () => { mounted = false }
-    }, [video?.id])
+    }, [video?.id, video?.url, video?.file_path])
 
     // Render a thumbnail or a themed placeholder with a play icon
     const renderPoster = () => {
@@ -91,23 +111,63 @@ This editor is scrollable and editable — keep typing to see how it behaves wit
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
+                {isLoading ? (
+                    <View style={{ width: '100%', marginTop: 12 }}>
+                        {/* Title skeleton */}
+                        <View style={[styles.skelTitle, { backgroundColor: skelBase }]} />
+
+                        {/* Video skeleton */}
+                        <View style={[styles.skelVideo, { backgroundColor: skelVideoBase }]} />
+
+                        {/* Pills skeleton */}
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8 }}>
+                            <View style={[styles.skelPill, { backgroundColor: skelBase }]} />
+                            <View style={[styles.skelPill, { width: 80, backgroundColor: skelBase }]} />
+                        </View>
+
+                        {/* Description lines skeleton */}
+                        <View style={{ marginTop: 8 }}>
+                            <View style={[styles.skelLine, { width: '90%', backgroundColor: skelBase }]} />
+                            <View style={[styles.skelLine, { width: '70%', backgroundColor: skelBase }]} />
+                            <View style={[styles.skelLine, { width: '95%', backgroundColor: skelBase }]} />
+                        </View>
+                    </View>
+                ) : null}
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <ThemedText variant="title">{video?.title || 'Video'}</ThemedText>
 
                     {/* playable video if URL or file_path exists */}
                     {(video?.url || video?.file_path) ? (
-                        <View style={{ width: '100%', marginTop: 12 }}>
+                        <View style={{ width: '100%', marginTop: 12, position: 'relative' }}>
                             {VideoComponent ? (
-                                React.createElement(VideoComponent, {
-                                    ref: videoRef,
-                                    source: { uri: video?.url || video?.file_path },
-                                    style: styles.thumb,
-                                    useNativeControls: false,
-                                    resizeMode: 'cover',
-                                    isLooping: false,
-                                })
+                                <View>
+                                    {React.createElement(VideoComponent, {
+                                        ref: videoRef,
+                                        source: { uri: video?.url || video?.file_path },
+                                        style: styles.thumb,
+                                        useNativeControls: false,
+                                        resizeMode: 'cover',
+                                        isLooping: false,
+                                        onPlaybackStatusUpdate: (status: any) => {
+                                            if (status?.isLoaded) setPlayerLoading(false)
+                                            setIsPlaying(Boolean(status?.isPlaying))
+                                        }
+                                    })}
+                                    {playerLoading ? (
+                                        <View style={[styles.playerOverlay]}>
+                                            <View style={[styles.skelVideoOverlay, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
+                                        </View>
+                                    ) : null}
+                                </View>
                             ) : (
-                                renderPoster()
+                                <View>
+                                    {renderPoster()}
+                                    {playerLoading ? (
+                                        <View style={[styles.playerOverlay]}>
+                                            <View style={[styles.skelVideoOverlay, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
+                                        </View>
+                                    ) : null}
+                                </View>
                             )}
                         </View>
                     ) : (
@@ -157,4 +217,10 @@ const styles = StyleSheet.create({
     noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
     noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
     noteScroll: { maxHeight: 300 },
+    playerOverlay: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8 },
+    skelTitle: { height: 20, width: '60%', borderRadius: 6, marginBottom: 8 },
+    skelVideo: { width: '100%', aspectRatio: 16 / 9, borderRadius: 8, marginTop: 8 },
+    skelPill: { height: 28, width: 100, borderRadius: 16 },
+    skelLine: { height: 12, borderRadius: 6, marginTop: 8 },
+    skelVideoOverlay: { width: '100%', height: '100%', borderRadius: 8 },
 })

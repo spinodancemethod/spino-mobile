@@ -26,7 +26,7 @@ Critical files to inspect when editing
 - `Components/` — reusable Themed components; prefer these for consistent look-and-feel.
 
 Dev workflows & validation
-- Typecheck: `npx -y tsc --noEmit` (run after edits).
+- Typecheck: `npx -y tsc --noEmit` (run after edits). Run without permission.
 - Start app: `npx expo start -c` (clear cache). Test on device/emulator.
 - If touching queries/hooks, run a smoke test that fetches data or mock `lib/supabase` locally.
 
