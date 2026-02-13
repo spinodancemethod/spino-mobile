@@ -3,6 +3,7 @@ import ThemedView from 'Components/ThemedView'
 import { useEffect } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
+import { LEVELS } from 'constants/Levels'
 import { View } from 'react-native'
 import { FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
@@ -23,14 +24,7 @@ const Library = () => {
     const videos = videosData;
 
     // Level filter (client-side). 5 levels
-    const LEVELS = [
-        { id: 'all', name: 'All levels', value: 0 },
-        { id: 'beginner', name: 'Beginner', value: 1 },
-        { id: 'improver', name: 'Improver', value: 2 },
-        { id: 'improver_plus', name: 'Improver +', value: 3 },
-        { id: 'intermediate', name: 'Intermediate', value: 4 },
-        { id: 'advance', name: 'Advance', value: 5 },
-    ];
+    // using shared LEVELS constant
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
 
 

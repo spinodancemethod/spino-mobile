@@ -1,17 +1,20 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { View, StyleSheet, Image } from 'react-native'
+import { View, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
-import ThemedButton from 'Components/ThemedButton'
+import ThemedPill from 'Components/ThemedPill'
+import { getLevelLabel, getLevelInfo } from 'constants/Levels'
+// ...existing code...
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
 import { usePositions } from 'lib/hooks/usePositions'
+import { Ionicons } from '@expo/vector-icons'
 
 
 export default function VideoDetailScreen() {
     const { id } = useLocalSearchParams() as { id?: string }
-    const { colors } = useTheme()
+    const { colors, mode } = useTheme()
 
     const { data: video, isLoading, error } = useVideoById(id as string)
     const { data: positions = [] } = usePositions(undefined)
@@ -20,6 +23,40 @@ export default function VideoDetailScreen() {
     const videoRef = useRef<any | null>(null)
     const [VideoComponent, setVideoComponent] = useState<any | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [note, setNote] = useState<string>(() => `Here's an extended sample note to demonstrate the scrolling behaviour and to act as a place where you can store longer practice notes.
+
+Overview
+- Purpose: use this space to capture observations, corrections, and practice plans for the video above.
+- How to use: jot down short items, then expand them into drills. Revisit weekly and add timestamps.
+
+Practice checklist
+1. Warm-up (5-8 minutes): mobility, ankle rolls, hip openers.
+2. Slow walkthrough (3x): perform the full sequence at 40% speed, emphasise foot placement.
+3. Focus drills (3 minutes each):
+   - Drill A: weight transfer between feet.
+   - Drill B: posture during pivot.
+   - Drill C: rhythm counting 1-2-3.
+
+Detailed notes
+- On rep 4 at 0:45 there is a small wobble — work on keeping the supporting knee soft.
+- Use a marker on the floor to keep your axis consistent when rotating.
+- Breathe on the count, exhale on the change of weight.
+
+Progress log
+- Day 1: felt awkward on transitions, landed on heel too often.
+- Day 3: transitions smoother after isolation drills.
+
+Ideas for next session
+- Film from two angles and compare slow-mo playback.
+- Add a metronome to keep tempo at 90bpm for the middle section.
+
+Reminders
+- Keep notes short and actionable.
+- If something consistently fails, reduce speed and repeat the micro-drill 50 times.
+
+This editor is scrollable and editable — keep typing to see how it behaves with a larger body of text. You can paste or type any notes here.`)
+
+    // notes are read-only in this view
 
     useEffect(() => {
         setIsPlaying(false)
@@ -38,60 +75,77 @@ export default function VideoDetailScreen() {
         return () => { mounted = false }
     }, [video?.id])
 
-    return (
-        <ThemedView style={styles.container}>
-            <View style={[styles.card, { backgroundColor: colors.card }]}>
-                <ThemedText variant="title">{video?.title || 'Video'}</ThemedText>
-                <ThemedText variant="subheader" style={{ marginTop: 8 }}>{video?.description || 'No description available.'}</ThemedText>
+    // Render a thumbnail or a themed placeholder with a play icon
+    const renderPoster = () => {
+        if (video?.thumbnail_url) {
+            return <Image source={{ uri: video.thumbnail_url }} style={styles.thumb} />
+        }
 
-                {/* playable video if URL or file_path exists */}
-                {(video?.url || video?.file_path) ? (
-                    <View style={{ width: '100%', marginTop: 12 }}>
-                        {VideoComponent ? (
-                            React.createElement(VideoComponent, {
-                                ref: videoRef,
-                                source: { uri: video?.url || video?.file_path },
-                                style: styles.thumb,
-                                useNativeControls: false,
-                                resizeMode: 'contain',
-                                isLooping: false,
-                            })
-                        ) : (
-                            <Image source={{ uri: video?.thumbnail_url }} style={styles.thumb} />
-                        )}
-                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                            <ThemedButton
-                                title={isPlaying ? 'Pause' : (isLoading ? 'Loading...' : 'Play')}
-                                onPress={async () => {
-                                    try {
-                                        if (!videoRef.current) return
-                                        if (isPlaying) {
-                                            await videoRef.current.pauseAsync()
-                                            setIsPlaying(false)
-                                        } else {
-                                            await videoRef.current.playAsync()
-                                            setIsPlaying(true)
-                                        }
-                                    } catch (e) {
-                                        console.warn('Playback error', e)
-                                    }
-                                }}
-                            />
-                        </View>
-                    </View>
-                ) : (
-                    // thumbnail fallback
-                    video?.thumbnail_url ? (
-                        <Image source={{ uri: video.thumbnail_url }} style={styles.thumb} />
-                    ) : null
-                )}
-
-                {/* Metadata */}
-                <View style={{ marginTop: 12 }}>
-                    {position ? <ThemedText>Position: {position.name}</ThemedText> : null}
-                    {typeof video?.level === 'number' ? <ThemedText>Level: {video.level}</ThemedText> : null}
-                </View>
+        const bg = mode === 'dark' ? '#0f172a' : '#eef2ff'
+        return (
+            <View style={[styles.thumb, { backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }]}>
+                <Ionicons name="play-circle" size={72} color={colors.primary} />
             </View>
+        )
+    }
+
+    return (
+        <ThemedView style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={styles.container}>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <ThemedText variant="title">{video?.title || 'Video'}</ThemedText>
+
+                    {/* playable video if URL or file_path exists */}
+                    {(video?.url || video?.file_path) ? (
+                        <View style={{ width: '100%', marginTop: 12 }}>
+                            {VideoComponent ? (
+                                React.createElement(VideoComponent, {
+                                    ref: videoRef,
+                                    source: { uri: video?.url || video?.file_path },
+                                    style: styles.thumb,
+                                    useNativeControls: false,
+                                    resizeMode: 'cover',
+                                    isLooping: false,
+                                })
+                            ) : (
+                                renderPoster()
+                            )}
+                        </View>
+                    ) : (
+                        // thumbnail fallback / placeholder
+                        renderPoster()
+                    )}
+
+                    {/* Metadata */}
+                    <View style={{ marginTop: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        {position ? <ThemedPill size="small" color="primary">{position.name}</ThemedPill> : null}
+                        {typeof video?.level === 'number' ? (
+                            (() => {
+                                const info = getLevelInfo(video.level);
+                                return <ThemedPill size="small" color={info?.color ?? '#e5e7eb'}>{getLevelLabel(video.level)}</ThemedPill>
+                            })()
+                        ) : null}
+                    </View>
+
+                    {/* Description (moved below pills) */}
+                    <ThemedText variant="subheader" style={{ marginTop: 8 }}>{video?.description || 'No description available.'}</ThemedText>
+                </View>
+
+                {/* Single read-only note area */}
+                <View style={{ marginTop: 16, width: '100%' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <ThemedText variant="title" style={styles.notesTitle}>Your Notes</ThemedText>
+                        <TouchableOpacity onPress={() => { }} accessibilityLabel="Create note">
+                            <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={[styles.noteBox, { backgroundColor: colors.uiBackground }]}>
+                        <ScrollView style={styles.noteScroll} nestedScrollEnabled>
+                            <ThemedText style={{ color: colors.text }}>{note}</ThemedText>
+                        </ScrollView>
+                    </View>
+                </View>
+            </ScrollView>
         </ThemedView>
     )
 }
@@ -99,5 +153,9 @@ export default function VideoDetailScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 16 },
     card: { padding: 16, borderRadius: 12, alignItems: 'flex-start' },
-    thumb: { width: '100%', height: 200, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
+    thumb: { width: '100%', aspectRatio: 16 / 9, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
+    notesTitle: { marginBottom: 8 },
+    noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
+    noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
+    noteScroll: { maxHeight: 300 },
 })

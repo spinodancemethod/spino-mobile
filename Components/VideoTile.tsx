@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import ThemedText from 'Components/ThemedText';
 import ThemedPill from 'Components/ThemedPill';
+import { getLevelInfo } from 'constants/Levels';
 import ThemedLike from 'Components/ThemedLike';
 import ThemedStar from 'Components/ThemedStar';
 import { useTheme } from 'constants/useTheme';
@@ -51,14 +52,7 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {typeof item?.level === 'number' ? (
                             (() => {
                                 const lvl = item.level as number;
-                                const mapping: Record<number, { label: string; color: string }> = {
-                                    1: { label: 'Beginner', color: '#10B981' }, // green
-                                    2: { label: 'Improver', color: '#34D399' },
-                                    3: { label: 'Improver +', color: '#FBBF24' },
-                                    4: { label: 'Intermediate', color: '#F97316' },
-                                    5: { label: 'Advance', color: '#EF4444' }, // red
-                                };
-                                const info = mapping[lvl] || { label: String(lvl), color: '#8B5CF6' };
+                                const info = getLevelInfo(lvl) || { label: String(lvl), color: '#8B5CF6' };
                                 return <ThemedPill color={info.color} size="small">{info.label}</ThemedPill>;
                             })()
                         ) : null}
