@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
+// fonts are preloaded in app/_layout.tsx
 import ThemedButton from 'Components/ThemedButton';
 import { router } from 'expo-router';
 import ThemedView from 'Components/ThemedView';
@@ -13,6 +14,7 @@ export default function RootIndex() {
         let mounted = true;
 
         async function check() {
+            // font preloading is handled in app/_layout.tsx
             try {
                 const { data } = await supabase.auth.getSession();
                 const session = data?.session;
