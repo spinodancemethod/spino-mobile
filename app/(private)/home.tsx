@@ -31,6 +31,7 @@ const Home = () => {
                     onPress={() => router.push('/inprogress')}
                     style={{ width: '100%', marginTop: 12 }}
                 />
+
             </ScrollView>
         </ThemedView>
     )

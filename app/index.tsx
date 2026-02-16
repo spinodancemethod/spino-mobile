@@ -1,26 +1,47 @@
-import { router } from "expo-router";
-import ThemedView from "Components/ThemedView";
-import ThemedText from "Components/ThemedText";
-import ThemedButton from "Components/ThemedButton";
-import Spacer from "Components/Spacer";
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
+import ThemedButton from 'Components/ThemedButton';
+import { router } from 'expo-router';
+import ThemedView from 'Components/ThemedView';
+import ThemedText from 'Components/ThemedText';
+import { supabase } from 'lib/supabase';
 
-export default function App() {
+export default function RootIndex() {
+    const [checking, setChecking] = useState(true);
 
-  return (
-    <ThemedView>
-      <ThemedText variant="title">Log In</ThemedText>
-      <ThemedText variant="subheader">Page.</ThemedText>
-      <ThemedText variant="subheader">Maybe this will be moved and a generic landing page instead?</ThemedText>
-      <Spacer />
-      <ThemedText> ciao.</ThemedText>
-      <Spacer />
+    useEffect(() => {
+        let mounted = true;
 
-      <Spacer />
-      <ThemedButton
-        title="Go to Your Workspace"
-        onPress={() => router.push('/inprogress')}
-        style={{ width: "100%" }}
-      />
-    </ThemedView>
-  );
+        async function check() {
+            try {
+                const { data } = await supabase.auth.getSession();
+                const session = data?.session;
+                if (!mounted) return;
+                if (session?.user) {
+                    // authenticated -> go to app home
+                    router.replace('/home');
+                } else {
+                    // not authenticated -> show login
+                    router.replace('/login');
+                }
+            } catch (e) {
+                // on error, fallback to login
+                router.replace('/login');
+            } finally {
+                if (mounted) setChecking(false);
+            }
+        }
+
+        check();
+        return () => { mounted = false; };
+    }, []);
+
+    // brief splash while we decide
+    return (
+        <ThemedView padded safe>
+            <ThemedText variant="title">Welcome</ThemedText>
+            <ThemedText variant="small">Checking authentication...</ThemedText>
+            <ActivityIndicator style={{ marginTop: 20 }} />
+        </ThemedView>
+    );
 }

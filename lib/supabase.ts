@@ -12,8 +12,14 @@ import 'expo-sqlite/localStorage/install';
         should be provided via your Expo environment configuration.
     - The auth options enable automatic token refresh and persistent sessions.
 */
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+    // helpful dev-time warning; harmless in production if you set envs properly
+    // eslint-disable-next-line no-console
+    console.warn('[supabase] EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY is not set');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
