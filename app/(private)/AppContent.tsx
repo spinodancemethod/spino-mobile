@@ -39,7 +39,6 @@ const AppContent: React.FC = () => {
                 <Stack.Screen name="video/[id]" options={{ title: 'Video' }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>
-            <Snackbar />
             {showGlobalMenu && <GlobalMenu />}
         </View>
     );
