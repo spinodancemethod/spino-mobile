@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "spino-mobile",
-    "scheme": "your-app-scheme",
+    "scheme": "spino",
     "slug": "spino-mobile",
     "version": "1.0.0",
     "orientation": "portrait",

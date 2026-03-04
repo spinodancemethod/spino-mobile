@@ -199,7 +199,11 @@ export async function signIn(email: string, password: string) {
 
 export async function signUp(email: string, password: string) {
     try {
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
+        const redirectTo = `${scheme}://login`;
+        // include redirectTo so confirmation/magic links return to the app
+        // @ts-ignore - runtime shape may vary across supabase-js versions
+        const { data, error } = await supabase.auth.signUp({ email, password }, { redirectTo });
         if (error) {
             showSnack(error.message || 'Signup failed');
             return { error };
@@ -208,6 +212,23 @@ export async function signUp(email: string, password: string) {
         return { error: null, data };
     } catch (e: any) {
         showSnack(e?.message ?? 'Signup failed');
+        return { error: e };
+    }
+}
+
+export async function signInWithOAuth(provider: string) {
+    try {
+        const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
+        const redirectTo = `${scheme}://login`;
+        // @ts-ignore - supabase client signatures differ between versions; call with redirectTo
+        const res = await supabase.auth.signInWithOAuth({ provider }, { redirectTo });
+        if (res?.error) {
+            showSnack(res.error.message || 'OAuth sign-in failed');
+            return { error: res.error };
+        }
+        return { error: null, data: res?.data };
+    } catch (e: any) {
+        showSnack(e?.message ?? 'OAuth sign-in failed');
         return { error: e };
     }
 }

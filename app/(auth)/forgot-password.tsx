@@ -21,8 +21,10 @@ export default function ForgotPassword() {
         if (!email || !emailRegex.test(email)) { setEmailError('Please enter a valid email'); return; }
         setLoading(true);
         try {
+            const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
+            const redirectTo = `${scheme}://login`;
             const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: '/',
+                redirectTo,
             });
             if (error) {
                 showSnack(error.message);
