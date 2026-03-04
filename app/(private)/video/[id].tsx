@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react'
-import { View, StyleSheet, Image, ScrollView, TouchableOpacity } from 'react-native'
+import { View, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
@@ -8,7 +8,11 @@ import { getLevelLabel, getLevelInfo } from 'constants/Levels'
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
 import { usePositions } from 'lib/hooks/usePositions'
+import { useNoteByUserAndVideo } from 'lib/hooks/useNoteByUserAndVideo'
 import { Ionicons } from '@expo/vector-icons'
+import ThemedButton from 'Components/ThemedButton'
+import { useUpsertNote } from 'lib/hooks/useUpsertNote'
+import { showSnack } from 'lib/snackbarService'
 
 
 export default function VideoDetailScreen() {
@@ -27,40 +31,14 @@ export default function VideoDetailScreen() {
     const [VideoComponent, setVideoComponent] = useState<any | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [playerLoading, setPlayerLoading] = useState(false)
-    const [note, setNote] = useState<string>(() => `Here's an extended sample note to demonstrate the scrolling behaviour and to act as a place where you can store longer practice notes.
+    // notes are read-only in this view; fetch from DB for current user + video
+    const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
+    const noteText = noteRow?.note_text ?? null
 
-Overview
-- Purpose: use this space to capture observations, corrections, and practice plans for the video above.
-- How to use: jot down short items, then expand them into drills. Revisit weekly and add timestamps.
-
-Practice checklist
-1. Warm-up (5-8 minutes): mobility, ankle rolls, hip openers.
-2. Slow walkthrough (3x): perform the full sequence at 40% speed, emphasise foot placement.
-3. Focus drills (3 minutes each):
-   - Drill A: weight transfer between feet.
-   - Drill B: posture during pivot.
-   - Drill C: rhythm counting 1-2-3.
-
-Detailed notes
-- On rep 4 at 0:45 there is a small wobble — work on keeping the supporting knee soft.
-- Use a marker on the floor to keep your axis consistent when rotating.
-- Breathe on the count, exhale on the change of weight.
-
-Progress log
-- Day 1: felt awkward on transitions, landed on heel too often.
-- Day 3: transitions smoother after isolation drills.
-
-Ideas for next session
-- Film from two angles and compare slow-mo playback.
-- Add a metronome to keep tempo at 90bpm for the middle section.
-
-Reminders
-- Keep notes short and actionable.
-- If something consistently fails, reduce speed and repeat the micro-drill 50 times.
-
-This editor is scrollable and editable — keep typing to see how it behaves with a larger body of text. You can paste or type any notes here.`)
-
-    // notes are read-only in this view
+    const [editorOpen, setEditorOpen] = useState(false)
+    const [editorText, setEditorText] = useState<string | null>(null)
+    const upsert = useUpsertNote()
+    const [saving, setSaving] = useState(false)
 
     useEffect(() => {
         setIsPlaying(false)
@@ -194,16 +172,59 @@ This editor is scrollable and editable — keep typing to see how it behaves wit
                 <View style={{ marginTop: 16, width: '100%' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <ThemedText variant="title" style={styles.notesTitle}>Your Notes</ThemedText>
-                        <TouchableOpacity onPress={() => { }} accessibilityLabel="Create note">
+                        <TouchableOpacity onPress={() => {
+                            // open editor; preload existing note if available
+                            setEditorText(noteText ?? '')
+                            setEditorOpen(true)
+                        }} accessibilityLabel="Create note">
                             <Ionicons name="create-outline" size={20} color={colors.primary} />
                         </TouchableOpacity>
                     </View>
                     <View style={[styles.noteBox, { backgroundColor: colors.uiBackground }]}>
                         <ScrollView style={styles.noteScroll} nestedScrollEnabled>
-                            <ThemedText style={{ color: colors.text }}>{note}</ThemedText>
+                            <ThemedText style={{ color: colors.text }}>
+                                {noteLoading ? 'Loading notes…' : (noteText ?? 'Add notes to aid your progress.')}
+                            </ThemedText>
                         </ScrollView>
                     </View>
                 </View>
+                {/* Editor modal */}
+                <Modal visible={editorOpen} animationType="slide" transparent>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', padding: 24, justifyContent: 'center' }}>
+                        <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16 }}>
+                            <TextInput
+                                placeholder="Add notes here"
+                                placeholderTextColor={mode === 'dark' ? '#BDB6FF' : '#6B7280'}
+                                multiline
+                                value={editorText ?? ''}
+                                onChangeText={setEditorText as any}
+                                style={{ minHeight: 120, maxHeight: 400, textAlignVertical: 'top', color: colors.text, backgroundColor: colors.uiBackground, borderRadius: 8, padding: 8 }}
+                            />
+                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                                <ThemedButton title="Cancel" variant="ghost" onPress={() => setEditorOpen(false)} />
+                                <ThemedButton title={saving ? 'Saving…' : 'Save'} onPress={async () => {
+                                    if (!id) {
+                                        showSnack('Unable to determine video id');
+                                        return;
+                                    }
+                                    setSaving(true)
+                                    try {
+                                        // convert empty string -> null so DB stores NULL rather than blank
+                                        const text = (editorText ?? '').trim() || null
+                                        await upsert.mutateAsync({ video_id: id as string, note_text: text })
+                                        setEditorOpen(false)
+                                        showSnack('Notes saved')
+                                    } catch (e) {
+                                        console.warn('Failed to save note', e)
+                                        showSnack('Failed to save note')
+                                    } finally {
+                                        setSaving(false)
+                                    }
+                                }} loading={saving} />
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </ScrollView>
         </ThemedView>
     )
