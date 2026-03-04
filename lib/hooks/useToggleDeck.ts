@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { showSnack } from 'lib/snackbarService';
 import { DECK_LIMIT } from 'constants/Config';
+import { useAuth } from 'lib/auth';
 
 /**
  * useToggleDeck
@@ -10,12 +11,22 @@ import { DECK_LIMIT } from 'constants/Config';
  */
 export function useToggleDeck(userId?: string | null) {
     const qc = useQueryClient();
-    const key = ['deck', userId || 'current'];
+    const { user, loading } = useAuth();
+    const resolvedUserId = userId ?? user?.id ?? null;
+    const key = ['deck', resolvedUserId];
 
     return useMutation({
         mutationFn: async (videoId: string) => {
-            // NOTE: development hard-coded id for local testing
-            let actualUserId: any = "371b9ee4-3660-4deb-bbfb-b0f7d77e8962";
+            // Resolve user id from the provided param or the authenticated user
+            let actualUserId: any = null;
+            if (userId) actualUserId = userId;
+            if (!actualUserId) {
+                const { data: ud, error: ue } = await supabase.auth.getUser();
+                if (ue) throw ue;
+                actualUserId = ud?.user?.id;
+            }
+
+            if (!actualUserId) throw new Error('No authenticated user available');
 
             // check server-side whether the video exists in deck
             const { data: existing, error: fetchErr } = await supabase

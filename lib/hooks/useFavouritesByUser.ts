@@ -10,9 +10,16 @@ async function fetchFavourites({ queryKey }: any) {
     // queryKey shape: ['favourites', userIdOrCurrent]
     const [_key, userId] = queryKey;
 
-    // Development: use a fixed hard-coded user id so queries and mutations
-    // operate against the same test user.
-    const actualUserId = '371b9ee4-3660-4deb-bbfb-b0f7d77e8962';
+    // Prefer explicit userId (useful for testing); otherwise resolve the
+    // currently authenticated user via Supabase.
+    let actualUserId: string | null = userId ?? null;
+    if (!actualUserId) {
+        const { data: ud, error: ue } = await supabase.auth.getUser();
+        if (ue) throw ue;
+        actualUserId = ud?.user?.id ?? null;
+    }
+
+    if (!actualUserId) return [];
 
     // Query the `favourites` table for this user and return an array of video_ids.
     const { data, error } = await supabase

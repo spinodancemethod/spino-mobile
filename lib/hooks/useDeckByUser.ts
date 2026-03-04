@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabase';
+import { useAuth } from 'lib/auth';
 
 /**
  * useDeckByUser
@@ -8,20 +9,23 @@ import { supabase } from '../supabase';
  */
 async function fetchDeck({ queryKey }: any) {
     const [_key, userId] = queryKey;
-    const actualUserId = '371b9ee4-3660-4deb-bbfb-b0f7d77e8962';
+    if (!userId) return [];
 
     const { data, error } = await supabase
         .from('deck')
         .select('video_id')
-        .eq('user_id', actualUserId);
+        .eq('user_id', userId);
     if (error) throw error;
     return (data || []).map((r: any) => r.video_id);
 }
 
 export function useDeckByUser(userId?: string | null) {
-    const enabled = !!(userId || true);
+    const { user, loading } = useAuth();
+    const resolvedUserId = userId ?? user?.id ?? null;
+    const enabled = !loading && !!resolvedUserId;
+
     return useQuery({
-        queryKey: ['deck', userId || 'current'],
+        queryKey: ['deck', resolvedUserId],
         queryFn: fetchDeck,
         enabled,
         staleTime: 1000 * 60 * 2,

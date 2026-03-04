@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { supabase } from '../supabase';
+import { useAuth } from 'lib/auth';
 
 /**
  * useToggleFavourite
@@ -11,20 +12,23 @@ import { supabase } from '../supabase';
  */
 export function useToggleFavourite(userId?: string | null) {
     const qc = useQueryClient();
-    const key = ['favourites', userId || 'current'];
+    const { user, loading } = useAuth();
+    const resolvedUserId = userId ?? user?.id ?? null;
+    const key = ['favourites', resolvedUserId];
 
     return useMutation({
         mutationFn: async (videoId: string) => {
-            // NOTE: Development convenience - a hard-coded test user id is used here
-            // so you can toggle favourites during local development without a real
-            // authenticated session. Keep this in place for dev; replace or remove
-            // before shipping to production.
-            let actualUserId: any = "371b9ee4-3660-4deb-bbfb-b0f7d77e8962";
-            // If for some reason the hard-coded id is empty, fall back to auth
+            // Resolve user id: use provided userId param if present; otherwise
+            // fall back to currently authenticated Supabase user.
+            let actualUserId: any = null;
+            if (userId) actualUserId = userId;
             if (!actualUserId) {
-                const { data: ud } = await supabase.auth.getUser();
+                const { data: ud, error: ue } = await supabase.auth.getUser();
+                if (ue) throw ue;
                 actualUserId = ud?.user?.id;
             }
+
+            if (!actualUserId) throw new Error('No authenticated user available');
 
             // Check existing favourite
             const { data: existing, error: fetchErr } = await supabase
