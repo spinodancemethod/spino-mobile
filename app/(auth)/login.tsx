@@ -5,8 +5,8 @@ import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedSearch from 'Components/ThemedSearch';
 import Spacer from 'Components/Spacer';
-import { supabase } from 'lib/supabase';
 import { showSnack } from 'lib/snackbarService';
+import { signIn } from 'lib/auth';
 import { useTheme } from 'constants/useTheme';
 
 export default function Login() {
@@ -28,15 +28,12 @@ export default function Login() {
         if (!ok) return;
         setLoading(true);
         try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                showSnack(error.message);
+            const res = await signIn(email, password);
+            if (res?.error) {
+                // signIn already shows snack
             } else {
-                showSnack('Logged in');
                 router.replace('/');
             }
-        } catch (e: any) {
-            showSnack(e?.message ?? 'Login failed');
         } finally {
             setLoading(false);
         }

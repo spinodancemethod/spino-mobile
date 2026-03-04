@@ -5,8 +5,8 @@ import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedSearch from 'Components/ThemedSearch';
 import Spacer from 'Components/Spacer';
-import { supabase } from 'lib/supabase';
 import { showSnack } from 'lib/snackbarService';
+import { signUp } from 'lib/auth';
 import { useTheme } from 'constants/useTheme';
 
 export default function Signup() {
@@ -28,15 +28,8 @@ export default function Signup() {
         if (!ok) return;
         setLoading(true);
         try {
-            const { data, error } = await supabase.auth.signUp({ email, password });
-            if (error) {
-                showSnack(error.message);
-            } else {
-                showSnack('Signup successful. Check your email to confirm.');
-                router.replace('/');
-            }
-        } catch (e: any) {
-            showSnack(e?.message ?? 'Signup failed');
+            const res = await signUp(email, password);
+            if (!res?.error) router.replace('/');
         } finally {
             setLoading(false);
         }

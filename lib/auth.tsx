@@ -2,13 +2,14 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
-import { Linking } from 'react-native';
+import { Linking, AppState } from 'react-native';
 import { showSnack } from 'lib/snackbarService';
 
 type AuthContextValue = {
     session: Session | null;
     user: User | null;
     loading: boolean;
+    processingLink?: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -17,6 +18,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [processingLink, setProcessingLink] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -49,6 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // deep link / magic link handling
         async function handleUrl(url?: string | null) {
             if (!url) return;
+            setProcessingLink(true);
+            // small delay to ensure overlay is visible for very fast responses
+            const start = Date.now();
             try {
                 // prefer supabase helper if available
                 // @ts-ignore
@@ -76,6 +81,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             } catch (e: any) {
                 showSnack(e?.message ?? 'Failed to process auth link');
+            } finally {
+                const elapsed = Date.now() - start;
+                const min = 600;
+                if (elapsed < min) await new Promise((r) => setTimeout(r, min - elapsed));
+                setProcessingLink(false);
             }
         }
 
@@ -87,15 +97,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             handleUrl(event.url);
         });
 
+        // re-check session when app comes to foreground (helps catch refresh failures)
+        const appStateHandler = (next: string) => {
+            if (next === 'active') {
+                // revalidate session
+                supabase.auth.getSession().then(({ data }) => {
+                    setSession(data?.session ?? null);
+                    setUser(data?.session?.user ?? null);
+                    if (!data?.session) {
+                        // if session went away, snack and let onAuthStateChange/router flow handle redirect
+                        showSnack('Session expired, please sign in again');
+                    }
+                }).catch(() => { /* ignore */ });
+            }
+        };
+
+        const appStateSub = AppState.addEventListener('change', appStateHandler);
+
         return () => {
             mounted = false;
             sub?.subscription?.unsubscribe();
             try { subscription.remove(); } catch (e) { /* ignore */ }
+            try { appStateSub.remove(); } catch (e) { /* ignore */ }
         };
     }, []);
 
     return (
-        <AuthContext.Provider value={{ session, user, loading }}>{children}</AuthContext.Provider>
+        <AuthContext.Provider value={{ session, user, loading, processingLink }}>
+            {children}
+            {processingLink ? (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', display: 'flex' }}>
+                    <div style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: 16, borderRadius: 8 }}>
+                        <span style={{ color: '#fff', fontWeight: '700' }}>Signing you in…</span>
+                    </div>
+                </div>
+            ) : null}
+        </AuthContext.Provider>
     );
 };
 
@@ -118,6 +155,36 @@ export async function signOut() {
         return { error: null };
     } catch (e: any) {
         showSnack(e?.message ?? 'Error signing out');
+        return { error: e };
+    }
+}
+
+export async function signIn(email: string, password: string) {
+    try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            showSnack(error.message || 'Login failed');
+            return { error };
+        }
+        showSnack('Logged in');
+        return { error: null };
+    } catch (e: any) {
+        showSnack(e?.message ?? 'Login failed');
+        return { error: e };
+    }
+}
+
+export async function signUp(email: string, password: string) {
+    try {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+            showSnack(error.message || 'Signup failed');
+            return { error };
+        }
+        showSnack('Signup successful. Check your email to confirm.');
+        return { error: null, data };
+    } catch (e: any) {
+        showSnack(e?.message ?? 'Signup failed');
         return { error: e };
     }
 }

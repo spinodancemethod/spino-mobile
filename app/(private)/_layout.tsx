@@ -4,6 +4,7 @@ import { useAuth } from 'lib/auth';
 import { ActivityIndicator } from 'react-native';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
+import { router } from 'expo-router';
 
 const RootLayout = () => {
     const { user, loading } = useAuth();
@@ -22,8 +23,11 @@ const RootLayout = () => {
         );
     }
 
-    // if user is null, the AuthProvider's onAuthStateChange will handle routing to /login
-    if (!user) return null;
+    // explicit fallback: if not loading and no user, redirect to login
+    if (!user) {
+        router.replace('/login');
+        return null;
+    }
 
     return <AppContent />;
 };
