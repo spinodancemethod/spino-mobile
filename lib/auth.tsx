@@ -106,3 +106,18 @@ export const useAuth = () => {
 };
 
 export default AuthProvider;
+
+export async function signOut() {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            showSnack(error.message || 'Error signing out');
+            return { error };
+        }
+        showSnack('Signed out successfully');
+        return { error: null };
+    } catch (e: any) {
+        showSnack(e?.message ?? 'Error signing out');
+        return { error: e };
+    }
+}

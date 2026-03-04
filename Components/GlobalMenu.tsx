@@ -2,8 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from 'constants/ThemeProvider';
-import { supabase } from 'lib/supabase';
-import { showSnack } from 'lib/snackbarService';
+import { signOut } from 'lib/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStyles } from 'constants/styles';
 import ThemedText from 'Components/ThemedText';
@@ -54,13 +53,8 @@ const GlobalMenu: React.FC = () => {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={async () => {
                         setOpen(false);
-                        const { error } = await supabase.auth.signOut();
-                        if (error) {
-                            showSnack('Error signing out');
-                        } else {
-                            showSnack('Signed out successfully');
-                            router.push('/login');
-                        }
+                        const res = await signOut();
+                        if (!res?.error) router.push('/login');
                     }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                         <Ionicons name={'log-out-outline'} size={18} color={styles.icon.color} />
                         <View style={{ width: 12 }} />
