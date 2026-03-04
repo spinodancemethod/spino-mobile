@@ -1,28 +1,39 @@
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedButton from 'Components/ThemedButton'
-import { ScrollView } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { router } from 'expo-router'
+import { useTheme } from 'constants/useTheme'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 const Home = () => {
+    const { colors } = useTheme()
+    const insets = useSafeAreaInsets()
+
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 16 }}>
-                <ThemedText variant="title" style={{ marginBottom: 12 }}>Welcome</ThemedText>
+            <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ padding: 16, width: '100%' }}>
+                {/* Hero block */}
+                <View style={{ backgroundColor: colors.primary, padding: 24, borderRadius: 14, marginTop: insets.top + 12, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}>
+                    <ThemedText variant="title" style={{ marginBottom: 12, color: colors.onPrimary, fontSize: 36, fontWeight: '800', letterSpacing: 0.2, lineHeight: 44 }}>
+                        Welcome
+                    </ThemedText>
 
-                <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
-                    Bachata can get complicated real fast. Simplifying the basics is the best way to build a solid foundation so you can focus more on movement QUALITY and less on remembering the moves.
-                </ThemedText>
+                    <ThemedText variant="subheader" style={{ marginBottom: 6, color: colors.onPrimary, fontSize: 18, fontWeight: '600', lineHeight: 26 }}>
+                        Bachata can get complicated real fast. Simplifying the basics is the best way to build a solid foundation so you can focus more on movement QUALITY and less on remembering the moves.
+                    </ThemedText>
+                </View>
 
-                <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
+                {/* Supporting copy — larger, increased line-height for readability */}
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
                     It's much easier to remember moves from positions. If you have 3 positions each with 3 variations you are able to perform 9 different combos. That is the idea.
                 </ThemedText>
 
-                <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
                     Pick a position, pick 3 variations, learn them, and master them on your social night out. After each night, add notes — what works, what doesn't — and repeat for new positions/variations.
                 </ThemedText>
 
-                <ThemedText variant="subheader" style={{ marginBottom: 12 }}>
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
                     Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines.
                 </ThemedText>
 
