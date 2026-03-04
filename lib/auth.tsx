@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
-import { Linking, AppState } from 'react-native';
+import { Linking, AppState, Modal, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { showSnack } from 'lib/snackbarService';
 
 type AuthContextValue = {
@@ -126,15 +126,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <AuthContext.Provider value={{ session, user, loading, processingLink }}>
             {children}
             {processingLink ? (
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', display: 'flex' }}>
-                    <div style={{ backgroundColor: 'rgba(0,0,0,0.6)', padding: 16, borderRadius: 8 }}>
-                        <span style={{ color: '#fff', fontWeight: '700' }}>Signing you in…</span>
-                    </div>
-                </div>
+                <Modal transparent visible animationType="fade">
+                    <View style={styles.overlay} pointerEvents="box-none">
+                        <View style={styles.box}>
+                            <ActivityIndicator size="large" color="#fff" />
+                            <Text style={styles.text}>Signing you in…</Text>
+                        </View>
+                    </View>
+                </Modal>
             ) : null}
         </AuthContext.Provider>
     );
 };
+
+const styles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    box: {
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        padding: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    text: {
+        color: '#fff',
+        fontWeight: '700',
+        marginTop: 12,
+    },
+});
 
 export const useAuth = () => {
     const ctx = useContext(AuthContext);
