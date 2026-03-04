@@ -10,8 +10,11 @@ const RootLayout = () => {
     const { user, loading } = useAuth();
 
     useEffect(() => {
-        // if not loading and no user, the global auth listener already routes to /login
-        // we keep this effect in case you want to extend behavior here
+        // Redirect to login after render if not loading and no user.
+        // Moving router calls into an effect avoids "setState in render" errors.
+        if (!loading && !user) {
+            router.replace('/login');
+        }
     }, [user, loading]);
 
     if (loading) {
@@ -23,9 +26,9 @@ const RootLayout = () => {
         );
     }
 
-    // explicit fallback: if not loading and no user, redirect to login
+    // explicit fallback: if not loading and no user, we've already scheduled
+    // a redirect in the effect above — render nothing until navigation occurs.
     if (!user) {
-        router.replace('/login');
         return null;
     }
 
