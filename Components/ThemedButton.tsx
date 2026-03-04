@@ -19,6 +19,7 @@ interface Props {
     loading?: boolean;
     style?: ViewStyle;
     textStyle?: TextStyle;
+    leftIcon?: React.ReactNode;
 }
 
 const ThemedButton: React.FC<Props> = ({
@@ -29,6 +30,7 @@ const ThemedButton: React.FC<Props> = ({
     loading = false,
     style,
     textStyle,
+    leftIcon,
 }) => {
     const { colors } = useTheme();
     const styles = useStyles();
@@ -51,15 +53,18 @@ const ThemedButton: React.FC<Props> = ({
                     color={variant === 'ghost' ? colors.text : colors.onPrimary}
                 />
             ) : (
-                <Text
-                    style={[
-                        styles.buttonText,
-                        variant === 'ghost' && styles.buttonTextGhost,
-                        textStyle,
-                    ]}
-                >
-                    {title}
-                </Text>
+                <>
+                    {leftIcon ? <React.Fragment>{leftIcon}</React.Fragment> : null}
+                    <Text
+                        style={[
+                            styles.buttonText,
+                            variant === 'ghost' && styles.buttonTextGhost,
+                            textStyle,
+                        ]}
+                    >
+                        {title}
+                    </Text>
+                </>
             )}
         </TouchableOpacity>
     );
