@@ -8,6 +8,7 @@ import ThemedText from 'Components/ThemedText';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from 'lib/queryClient';
 import { ThemeProvider } from 'constants/ThemeProvider';
+import { AuthProvider } from 'lib/auth';
 import Snackbar from 'Components/Snackbar';
 
 export default function RootLayout() {
@@ -45,8 +46,10 @@ export default function RootLayout() {
     return (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider>
-                <Slot />
-                <Snackbar />
+                <AuthProvider>
+                    <Slot />
+                    <Snackbar />
+                </AuthProvider>
             </ThemeProvider>
         </QueryClientProvider>
     );
