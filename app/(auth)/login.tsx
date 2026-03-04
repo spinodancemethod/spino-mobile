@@ -85,12 +85,7 @@ export default function Login() {
             <Spacer />
             <ThemedText variant="small">Don't have an account?</ThemedText>
             <ThemedButton title="Sign up" variant="ghost" onPress={() => router.push('/signup')} />
-            {process.env.NODE_ENV !== 'production' && (
-                <>
-                    <Spacer />
-                    <ThemedButton title="Dev: Enter app" variant="ghost" onPress={() => router.replace('/home')} />
-                </>
-            )}
+            {/* dev-only shortcut removed */}
         </ThemedView>
     );
 }
