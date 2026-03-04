@@ -33,7 +33,6 @@ const AppContent: React.FC = () => {
         <View style={{ flex: 1 }}>
             <StatusBar />
             <Stack screenOptions={screenOptions}>
-                <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="home" options={{ headerShown: false }} />
                 <Stack.Screen name="your-roadmap" options={{ title: 'Your Roadmap' }} />
                 <Stack.Screen name="video/[id]" options={{ title: 'Video' }} />

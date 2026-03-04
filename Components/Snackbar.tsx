@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { subscribe } from 'lib/snackbarService';
 import { useTheme } from 'constants/useTheme';
 
