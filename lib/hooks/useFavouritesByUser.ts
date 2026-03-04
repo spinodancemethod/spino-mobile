@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabase';
+import { useAuth } from 'lib/auth';
 
 /**
  * useFavouritesByUser
@@ -31,9 +32,12 @@ async function fetchFavourites({ queryKey }: any) {
 }
 
 export function useFavouritesByUser(userId?: string | null) {
-    const enabled = !!(userId || true); // we always try to resolve the current user if none supplied
+    const { user, loading } = useAuth();
+    const resolvedUserId = userId ?? user?.id ?? null;
+    const enabled = !loading && !!resolvedUserId;
+
     return useQuery({
-        queryKey: ['favourites', userId || 'current'],
+        queryKey: ['favourites', resolvedUserId],
         queryFn: fetchFavourites,
         enabled,
         staleTime: 1000 * 60 * 2,
