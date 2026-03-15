@@ -1,52 +1,32 @@
 ## Current features
 
-This repository contains a small Expo + React Native app (expo-router) with the following implemented features:
+This repository is a small Expo + React Native app (expo-router) focused on a video library with practice tooling. Current implemented features:
 
-- Library list (single-column) — `app/(dashboard)/library.tsx` displays videos filtered by position/category.
-- Themed UI primitives — reusable components in `Components/` such as `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedStar`.
-- Position/category selector — `usePositions` hook and `ThemedFilter` component to pick a category that drives the videos query.
-- Data fetching with React Query — centralized `queryClient` and hooks under `lib/hooks/` (`useVideos`, `usePositions`, `useFavouritesByUser`).
-- Conditional fetching — `useVideos` only requests videos when a position/category is selected to avoid unnecessary network calls.
-- Favourites support (client) —
-	- `useFavouritesByUser` returns favourite `video_id`s for the current (or dev) user.
-	- `useToggleFavourite` mutation performs optimistic updates: it flips the local favourites cache immediately and inserts/deletes rows in the `favourites` table.
-- Supabase integration — `lib/supabase.ts` configures the Supabase client for auth and database access.
-- Dev conveniences:
-	- `EXPO_PUBLIC_DEV_USER_ID` / `DEV_USER_ID` support and a small development fallback so you can test favourites without a full auth flow.
-	- A SQL file `sql/get_videos_with_fav.sql` with an example RPC (Postgres function) that can return videos with an `is_favourite` boolean server-side (optional to deploy).
+- Video library and detail pages — browse videos, view metadata and play back media. See `app/` and `app/(private)/video/[id].tsx`.
+- Notes (CRUD) on videos — per-user notes stored in `public.notes` with a composite primary key `(user_id, video_id)`. UI: read-only note area and an edit modal (editable TextInput) on the video page. Hooks: `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`. Server: `sql/notes_rls_policies.sql` contains recommended RLS policies.
+- Favourites and deck features — per-user favourites and deck management via `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useToggleFavourite.ts`, `lib/hooks/useToggleDeck.ts`.
+- Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedStar`, etc.
+- Position/category filtering — `usePositions` and `ThemedFilter` support selecting categories to drive video queries.
+- Data fetching with React Query — centralized `queryClient` with hooks under `lib/hooks/` (`useVideos`, `usePositions`, `useNoteByUserAndVideo`, etc.), including optimistic updates patterns used by toggle mutations.
+- Supabase integration — `lib/supabase.ts` configures the Supabase client for auth and DB access; session persistence is enabled for the RN client.
+- Dev conveniences — `EXPO_PUBLIC_DEV_USER_ID` / `DEV_USER_ID` support for local testing (dev fallback for auth during development).
 
 Quick files of interest
 
-- Screens: `app/` and `app/(dashboard)/`
-- Hooks: `lib/hooks/useVideos.ts`, `lib/hooks/usePositions.ts`, `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useToggleFavourite.ts`
-- API helpers / SQL: `lib/api/` and `sql/get_videos_with_fav.sql`
+- Screens: `app/`, `app/(private)/video/[id].tsx` (video page)
+- Hooks: `lib/hooks/useVideos.ts`, `lib/hooks/usePositions.ts`, `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`
+- Supabase / SQL: `lib/supabase.ts`, `sql/notes_rls_policies.sql`, `sql/get_videos_with_fav.sql`
 
-Dev notes
+Developer notes
 
-- To test favourites without signing in, set `EXPO_PUBLIC_DEV_USER_ID` in your Expo config (`app.json` extras) or set `DEV_USER_ID` in your environment and restart Expo. The app contains a temporary dev fallback for quicker local testing — remove it before production.
-- To enable the server-side RPC, run the SQL in `sql/get_videos_with_fav.sql` in your Supabase project's SQL editor.
-- The app uses React Query. If you change query keys, update any mutation invalidations accordingly.
+- To run locally, provide your Supabase URL and publishable key via Expo environment variables (e.g. `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). See `lib/supabase.ts` for usage.
+- The `notes` table uses row-level security; apply `sql/notes_rls_policies.sql` in the Supabase SQL editor (as an admin) so authenticated clients can access their own rows.
+- The app uses React Query; if you change query keys, update mutation invalidations accordingly.
 
-If you want a condensed list of remaining TODOs or prefer I add documentation for running locally (env, Expo, Supabase vars), tell me which area to document and I'll add it.
+Short TODOs
 
----
+- Redo the roadmap. the roadmap should reflect the users repertoire of moves that they have mastered for easy reviewing. This will require an additional table maybe called mastered which has user_id and video_id
 
-TODO (previous notes)
+Project intent
 
-- Connect up a video page to the library - Include Notes section and comments for private viewing, CRUD style.
-- Page to explain positions.
-- Mark as complete option so that user no longer sees these. Can be accessed in filters, include completed. 
-- 3 types of videos - reminder, counts, music, explanation (or maybe just description is enough)
-
-
-
-
-Bachata can get complicated real fast. 
-Simplifying the basics is the best way to build a solid foundation
-So you can focus more on movement QUALITY and less on remembering the moves. 
-
-Its much easier to remember moves from positions. If you have 3 positions each with 3 variations you are able to perform 9 different combos. That is the idea. 
-
-Pick a position, pick 3 variations, learn them, and master them on your social night out. After each night, add notes, what works, what doesn't. And repeat for new positions/variations. 
-
-Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines. 
+This app helps you capture short, actionable practice notes linked to individual videos and positions so you can iterate and improve session-to-session.

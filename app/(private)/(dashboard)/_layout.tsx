@@ -45,6 +45,18 @@ export default function DashboardLayout() {
                     }}
                 />
                 <Tabs.Screen
+                    name="your-roadmap"
+                    options={{
+                        title: "Your Custom Roadmap", tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                size={24}
+                                name={focused ? 'map' : 'map-outline'}
+                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
+                            />
+                        )
+                    }}
+                />
+                <Tabs.Screen
                     name="library"
                     options={{
                         title: "Library", tabBarIcon: ({ focused }) => (

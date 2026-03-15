@@ -33,13 +33,6 @@ const GlobalMenu: React.FC = () => {
                         <View style={{ width: 12 }} />
                         <ThemedText variant="subheader">Home</ThemedText>
                     </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => { setOpen(false); router.push('/your-roadmap'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-                        <Ionicons name={'map-outline'} size={18} color={styles.icon.color} />
-                        <View style={{ width: 12 }} />
-                        <ThemedText variant="subheader">Your roadmap</ThemedText>
-                    </TouchableOpacity>
-
                     <TouchableOpacity onPress={() => { toggle(); setOpen(false); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                         <Ionicons name={mode === 'dark' ? 'moon' : 'sunny'} size={18} color={styles.icon.color} />
                         <View style={{ width: 12 }} />
