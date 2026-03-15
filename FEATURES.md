@@ -12,3 +12,12 @@
 - Added a conditional Subscribe CTA on Home for non-subscribed users that routes to a dedicated subscription flow.
 - Added a new private subscription purchase/cart page with plan selection and checkout placeholder UI.
 - Connected subscription checkout to a Supabase Edge Function + Stripe session flow, including app-side mutation hook and hosted checkout URL launch.
+- Expanded `READMESUBSRCIBE.md` with an explicit Stripe + Supabase ordered completion checklist and prerequisites for database purchase readiness.
+- Clarified subscription MVP scope in `READMESUBSRCIBE.md`: monthly/yearly plans with one shared full-access entitlement.
+- Expanded `READMESUBSRCIBE.md` with major missing production-readiness steps: Stripe event coverage, price allowlist validation, billing portal, reconciliation job, and observability alerts.
+- Extended `READMESUBSRCIBE.md` further with missing integration safeguards: environment separation, Stripe customer mapping strategy, checkout return deep-link states, and server-endpoint entitlement enforcement.
+- Added final major rollout considerations to `READMESUBSRCIBE.md`: app-store billing compliance decision, refund/cancellation entitlement rules, restore purchases flow, and billing-data deletion runbook.
+- Updated `READMESUBSRCIBE.md` with remaining readiness steps for tax/invoice strategy and legal consent tracking before checkout.
+- Added additional production safeguards to `READMESUBSRCIBE.md`: checkout rate limiting, entitlement emergency override controls, and migration rollback planning.
+- Refocused `READMESUBSRCIBE.md` into an MVP-fast Stripe + Supabase launch checklist for test users and added `READMEPOSTMVP.md` to hold deferred non-blocking billing features.
+- Added additional MVP-critical plan details in `READMESUBSRCIBE.md`: webhook secret setup, checkout metadata user mapping, `customer.subscription.created` event handling, and explicit mobile deep-link return validation.
