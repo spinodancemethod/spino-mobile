@@ -60,8 +60,27 @@ const Home = () => {
                     Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines.
                 </ThemedText>
 
+                <View style={{ backgroundColor: colors.primary, padding: 24, borderRadius: 14, marginTop: insets.top + 12, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}>
+                    <ThemedText variant="subheader" style={{ marginBottom: 6, color: colors.onPrimary, fontSize: 18, fontWeight: '600', lineHeight: 26 }}>
+                        Why this conventional approach to learning is flawed.
+                    </ThemedText>
+                </View>
 
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
+                    How many classes have you been to and recorded videos only to find it near impossible to remember when you need to?
+                </ThemedText>
 
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
+                    How many times do you start a routine learnt in class, only to then find it doesnt go with the music but you feel the only way out is to complete the sequence?
+                </ThemedText>
+
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
+                    How many times are classes randomly created with no progression or structure, leaving you with no clear path to improvement?
+                </ThemedText>
+
+                <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
+                    When leaders stand infront of followers, the ability to ACCESS our archives of classes reduces dramatically. In these states, the most effective approach is to have small bite sized chunks which we can recall with ease.
+                </ThemedText>
             </ScrollView>
         </ThemedView>
     )
