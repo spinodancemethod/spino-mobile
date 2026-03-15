@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from 'constants/ThemeProvider';
 import { signOut } from 'lib/auth';
@@ -24,9 +24,7 @@ const GlobalMenu: React.FC = () => {
             </View>
 
             <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-                <TouchableWithoutFeedback onPress={() => setOpen(false)}>
-                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} />
-                </TouchableWithoutFeedback>
+                <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }} />
                 <View style={{ position: 'absolute', top: insets.top + 56, right: 12, width: 220, backgroundColor: styles.card.backgroundColor, borderRadius: 12, padding: 8, elevation: 6 }}>
                     <TouchableOpacity onPress={() => { setOpen(false); router.push('/home'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                         <Ionicons name={'home-outline'} size={18} color={styles.icon.color} />
