@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useMemo, useState } from 'react'
+import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch } from 'react-native'
@@ -11,38 +11,36 @@ import { useTheme } from 'constants/useTheme'
 // Scale bounds for pinch-to-zoom so users can inspect the roadmap comfortably.
 const MIN_SCALE = 0.2
 const MAX_SCALE = 3
+const DEFAULT_SCALE = 0.5
+const DEFAULT_VIEWPORT_MARGIN_LEFT = 16
+const DEFAULT_VIEWPORT_MARGIN_TOP = -440
+const DEFAULT_PAN_COMPENSATION_RATIO = 0.6
 
-// Surface center defaults.
+// Node sizing for the roadmap row layout.
 const SURFACE_WIDTH = 1800
-const START_X = SURFACE_WIDTH / 2
-const START_Y = 200
-
-// Node sizing for the roadmap tree layout.
-const ROOT_WIDTH = 140
-const ROOT_HEIGHT = 56
-const NODE_WIDTH = 160
-const NODE_HEIGHT = 44
+const POSITION_COLUMN_WIDTH = 180
+const SURFACE_HORIZONTAL_PADDING = 24
 const VIDEO_W = 120
 const VIDEO_H = 66
 const VIDEO_MARGIN = 12
 const ICON_SIZE = 18
-const STEM_GAP = 16
-const POSITION_NODE_OFFSET = 20
+const ROW_GAP = 18
+const VIDEO_GAP = 12
 
 const YourRoadmap = () => {
     const { mode, colors } = useTheme()
 
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
+
     // Animated state that drives drag and pinch interactions.
     const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
-    const scale = useRef(new Animated.Value(1)).current
+    const scale = useRef(new Animated.Value(DEFAULT_SCALE)).current
 
     // Refs preserve gesture state between touch events.
     const lastPan = useRef({ x: 0, y: 0 })
-    const lastScale = useRef(1)
+    const lastScale = useRef(DEFAULT_SCALE)
     const initialTouches = useRef<{ x: number; y: number }[] | null>(null)
     const initialDistance = useRef<number | null>(null)
-
-    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
     const panResponder = useRef(
         PanResponder.create({
@@ -163,93 +161,22 @@ const YourRoadmap = () => {
         return positions.filter((position: any) => (videosByPosition.get(position.id)?.length ?? 0) > 0)
     }, [positions, videosByPosition, showEmptyPositions])
 
-    const nodeCount = roadmapPositions.length
-    const maxGap = 80
-    const minGap = 12
-    const availableGap = nodeCount > 0 ? Math.max(0, (SURFACE_WIDTH - nodeCount * NODE_WIDTH) / (nodeCount + 1)) : minGap
-    const childSpacing = Math.max(minGap, Math.min(maxGap, availableGap))
-    const groupWidth = nodeCount * NODE_WIDTH + Math.max(0, nodeCount - 1) * childSpacing
-    const groupStartX = START_X - groupWidth / 2 + NODE_WIDTH / 2
+    const estimatedSurfaceHeight = useMemo(() => {
+        const rowHeight = VIDEO_H + VIDEO_MARGIN * 2
+        const baseHeight = 180
+        // Keep a stable canvas height across filter toggles to avoid viewport jumps.
+        return Math.max(baseHeight, positions.length * (rowHeight + ROW_GAP) + 96)
+    }, [positions.length])
 
-    // This helper renders crisp connector lines for the roadmap tree.
-    const renderLine = (x1: number, y1: number, x2: number, y2: number, key: string) => {
-        const dx = x2 - x1
-        const dy = y2 - y1
-
-        if (Math.abs(dx) < 1) {
-            const top = Math.min(y1, y2)
-            const height = Math.max(1, Math.abs(dy))
-            const endTop = top + height - 4
-
-            return (
-                <React.Fragment key={`line-${key}`}>
-                    <View
-                        style={{
-                            position: 'absolute',
-                            left: x1 - 1,
-                            top,
-                            width: 2,
-                            height,
-                            backgroundColor: '#cbd5e1',
-                        }}
-                    />
-                    <View
-                        style={{
-                            position: 'absolute',
-                            left: x1 - 4,
-                            top: endTop,
-                            width: 8,
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: '#cbd5e1',
-                        }}
-                    />
-                </React.Fragment>
-            )
-        }
-
-        if (Math.abs(dy) < 1) {
-            const left = Math.min(x1, x2)
-            const width = Math.max(1, Math.abs(dx))
-
-            return (
-                <View
-                    key={`line-${key}`}
-                    style={{
-                        position: 'absolute',
-                        left,
-                        top: y1 - 1,
-                        width,
-                        height: 2,
-                        backgroundColor: '#cbd5e1',
-                    }}
-                />
-            )
-        }
-
-        const length = Math.sqrt(dx * dx + dy * dy)
-        const angle = (Math.atan2(dy, dx) * 180) / Math.PI
-
-        return (
-            <View
-                key={`line-${key}`}
-                style={{
-                    position: 'absolute',
-                    left: x1,
-                    top: y1,
-                    width: length,
-                    height: 2,
-                    backgroundColor: '#cbd5e1',
-                    transform: [{ rotate: `${angle}deg` }],
-                }}
-            />
-        )
-    }
-
-    const childXs = roadmapPositions.map((_: unknown, index: number) => groupStartX + index * (NODE_WIDTH + childSpacing))
-    const firstChildX = childXs[0] ?? START_X
-    const lastChildX = childXs[childXs.length - 1] ?? START_X
-    const spineY = START_Y + ROOT_HEIGHT / 2 + 8
+    const defaultPanX = useMemo(
+        // Compensate for initial zoom so the left column stays visible on first render.
+        () => ((SURFACE_WIDTH * (1 - DEFAULT_SCALE)) / 2) * DEFAULT_PAN_COMPENSATION_RATIO + DEFAULT_VIEWPORT_MARGIN_LEFT,
+        []
+    )
+    const defaultPanY = useMemo(
+        () => DEFAULT_VIEWPORT_MARGIN_TOP,
+        []
+    )
 
     const [selectedPos, setSelectedPos] = useState<any | null>(null)
     const [selectedVideo, setSelectedVideo] = useState<{ pos: any; index: number; video: any } | null>(null)
@@ -262,11 +189,18 @@ const YourRoadmap = () => {
         setSelectedVideo({ pos: position, index, video })
     }, [])
 
+    useEffect(() => {
+        pan.setValue({ x: defaultPanX, y: defaultPanY })
+        scale.setValue(DEFAULT_SCALE)
+        lastPan.current = { x: defaultPanX, y: defaultPanY }
+        lastScale.current = DEFAULT_SCALE
+    }, [defaultPanX, defaultPanY, pan, scale])
+
     const PositionVideoStack: React.FC<{ pos: any; videos: any[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
         if (videos.length === 0 && !showEmptyState) return null
 
         return (
-            <View style={{ marginTop: 8, alignItems: 'center' }}>
+            <View style={styles.videoRow}>
                 {videos.length === 0 && showEmptyState && (
                     <View
                         style={[
@@ -311,6 +245,7 @@ const YourRoadmap = () => {
                                         width: VIDEO_W,
                                         height: VIDEO_H,
                                         marginVertical: VIDEO_MARGIN / 2,
+                                        marginRight: VIDEO_GAP,
                                         paddingHorizontal: 8,
                                         flexDirection: 'row',
                                         alignItems: 'center',
@@ -360,6 +295,7 @@ const YourRoadmap = () => {
                 <Animated.View
                     style={[
                         styles.canvasInner,
+                        { width: SURFACE_WIDTH, minHeight: estimatedSurfaceHeight },
                         {
                             transform: [
                                 { translateX: pan.x },
@@ -369,72 +305,57 @@ const YourRoadmap = () => {
                         },
                     ]}
                 >
-                    <View style={styles.surface}>
-                        {roadmapPositions.length > 0 && (
-                            <View
-                                style={{
-                                    position: 'absolute',
-                                    left: firstChildX,
-                                    top: spineY,
-                                    width: Math.max(2, lastChildX - firstChildX),
-                                    height: 2,
-                                    backgroundColor: '#cbd5e1',
-                                }}
-                            />
-                        )}
-
-                        {roadmapPositions.map((position: any, index: number) => {
-                            const x = childXs[index]
-                            const nodeTop = START_Y + ROOT_HEIGHT / 2 + 8 + 2 + 8 + POSITION_NODE_OFFSET
-
-                            return (
-                                <React.Fragment key={`stems-${position.id || index}`}>
-                                    {renderLine(x, spineY, x, nodeTop - STEM_GAP, `stem-${position.id || index}`)}
-                                </React.Fragment>
-                            )
-                        })}
-
-                        <View style={[styles.rootBox, { left: START_X - ROOT_WIDTH / 2, top: START_Y - ROOT_HEIGHT / 2 }]}>
-                            <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
+                    <View style={[styles.surface, { minHeight: estimatedSurfaceHeight }]}>
+                        <View style={styles.surfaceHeaderRow}>
+                            <View style={[styles.rootBox, styles.rootBoxStatic]}>
+                                <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
+                            </View>
+                            <View style={styles.selectedVideosHeader}>
+                                <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Chosen videos</ThemedText>
+                            </View>
                         </View>
 
-                        {roadmapPositions.map((position: any, index: number) => {
-                            const x = childXs[index]
-                            const nodeTop = START_Y + ROOT_HEIGHT / 2 + 8 + 2 + 8 + POSITION_NODE_OFFSET
-                            const nodeLeft = x - NODE_WIDTH / 2
+                        {roadmapPositions.map((position: any) => {
                             const positionFavouriteVideos = videosByPosition.get(position.id) ?? []
 
                             return (
-                                <React.Fragment key={position.id}>
-                                    <View style={{ position: 'absolute', left: nodeLeft, top: nodeTop }}>
+                                <View key={position.id} style={styles.roadmapRow}>
+                                    <View style={styles.positionColumn}>
                                         <TouchableOpacity onPress={() => onNodePress(position)} activeOpacity={0.85}>
                                             <View
                                                 style={[
                                                     styles.positionBox,
+                                                    styles.positionBoxStatic,
                                                     {
-                                                        width: NODE_WIDTH,
-                                                        height: NODE_HEIGHT,
-                                                        borderRadius: 8,
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        paddingHorizontal: 8,
+                                                        width: POSITION_COLUMN_WIDTH,
                                                     },
                                                 ]}
                                             >
                                                 <ThemedText
                                                     variant="subheader"
-                                                    style={{ ...styles.nodeText, fontSize: 16, textAlign: 'center', width: NODE_WIDTH - 16 }}
+                                                    style={{ ...styles.nodeText, fontSize: 16, textAlign: 'center', width: POSITION_COLUMN_WIDTH - 16 }}
                                                 >
                                                     {position.name || position.title || 'Position'}
                                                 </ThemedText>
                                             </View>
                                         </TouchableOpacity>
+                                    </View>
 
+                                    <View style={styles.connectorStub} />
+
+                                    <View style={styles.videosColumn}>
                                         <PositionVideoStack pos={position} videos={positionFavouriteVideos} showEmptyState={showEmptyPositions} />
                                     </View>
-                                </React.Fragment>
+                                </View>
                             )
                         })}
+
+                        {roadmapPositions.length === 0 && (
+                            <View style={styles.emptyRoadmapState}>
+                                <ThemedText variant="subheader" style={styles.emptyRoadmapTitle}>No roadmap items yet</ThemedText>
+                                <ThemedText variant="small" style={styles.emptyRoadmapText}>Favourite videos to build your roadmap, or turn on "Show empty positions" to inspect gaps.</ThemedText>
+                            </View>
+                        )}
                     </View>
 
                     <Modal visible={selectedPos != null} transparent animationType="fade" onRequestClose={closeModal}>
@@ -530,30 +451,69 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     canvasInner: {
-        width: '100%',
+        alignSelf: 'flex-start',
     },
     surface: {
-        width: 1800,
-        height: 1400,
+        width: SURFACE_WIDTH,
         backgroundColor: 'transparent',
+        paddingHorizontal: SURFACE_HORIZONTAL_PADDING,
+        paddingBottom: 48,
     },
     nodeText: {
         color: '#0f172a',
         fontWeight: '600',
     },
+    surfaceHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 18,
+    },
     rootBox: {
-        position: 'absolute',
-        width: ROOT_WIDTH,
-        height: ROOT_HEIGHT,
         borderRadius: 6,
         backgroundColor: '#e6dfd6',
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 2,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+    },
+    rootBoxStatic: {
+        width: POSITION_COLUMN_WIDTH,
     },
     rootText: {
         color: '#111827',
         fontWeight: '700',
+    },
+    selectedVideosHeader: {
+        marginLeft: 34,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    selectedVideosHeaderText: {
+        color: '#475569',
+        fontWeight: '700',
+    },
+    roadmapRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: ROW_GAP,
+    },
+    positionColumn: {
+        width: POSITION_COLUMN_WIDTH,
+    },
+    connectorStub: {
+        width: 22,
+        height: 2,
+        marginHorizontal: 12,
+        backgroundColor: '#cbd5e1',
+    },
+    videosColumn: {
+        flex: 1,
+    },
+    videoRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
     },
     leafBox: {
         backgroundColor: '#f2f7e7',
@@ -583,6 +543,27 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.06,
         shadowRadius: 3,
         shadowOffset: { width: 0, height: 1 },
+    },
+    positionBoxStatic: {
+        minHeight: VIDEO_H,
+        paddingHorizontal: 8,
+    },
+    emptyRoadmapState: {
+        marginTop: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+    },
+    emptyRoadmapTitle: {
+        marginBottom: 8,
+        color: '#0f172a',
+        fontWeight: '700',
+    },
+    emptyRoadmapText: {
+        color: '#64748b',
+        textAlign: 'center',
+        maxWidth: 420,
     },
     modalBackdrop: {
         flex: 1,
