@@ -5,11 +5,14 @@ import { ScrollView, View } from 'react-native'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
 
 const Home = () => {
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
-    const hasActiveSubscription = false
+    const subscriptionStatus = useSubscriptionStatus()
+    const hasActiveSubscription = subscriptionStatus.isActiveSubscription
+    const isCheckingSubscription = subscriptionStatus.isLoading
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -25,6 +28,23 @@ const Home = () => {
                     </ThemedText>
                 </View>
                 {/* Keep subscription status and CTA grouped in one card so the state is visually clear. */}
+                {isCheckingSubscription && (
+                    <View
+                        style={{
+                            backgroundColor: colors.card,
+                            borderRadius: 14,
+                            padding: 16,
+                            marginBottom: 16,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                        }}
+                    >
+                        <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
+                            Checking your subscription...
+                        </ThemedText>
+                    </View>
+                )}
+
                 {hasActiveSubscription && (
                     <View
                         style={{
@@ -47,7 +67,7 @@ const Home = () => {
                     </View>
                 )}
 
-                {!hasActiveSubscription && (
+                {!isCheckingSubscription && !hasActiveSubscription && (
                     <View
                         style={{
                             backgroundColor: colors.card,
