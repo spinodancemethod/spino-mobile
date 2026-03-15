@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet } from 'react-native';
+import * as Linking from 'expo-linking';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
+import { useCreateCheckoutSession } from 'lib/hooks/useCreateCheckoutSession';
 
 type Plan = {
     id: 'monthly' | 'yearly';
@@ -31,15 +33,30 @@ const plans: Plan[] = [
 export default function Subscribe() {
     const { colors } = useTheme();
     const [selectedPlan, setSelectedPlan] = useState<Plan['id']>('monthly');
+    const checkoutMutation = useCreateCheckoutSession();
 
     const selectedPlanData = useMemo(
         () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0],
         [selectedPlan]
     );
 
-    const onCheckout = () => {
-        // Placeholder action until payment integration is connected.
-        showSnack(`Checkout coming soon for ${selectedPlanData.title}.`);
+    const onCheckout = async () => {
+        const priceId =
+            selectedPlan === 'monthly'
+                ? process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_MONTHLY
+                : process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_YEARLY;
+
+        if (!priceId) {
+            showSnack('Missing Stripe price ID configuration for this plan.');
+            return;
+        }
+
+        try {
+            const result = await checkoutMutation.mutateAsync({ priceId });
+            await Linking.openURL(result.url);
+        } catch (error: any) {
+            showSnack(error?.message ?? 'Failed to start checkout.');
+        }
     };
 
     return (
@@ -92,12 +109,13 @@ export default function Subscribe() {
                         <ThemedText>{selectedPlanData.price}</ThemedText>
                     </View>
                     <ThemedButton
-                        title="Continue to Checkout"
+                        title={checkoutMutation.isPending ? 'Starting Checkout...' : 'Continue to Checkout'}
                         onPress={onCheckout}
                         style={{ width: '100%', marginTop: 12 }}
+                        disabled={checkoutMutation.isPending}
                     />
                     <ThemedText variant="small" style={styles.disclaimer}>
-                        Payment processing will be connected in the next step.
+                        Secure checkout is powered by Stripe via Supabase Edge Functions.
                     </ThemedText>
                 </View>
             </ScrollView>

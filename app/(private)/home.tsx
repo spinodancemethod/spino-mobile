@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 const Home = () => {
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
-    const hasActiveSubscription = true
+    const hasActiveSubscription = false
 
     return (
         <ThemedView style={{ flex: 1 }}>
