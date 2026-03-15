@@ -1,9 +1,10 @@
-import React, { useRef, useCallback, useState } from 'react'
+import React, { useRef, useCallback, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
-import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native'
-import { useVideos } from 'lib/hooks/useVideos'
+import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
+import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
+import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
@@ -139,9 +140,30 @@ const YourRoadmap = () => {
     ).current
 
     const { data: positions = [] } = usePositions(undefined)
+    const { data: favouriteIds = [] } = useFavouritesByUser()
+    const { data: favouriteVideos = [] } = useVideosByIds(favouriteIds)
+    const [showEmptyPositions, setShowEmptyPositions] = useState(false)
 
-    const nodeCount = positions.length
-    const videosPerNode = 3
+    const videosByPosition = useMemo(() => {
+        const grouped = new Map<string, any[]>()
+
+        for (const video of favouriteVideos) {
+            const positionId = video?.position_id
+            if (!positionId) continue
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [favouriteVideos])
+
+    const roadmapPositions = useMemo(() => {
+        if (showEmptyPositions) return positions
+        return positions.filter((position: any) => (videosByPosition.get(position.id)?.length ?? 0) > 0)
+    }, [positions, videosByPosition, showEmptyPositions])
+
+    const nodeCount = roadmapPositions.length
     const maxGap = 80
     const minGap = 12
     const availableGap = nodeCount > 0 ? Math.max(0, (SURFACE_WIDTH - nodeCount * NODE_WIDTH) / (nodeCount + 1)) : minGap
@@ -224,33 +246,48 @@ const YourRoadmap = () => {
         )
     }
 
-    const childXs = positions.map((_: unknown, index: number) => groupStartX + index * (NODE_WIDTH + childSpacing))
+    const childXs = roadmapPositions.map((_: unknown, index: number) => groupStartX + index * (NODE_WIDTH + childSpacing))
     const firstChildX = childXs[0] ?? START_X
     const lastChildX = childXs[childXs.length - 1] ?? START_X
     const spineY = START_Y + ROOT_HEIGHT / 2 + 8
 
     const [selectedPos, setSelectedPos] = useState<any | null>(null)
-    const [selectedVideo, setSelectedVideo] = useState<{ pos: any; index: number } | null>(null)
+    const [selectedVideo, setSelectedVideo] = useState<{ pos: any; index: number; video: any } | null>(null)
 
     const onNodePress = useCallback((position: any) => {
         setSelectedPos(position)
     }, [])
 
-    const onVideoPress = useCallback((position: any, index: number) => {
-        setSelectedVideo({ pos: position, index })
+    const onVideoPress = useCallback((position: any, index: number, video: any) => {
+        setSelectedVideo({ pos: position, index, video })
     }, [])
 
-    const PositionVideoStack: React.FC<{ pos: any; videosPerNode: number }> = ({ pos, videosPerNode: limit }) => {
-        const { data: videos = [] } = useVideos(pos?.id ? { positionId: pos.id } : undefined)
-        const items = videos.length > 0 ? videos.slice(0, limit) : Array.from({ length: limit })
+    const PositionVideoStack: React.FC<{ pos: any; videos: any[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
+        if (videos.length === 0 && !showEmptyState) return null
 
         return (
             <View style={{ marginTop: 8, alignItems: 'center' }}>
-                {items.map((video: any, index: number) => {
-                    const key = video?.id ?? index
+                {videos.length === 0 && showEmptyState && (
+                    <View
+                        style={[
+                            styles.leafBox,
+                            styles.emptyLeafBox,
+                            {
+                                width: VIDEO_W,
+                                height: VIDEO_H,
+                                marginVertical: VIDEO_MARGIN / 2,
+                                paddingHorizontal: 8,
+                            },
+                        ]}
+                    >
+                        <ThemedText variant="small" style={styles.emptyLeafText}>No favourites yet</ThemedText>
+                    </View>
+                )}
+                {videos.map((video: any, index: number) => {
+                    const key = video?.id ?? `${pos?.id}-fav-${index}`
                     const title = video?.title ?? `Video ${index + 1}`
                     const isComplete = Array.isArray(pos?.completedVideoIds)
-                        ? pos.completedVideoIds.includes(video?.id ?? index)
+                        ? pos.completedVideoIds.includes(video?.id)
                         : index % 2 === 0
                     const bgColor = isComplete ? '#16a34a' : '#94a3b8'
 
@@ -263,7 +300,7 @@ const YourRoadmap = () => {
                                     return
                                 }
 
-                                onVideoPress(pos, index)
+                                onVideoPress(pos, index, video)
                             }}
                             activeOpacity={0.85}
                         >
@@ -307,7 +344,18 @@ const YourRoadmap = () => {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ThemedText variant="title" style={{ padding: 12 }}>Your Roadmap</ThemedText>
+            <View style={styles.headerRow}>
+                <ThemedText variant="title" style={styles.headerTitle}>Your Roadmap</ThemedText>
+                <View style={styles.toggleRow}>
+                    <ThemedText variant="small" style={styles.toggleText}>Show empty positions</ThemedText>
+                    <Switch
+                        value={showEmptyPositions}
+                        onValueChange={setShowEmptyPositions}
+                        trackColor={{ false: '#cbd5e1', true: colors.primary }}
+                        thumbColor="#ffffff"
+                    />
+                </View>
+            </View>
             <View style={styles.canvasOuter} {...panResponder.panHandlers}>
                 <Animated.View
                     style={[
@@ -322,7 +370,7 @@ const YourRoadmap = () => {
                     ]}
                 >
                     <View style={styles.surface}>
-                        {positions.length > 0 && (
+                        {roadmapPositions.length > 0 && (
                             <View
                                 style={{
                                     position: 'absolute',
@@ -335,7 +383,7 @@ const YourRoadmap = () => {
                             />
                         )}
 
-                        {positions.map((position: any, index: number) => {
+                        {roadmapPositions.map((position: any, index: number) => {
                             const x = childXs[index]
                             const nodeTop = START_Y + ROOT_HEIGHT / 2 + 8 + 2 + 8 + POSITION_NODE_OFFSET
 
@@ -350,10 +398,11 @@ const YourRoadmap = () => {
                             <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
                         </View>
 
-                        {positions.map((position: any, index: number) => {
+                        {roadmapPositions.map((position: any, index: number) => {
                             const x = childXs[index]
                             const nodeTop = START_Y + ROOT_HEIGHT / 2 + 8 + 2 + 8 + POSITION_NODE_OFFSET
                             const nodeLeft = x - NODE_WIDTH / 2
+                            const positionFavouriteVideos = videosByPosition.get(position.id) ?? []
 
                             return (
                                 <React.Fragment key={position.id}>
@@ -381,7 +430,7 @@ const YourRoadmap = () => {
                                             </View>
                                         </TouchableOpacity>
 
-                                        <PositionVideoStack pos={position} videosPerNode={videosPerNode} />
+                                        <PositionVideoStack pos={position} videos={positionFavouriteVideos} showEmptyState={showEmptyPositions} />
                                     </View>
                                 </React.Fragment>
                             )
@@ -420,7 +469,7 @@ const YourRoadmap = () => {
                                     variant="title"
                                     style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}
                                 >
-                                    {selectedVideo ? `Video ${selectedVideo.index + 1}` : ''}
+                                    {selectedVideo?.video?.title || (selectedVideo ? `Video ${selectedVideo.index + 1}` : '')}
                                 </ThemedText>
                                 <ThemedText
                                     variant="subheader"
@@ -430,8 +479,9 @@ const YourRoadmap = () => {
                                 </ThemedText>
                                 <TouchableOpacity
                                     onPress={() => {
-                                        const videoId = `${selectedVideo?.pos?.id || 'pos'}-v${selectedVideo?.index}`
-                                        router.push(`/video/${videoId}`)
+                                        if (selectedVideo?.video?.id) {
+                                            router.push(`/video/${selectedVideo.video.id}`)
+                                        }
                                     }}
                                     style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}
                                 >
@@ -453,6 +503,23 @@ const YourRoadmap = () => {
 }
 
 const styles = StyleSheet.create({
+    headerRow: {
+        paddingHorizontal: 12,
+        paddingTop: 10,
+        paddingBottom: 8,
+    },
+    headerTitle: {
+        marginBottom: 8,
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    toggleText: {
+        color: '#475569',
+        fontWeight: '600',
+    },
     headerContainer: {
         paddingHorizontal: 16,
         paddingTop: 8,
@@ -494,6 +561,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         elevation: 1,
+    },
+    emptyLeafBox: {
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: '#94a3b8',
+    },
+    emptyLeafText: {
+        color: '#64748b',
+        textAlign: 'center',
+        fontWeight: '600',
     },
     positionBox: {
         backgroundColor: '#fff7f9',
