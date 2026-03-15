@@ -49,7 +49,7 @@ export default function Subscribe() {
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
             >
-                <View style={[styles.hero, { backgroundColor: colors.primary }]}> 
+                <View style={[styles.hero, { backgroundColor: colors.primary }]}>
                     <ThemedText variant="title" style={{ ...styles.heroTitle, color: colors.onPrimary }}>
                         Upgrade Your Access
                     </ThemedText>
@@ -85,7 +85,7 @@ export default function Subscribe() {
                     );
                 })}
 
-                <View style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                <View style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <ThemedText variant="subheader" style={styles.cartTitle}>Cart Summary</ThemedText>
                     <View style={styles.cartRow}>
                         <ThemedText>{selectedPlanData.title}</ThemedText>
