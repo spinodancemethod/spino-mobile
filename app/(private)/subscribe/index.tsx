@@ -46,7 +46,7 @@ export default function Subscribe() {
         const priceId =
             selectedPlan === 'monthly'
                 ? process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_MONTHLY
-                : process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_YEARLY;
+                : process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_YEARLY ?? process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_ANNUALLY;
 
         if (!priceId) {
             showSnack('Missing Stripe price ID configuration for this plan.');

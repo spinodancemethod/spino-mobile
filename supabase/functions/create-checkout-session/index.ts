@@ -40,6 +40,26 @@ function hasCurrentAccess(status: string | null, currentPeriodEnd: string | null
     return new Date(currentPeriodEnd).getTime() > Date.now();
 }
 
+function buildReturnUrl(req: Request, path: '/subscribe/success' | '/subscribe/cancel') {
+    const explicit =
+        path === '/subscribe/success'
+            ? Deno.env.get('STRIPE_CHECKOUT_SUCCESS_URL')
+            : Deno.env.get('STRIPE_CHECKOUT_CANCEL_URL');
+
+    if (explicit) {
+        return explicit;
+    }
+
+    // Web checkout should return to an http(s) URL, while native can use deep links.
+    const origin = req.headers.get('origin');
+    if (origin && /^https?:\/\//i.test(origin)) {
+        return `${origin.replace(/\/$/, '')}${path}`;
+    }
+
+    const scheme = Deno.env.get('EXPO_PUBLIC_APP_SCHEME') ?? 'spino';
+    return `${scheme}:${path}`.replace(':/', '://');
+}
+
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
@@ -61,7 +81,9 @@ Deno.serve(async (req: Request) => {
         }
 
         if (allowedPriceIds.size === 0) {
-            throw new Error('Missing allowed Stripe price IDs');
+            throw new Error(
+                'Missing allowed Stripe price IDs. Set function env keys: STRIPE_PRICE_ID_MONTHLY and STRIPE_PRICE_ID_YEARLY (or STRIPE_PRICE_ID_ANNUALLY).',
+            );
         }
 
         const authHeader = req.headers.get('Authorization');
@@ -128,12 +150,8 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(409, { error: 'User already has an active subscription' });
         }
 
-        const successUrl =
-            Deno.env.get('STRIPE_CHECKOUT_SUCCESS_URL') ??
-            `${Deno.env.get('EXPO_PUBLIC_APP_SCHEME') ?? 'spino'}://subscribe/success`;
-        const cancelUrl =
-            Deno.env.get('STRIPE_CHECKOUT_CANCEL_URL') ??
-            `${Deno.env.get('EXPO_PUBLIC_APP_SCHEME') ?? 'spino'}://subscribe/cancel`;
+        const successUrl = buildReturnUrl(req, '/subscribe/success');
+        const cancelUrl = buildReturnUrl(req, '/subscribe/cancel');
 
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',

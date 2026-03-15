@@ -24,3 +24,5 @@
 - Hardened the Stripe checkout edge function with server-side price validation, existing-subscription blocking, and reusable Stripe customer support; added a Stripe webhook edge function plus minimal billing SQL schema for MVP subscription syncing.
 - Added clean in-app Stripe return handling with real `/subscribe/success` and `/subscribe/cancel` routes, a shared subscription status hook, and auth deep-link filtering so checkout return URLs are not treated as auth callbacks.
 - Replaced Home's hardcoded subscription flag with the shared subscription status hook and added a loading-state card to avoid showing the wrong CTA while entitlement is being fetched.
+- Added Stripe price-ID env compatibility for yearly plan naming (`YEARLY` and `ANNUALLY`) across checkout client + edge function allowlist, plus clearer function error text when price env keys are missing.
+- Updated checkout return URL generation to use browser origin on web (`http(s)://.../subscribe/success|cancel`) while keeping custom app-scheme deep links for native flows.
