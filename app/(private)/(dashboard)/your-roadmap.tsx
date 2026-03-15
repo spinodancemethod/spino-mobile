@@ -307,11 +307,7 @@ const YourRoadmap = () => {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <View style={styles.headerContainer}>
-                <ThemedText variant="subheader">Maybe think about having a filter for liked versus all here?</ThemedText>
-                <ThemedText variant="subheader">That way users can build custom roadmaps based on their preferences.</ThemedText>
-            </View>
-
+            <ThemedText variant="title" style={{ padding: 12 }}>Your Roadmap</ThemedText>
             <View style={styles.canvasOuter} {...panResponder.panHandlers}>
                 <Animated.View
                     style={[

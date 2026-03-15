@@ -47,7 +47,7 @@ export default function DashboardLayout() {
                 <Tabs.Screen
                     name="your-roadmap"
                     options={{
-                        title: "Your Custom Roadmap", tabBarIcon: ({ focused }) => (
+                        title: "Your Roadmap", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
                                 name={focused ? 'map' : 'map-outline'}
