@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 const Home = () => {
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
+    const hasActiveSubscription = true
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -23,6 +24,28 @@ const Home = () => {
                         Bachata can get complicated real fast. Simplifying the basics is the best way to build a solid foundation so you can focus more on movement QUALITY and less on remembering the moves.
                     </ThemedText>
                 </View>
+                {/* Keep subscription status and CTA grouped in one card so the state is visually clear. */}
+                {hasActiveSubscription && (
+                    <View
+                        style={{
+                            backgroundColor: colors.card,
+                            borderRadius: 14,
+                            padding: 16,
+                            marginBottom: 16,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                        }}
+                    >
+                        <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
+                            You are Subscribed!
+                        </ThemedText>
+                        <ThemedButton
+                            title="Go to your Workspace"
+                            onPress={() => router.push('/inprogress')}
+                            style={{ width: '100%', marginTop: 4 }}
+                        />
+                    </View>
+                )}
 
                 {/* Supporting copy — larger, increased line-height for readability */}
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
@@ -37,11 +60,7 @@ const Home = () => {
                     Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines.
                 </ThemedText>
 
-                <ThemedButton
-                    title="Go to your Workspace"
-                    onPress={() => router.push('/inprogress')}
-                    style={{ width: '100%', marginTop: 12 }}
-                />
+
 
             </ScrollView>
         </ThemedView>
