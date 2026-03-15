@@ -47,6 +47,29 @@ const Home = () => {
                     </View>
                 )}
 
+                {!hasActiveSubscription && (
+                    <View
+                        style={{
+                            backgroundColor: colors.card,
+                            borderRadius: 14,
+                            padding: 16,
+                            marginBottom: 16,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                        }}
+                    >
+                        {/* Keep purchase CTA visible for users who have not activated a subscription. */}
+                        <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
+                            Unlock your full roadmap
+                        </ThemedText>
+                        <ThemedButton
+                            title="Subscribe"
+                            onPress={() => router.push('/subscribe')}
+                            style={{ width: '100%', marginTop: 4 }}
+                        />
+                    </View>
+                )}
+
                 {/* Supporting copy — larger, increased line-height for readability */}
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
                     It's much easier to remember moves from positions. If you have 3 positions each with 3 variations you are able to perform 9 different combos. That is the idea.

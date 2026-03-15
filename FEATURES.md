@@ -9,3 +9,5 @@
 - Set the roadmap to open slightly zoomed out from its top-left origin so the Positions header is immediately visible on entry.
 - Stabilized roadmap canvas height across the empty-position toggle so the chart no longer jumps vertically when the filter changes.
 - Nudged the roadmap's initial vertical viewport upward so the positions tile starts higher on screen without changing toggle/zoom behavior.
+- Added a conditional Subscribe CTA on Home for non-subscribed users that routes to a dedicated subscription flow.
+- Added a new private subscription purchase/cart page with plan selection and checkout placeholder UI.

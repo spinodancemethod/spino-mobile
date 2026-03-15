@@ -34,6 +34,7 @@ const AppContent: React.FC = () => {
             <StatusBar />
             <Stack screenOptions={screenOptions}>
                 <Stack.Screen name="home" options={{ headerShown: false }} />
+                <Stack.Screen name="subscribe" options={{ title: 'Subscription' }} />
                 <Stack.Screen name="video/[id]" options={{ title: 'Video' }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>
