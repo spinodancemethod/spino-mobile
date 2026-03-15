@@ -31,7 +31,7 @@ Still required for MVP:
 
 ## MVP steps (in order)
 
-1. Stripe setup (test mode only)
+ 1. ✅ Stripe setup (test mode only)
 - Create Stripe account in test mode.
 - Create two recurring prices: monthly and yearly.
 - Save both price IDs in app env:

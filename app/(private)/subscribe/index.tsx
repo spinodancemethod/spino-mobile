@@ -7,6 +7,7 @@ import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
 import { useCreateCheckoutSession } from 'lib/hooks/useCreateCheckoutSession';
+import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 
 type Plan = {
     id: 'monthly' | 'yearly';
@@ -34,6 +35,7 @@ export default function Subscribe() {
     const { colors } = useTheme();
     const [selectedPlan, setSelectedPlan] = useState<Plan['id']>('monthly');
     const checkoutMutation = useCreateCheckoutSession();
+    const subscriptionStatus = useSubscriptionStatus();
 
     const selectedPlanData = useMemo(
         () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0],
@@ -73,6 +75,22 @@ export default function Subscribe() {
                     <ThemedText variant="subheader" style={{ ...styles.heroBody, color: colors.onPrimary }}>
                         Choose a subscription to unlock your full roadmap workspace and personalized progression tools.
                     </ThemedText>
+                </View>
+
+                <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <ThemedText variant="subheader" style={styles.statusTitle}>Current subscription status</ThemedText>
+                    <ThemedText>
+                        {subscriptionStatus.isLoading
+                            ? 'Checking your access status...'
+                            : subscriptionStatus.isActiveSubscription
+                                ? 'Your subscription is active.'
+                                : 'No active subscription found yet.'}
+                    </ThemedText>
+                    {subscriptionStatus.currentPeriodEnd ? (
+                        <ThemedText variant="small" style={styles.statusHint}>
+                            Access through {new Date(subscriptionStatus.currentPeriodEnd).toLocaleDateString()}.
+                        </ThemedText>
+                    ) : null}
                 </View>
 
                 <ThemedText variant="subheader" style={styles.sectionLabel}>Choose your plan</ThemedText>
@@ -146,6 +164,20 @@ const styles = StyleSheet.create({
     heroBody: {
         fontSize: 16,
         lineHeight: 24,
+    },
+    statusCard: {
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 16,
+    },
+    statusTitle: {
+        marginBottom: 6,
+        fontWeight: '700',
+    },
+    statusHint: {
+        marginTop: 6,
+        opacity: 0.75,
     },
     sectionLabel: {
         marginBottom: 10,

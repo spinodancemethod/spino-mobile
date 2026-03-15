@@ -21,3 +21,5 @@
 - Added additional production safeguards to `READMESUBSRCIBE.md`: checkout rate limiting, entitlement emergency override controls, and migration rollback planning.
 - Refocused `READMESUBSRCIBE.md` into an MVP-fast Stripe + Supabase launch checklist for test users and added `READMEPOSTMVP.md` to hold deferred non-blocking billing features.
 - Added additional MVP-critical plan details in `READMESUBSRCIBE.md`: webhook secret setup, checkout metadata user mapping, `customer.subscription.created` event handling, and explicit mobile deep-link return validation.
+- Hardened the Stripe checkout edge function with server-side price validation, existing-subscription blocking, and reusable Stripe customer support; added a Stripe webhook edge function plus minimal billing SQL schema for MVP subscription syncing.
+- Added clean in-app Stripe return handling with real `/subscribe/success` and `/subscribe/cancel` routes, a shared subscription status hook, and auth deep-link filtering so checkout return URLs are not treated as auth callbacks.
