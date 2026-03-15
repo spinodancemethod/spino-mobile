@@ -27,7 +27,7 @@ const ThemedLike: React.FC<Props> = ({ liked = false, size = 20, onPress }) => {
             testID={`like-button-${liked ? 'active' : 'idle'}`}
         >
             <Ionicons
-                name={liked ? 'heart' : 'heart-outline'}
+                name={liked ? 'map' : 'map-outline'}
                 size={size}
                 color={liked ? filledColor : outlineColor}
             />
