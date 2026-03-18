@@ -7,6 +7,8 @@ import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 
+const REDIRECT_DELAY_MS = 5000;
+
 export default function SubscribeSuccess() {
     const { colors } = useTheme();
     const subscriptionStatus = useSubscriptionStatus({ pollAfterReturn: true });
@@ -15,7 +17,7 @@ export default function SubscribeSuccess() {
         if (subscriptionStatus.isActiveSubscription) {
             const timeout = setTimeout(() => {
                 router.replace('/home');
-            }, 1200);
+            }, REDIRECT_DELAY_MS);
 
             return () => clearTimeout(timeout);
         }
@@ -32,7 +34,9 @@ export default function SubscribeSuccess() {
                 </ThemedText>
 
                 {subscriptionStatus.isActiveSubscription ? (
-                    <ThemedText style={styles.successText}>Your access is active. Redirecting you to Home...</ThemedText>
+                    <ThemedText style={styles.successText}>
+                        Your access is active. Redirecting you to Home in 5 seconds...
+                    </ThemedText>
                 ) : (
                     <View style={styles.processingRow}>
                         <ActivityIndicator />

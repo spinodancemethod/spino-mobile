@@ -26,3 +26,4 @@
 - Replaced Home's hardcoded subscription flag with the shared subscription status hook and added a loading-state card to avoid showing the wrong CTA while entitlement is being fetched.
 - Added Stripe price-ID env compatibility for yearly plan naming (`YEARLY` and `ANNUALLY`) across checkout client + edge function allowlist, plus clearer function error text when price env keys are missing.
 - Updated checkout return URL generation to use browser origin on web (`http(s)://.../subscribe/success|cancel`) while keeping custom app-scheme deep links for native flows.
+- Increased checkout return-screen dwell time so success and cancel states stay visible for 5 seconds before automatic navigation.

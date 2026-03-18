@@ -42,7 +42,7 @@ Still required for MVP:
   - `STRIPE_WEBHOOK_SECRET`
 - Define success/cancel return URLs for mobile deep links so checkout returns to the app predictably.
 
-2. Add minimal billing schema in Supabase
+2. ✅ Add minimal billing schema in Supabase
 - Create `billing_customers` table:
   - `user_id` (unique, maps to auth user)
   - `stripe_customer_id` (unique)
@@ -59,17 +59,17 @@ Still required for MVP:
   - `has_active_subscription(user_id)` returns boolean
   - true only for active/trialing and not expired
 
-3. Add basic RLS for premium data
+3. ✅ Add basic RLS for premium data
 - Use `has_active_subscription(auth.uid())` in premium table read policies.
 - Ensure non-premium data stays accessible as-is.
 
-4. Finalize checkout session function
+4. ✅ Finalize checkout session function
 - Keep server-side allowlist mapping for valid `priceId` values.
 - Require auth (`verify_jwt: true`).
 - Attach `user_id` in Stripe session metadata so webhook processing can map events back to the correct app user.
 - Return hosted Stripe checkout URL.
 
-5. Add Stripe webhook function (MVP critical)
+5. ✅ Add Stripe webhook function (MVP critical)
 - Verify Stripe webhook signature.
 - Process these events only for MVP:
   - `checkout.session.completed`
@@ -80,14 +80,14 @@ Still required for MVP:
 - Insert `event_id` into `stripe_webhook_events` and skip duplicates.
 - If metadata is missing on an event, resolve user via `stripe_customer_id` from `billing_customers` before updating entitlements.
 
-6. Connect real entitlement to app
+6. ✅ Connect real entitlement to app
 - Add `lib/hooks/useSubscriptionStatus.ts` (React Query).
 - Replace hardcoded subscription booleans in Home and any other gate checks.
 - Route-guard premium screens in private layouts:
   - inactive -> redirect to subscribe page
   - active -> allow access
 
-7. Add purchase return refresh
+7. ✅ Add purchase return refresh
 - On return from checkout, invalidate/refetch subscription query.
 - Optional short polling window (up to 30-60 seconds) while webhook settles.
 
