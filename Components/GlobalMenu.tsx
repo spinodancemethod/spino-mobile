@@ -37,10 +37,10 @@ const GlobalMenu: React.FC = () => {
                         <ThemedText variant="subheader">Toggle theme</ThemedText>
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => { setOpen(false); router.push('/profile'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
+                    <TouchableOpacity onPress={() => { setOpen(false); router.push('/account'); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                         <Ionicons name={'person-circle-outline'} size={18} color={styles.icon.color} />
                         <View style={{ width: 12 }} />
-                        <ThemedText variant="subheader">Profile</ThemedText>
+                        <ThemedText variant="subheader">Account</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={async () => {
                         setOpen(false);

@@ -27,3 +27,5 @@
 - Added Stripe price-ID env compatibility for yearly plan naming (`YEARLY` and `ANNUALLY`) across checkout client + edge function allowlist, plus clearer function error text when price env keys are missing.
 - Updated checkout return URL generation to use browser origin on web (`http(s)://.../subscribe/success|cancel`) while keeping custom app-scheme deep links for native flows.
 - Increased checkout return-screen dwell time so success and cancel states stay visible for 5 seconds before automatic navigation.
+- Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows real user account details and clearly surfaces subscription status, period end, and Stripe billing identifiers.
+- Simplified the Account page subscription summary by removing user ID, Stripe identifiers, and the cancel-at-period-end field to keep billing details less sensitive and more user-friendly.
