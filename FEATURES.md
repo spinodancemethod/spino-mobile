@@ -29,3 +29,4 @@
 - Increased checkout return-screen dwell time so success and cancel states stay visible for 5 seconds before automatic navigation.
 - Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows real user account details and clearly surfaces subscription status, period end, and Stripe billing identifiers.
 - Simplified the Account page subscription summary by removing user ID, Stripe identifiers, and the cancel-at-period-end field to keep billing details less sensitive and more user-friendly.
+- Added a Stripe-backed subscription cancellation flow from the Account page with a confirmation modal and post-action query invalidation so status updates are reflected immediately.
