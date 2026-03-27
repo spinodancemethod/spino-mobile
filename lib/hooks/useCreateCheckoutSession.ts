@@ -18,7 +18,20 @@ async function createCheckoutSession(input: CreateCheckoutSessionInput): Promise
         body: input,
     });
 
-    if (error) throw error;
+    if (error) {
+        // Supabase wraps non-2xx responses in a FunctionsHttpError with a generic message.
+        // Try to pull the human-readable message out of the response body instead.
+        let message: string = error.message;
+        try {
+            const body = await (error as any).context?.json?.();
+            if (body?.error && typeof body.error === 'string') {
+                message = body.error;
+            }
+        } catch {
+            // fall back to the original error message if body parsing fails
+        }
+        throw new Error(message);
+    }
 
     const url = (data as any)?.url;
     if (!url || typeof url !== 'string') {
