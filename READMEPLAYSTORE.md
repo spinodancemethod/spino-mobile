@@ -1,285 +1,151 @@
-# Play Store Prep Guide
+# Play Store + Subscription Release Guide
 
-This guide expands the first two launch steps for this repository:
+This document combines Play Store preparation and subscription rollout into one practical, ordered guide for this repository.
 
-1. App setup in the repo
-2. Native Android project strategy
+## Scope
 
-The goal is to make the path from codebase to Play Store less abstract and easier to execute in order.
+Use this guide when preparing an Android release that includes paid digital access via Google Play Billing and Supabase entitlement checks.
 
-## Step 1: App setup in the repo
-
-This step is about defining the app's identity, release behavior, and policy-sensitive product decisions before building anything.
-
-### 1.1 Confirm the app identity
-
-These values define what Google Play and Android see as your app.
+## Current baseline in this repo
 
 - App name: `Spino`
 - Expo slug: `spino-mobile`
-- Android package name: `com.spino.mobile`
+- Android package: `com.spino.mobile`
 - Deep-link scheme: `spino`
-- Current version name: `1.0.0`
-- Current version code: `1`
+- Billing path: Google Play purchase token verification via Supabase
 
-Current source of truth in this repo:
+Primary files involved:
 
 - `app.json`
 - `android/app/build.gradle`
 - `android/app/src/main/AndroidManifest.xml`
 - `android/app/src/main/res/values/strings.xml`
+- `supabase/functions/verify-google-play-purchase/index.ts`
+- `sql/bootstrap/`
 
-What each value means:
+## Phase 1: App identity and release config
 
-- App name: what users see on the device and in store-facing branding.
-- Package name: the permanent unique Android identifier. Once released on Play, changing it means creating a new app listing.
-- Scheme: used for app deep links, including auth and checkout returns.
-- Version name: user-facing release label.
-- Version code: integer Android uses for upgrade ordering. Every Play Store upload must increase this.
+### 1.1 Identity checklist
 
-### 1.2 Verify app config is internally consistent
+- [ ] `expo.name` matches Android display name.
+- [ ] `expo.android.package` matches Gradle `applicationId` and `namespace`.
+- [ ] `expo.scheme` matches Android intent-filter scheme.
+- [ ] Version values are set intentionally for the next upload.
 
-Before building, confirm these are aligned:
+### 1.2 Versioning rule
 
-1. `app.json` app name matches Android string resources.
-2. `app.json` Android package matches Gradle `applicationId` and `namespace`.
-3. Android manifest deep-link scheme matches the Expo scheme.
-4. Version values are intentionally chosen for the upcoming release.
+- [ ] `versionName` follows semantic labels (`1.0.0`, `1.0.1`, `1.1.0`).
+- [ ] `versionCode` increases by 1 on every Play upload.
+- [ ] No previously used `versionCode` is reused.
 
-For this repo, that means keeping these values in sync:
+### 1.3 Permissions and assets
 
-- `app.json -> expo.name`
-- `app.json -> expo.android.package`
-- `app.json -> expo.scheme`
-- `android/app/build.gradle -> namespace`
-- `android/app/build.gradle -> applicationId`
-- `android/app/build.gradle -> versionCode`
-- `android/app/build.gradle -> versionName`
-- `android/app/src/main/AndroidManifest.xml -> intent-filter data android:scheme`
+- [ ] Android permissions are minimal and justified.
+- [ ] App icon and adaptive icon are final enough for testing.
+- [ ] Splash and branding assets are ready.
+- [ ] Play listing assets (screenshots and feature graphic) are prepared.
 
-### 1.3 Set release versioning rules now
+## Phase 2: Native Android project strategy
 
-Use a simple rule so releases do not get blocked later.
+### 2.1 Choose one strategy
 
-Recommended rule:
+Option A: Generated native project
 
-- `versionName`: semantic release label such as `1.0.0`, `1.0.1`, `1.1.0`
-- `versionCode`: always increment by 1 for every Play upload
+- `android/` is not tracked.
+- Native state is regenerated from Expo config/plugins.
 
-Example:
+Option B: Tracked native project
 
-- Internal test build: `versionName 1.0.0`, `versionCode 1`
-- Next upload after a bug fix: `versionName 1.0.1`, `versionCode 2`
-- Next feature release: `versionName 1.1.0`, `versionCode 3`
+- `android/` is committed.
+- Native Gradle/manifest/resource edits are versioned.
 
-Do not reuse a previous version code. Google Play will reject it.
+### 2.2 Recommended for this repo now
 
-### 1.4 Review Android permissions before submission
+For Play submission with minimal ambiguity, use a tracked native project now.
 
-Every permission increases review surface area. Keep only what the app actually needs.
+- [ ] Stop ignoring `/android` in `.gitignore`.
+- [ ] Commit current native Android files (excluding secrets).
+- [ ] Keep signing secrets outside git.
 
-Current minimal permissions in this repo:
-
-- `INTERNET`
-- `VIBRATE`
-
-That is a good baseline. If a package later adds more permissions, review them before uploading.
-
-### 1.5 Confirm icons, splash, and branding assets
-
-Before release, verify these assets are final or at least good enough for testing:
-
-- App icon
-- Adaptive icon
-- Splash image
-- Store screenshots
-- Store feature graphic
-
-In this repo, app runtime assets are configured from `app.json`. Play Console listing graphics are uploaded separately in Google Play Console.
-
-### 1.6 Decide the billing model before production submission
-
-This is not a cosmetic choice. It affects whether the app can be approved on Play.
-
-Current repo state:
-
-- The app has in-app subscription purchase UI.
-- The current flow uses Google Play Billing and verifies purchase tokens via Supabase.
-
-Important rule:
-
-- If users buy digital content, digital access, or digital subscriptions consumed in the Android app, Google Play usually requires Play Billing.
-
-That means you should treat this as a required product decision before production rollout.
-
-Practical interpretation for this app:
-
-- If the subscription unlocks app content/features for end users inside the Android app, Play Billing is the correct production path.
-- Keep Stripe runtime paths removed from Android release branches to avoid review confusion.
-
-### 1.7 Set up release signing inputs
-
-Android builds for Play must be signed.
-
-This repo is prepared to read release signing values from Gradle properties:
-
-- `SPINO_UPLOAD_STORE_FILE`
-- `SPINO_UPLOAD_STORE_PASSWORD`
-- `SPINO_UPLOAD_KEY_ALIAS`
-- `SPINO_UPLOAD_KEY_PASSWORD`
-
-Recommended storage location:
-
-- local machine or CI in `~/.gradle/gradle.properties`
-
-Do not commit the keystore or passwords to git.
-
-### 1.8 Step 1 completion checklist
-
-Step 1 is complete when all of the following are true:
-
-- App name is final enough for testing.
-- Package name is final.
-- Scheme is final and matches Android config.
-- Version name and version code are intentionally set.
-- Permissions are minimal.
-- Billing decision is clear for Android.
-- Signing inputs exist outside the repo.
-
-## Step 2: Native Android project strategy
-
-This step is about deciding how your Android folder is managed and ensuring the build can be reproduced reliably.
-
-### 2.1 Understand what the Android folder is
-
-The `android/` directory is the real Android app project used by Gradle to compile an Android App Bundle (`.aab`).
-
-It contains:
-
-- Gradle build logic
-- Android manifest
-- native app resources
-- signing/build configuration hooks
-
-Without that native project, Android cannot produce a Play-uploadable bundle.
-
-### 2.2 Understand the two valid strategies
-
-There are two normal ways to manage native Android files in an Expo app.
-
-#### Option A: Generated native project
-
-How it works:
-
-- `android/` is not committed.
-- The native project is regenerated from Expo config/plugins when needed.
-
-Best when:
-
-- you stay close to standard Expo behavior
-- all native changes are represented in config/plugins
-- you want less native code in version control
-
-Risk:
-
-- manual edits inside `android/` are disposable unless encoded elsewhere
-
-#### Option B: Tracked native project
-
-How it works:
-
-- `android/` is committed to git
-- manual Gradle/Manifest/resource changes are preserved in repository history
-
-Best when:
-
-- you need deterministic native builds
-- you have manual Android changes
-- you are preparing store release and want fewer surprises
-
-Risk:
-
-- more native files in git
-- upgrades can require more merge/conflict management
-
-### 2.3 What this repo currently looks like
-
-Current state:
-
-- `android/` exists locally
-- `.gitignore` ignores `/android`
-- the Android native files are not tracked in git
-- some release-critical edits currently live in native Android files
-
-That means this repo is currently in an in-between state:
-
-- native files exist and matter
-- but the repo alone does not fully recreate them from git history
-
-### 2.4 Recommended strategy for this repo right now
-
-For Play Store release work, the safer choice is:
-
-1. Commit `android/` to git now
-2. Keep signing secrets out of git
-3. Build and release from the tracked native project
-
-Why this is the pragmatic choice:
-
-- you already have release-specific native edits
-- release builds are less error-prone when the exact Android project is versioned
-- it gives you a reproducible baseline for Play submission
-
-After launch, you can choose whether to:
-
-- continue tracking `android/`, or
-- migrate native changes into Expo plugins/config and go back to generated native folders
-
-### 2.5 What to do if you keep Android generated instead
-
-If you do not want to commit `android/`, then every native change must live in one of these places instead:
-
-- `app.json` or app config
-- Expo config plugins
-- build scripts that regenerate native changes consistently
-
-That is a valid approach, but it requires discipline. Manual edits to Gradle or Manifest cannot be treated as durable unless they are reproduced automatically.
-
-### 2.6 What should and should not be committed
+### 2.3 Commit and secret boundaries
 
 Commit:
 
 - `android/app/build.gradle`
 - `android/gradle.properties` (without secrets)
 - `android/app/src/main/AndroidManifest.xml`
-- resource files and code needed to build
+- Android resources/source needed for reproducible builds
 
 Do not commit:
 
 - `.jks` keystore files
 - passwords
-- secret env files with production secrets
+- secret env files
 
-This matches your current `.gitignore` strategy for secrets, but if you choose tracked Android, you should stop ignoring `/android` itself.
+## Phase 3: Google Play subscription setup
 
-### 2.7 Step 2 completion checklist
+### 3.1 Product setup
 
-Step 2 is complete when all of the following are true:
+- [ ] Create monthly and yearly subscriptions in Play Console.
+- [ ] Record product IDs and validate they match app config.
 
-- You have explicitly chosen generated vs tracked Android.
-- That choice matches how the repo is configured.
-- Release-critical Android changes are reproducible from the repo/process.
-- Signing secrets are external to git.
-- A new machine or CI environment can produce the same release app with documented steps.
+Required app env:
 
-## Recommended immediate next move for this repo
+- `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_MONTHLY`
+- `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_YEARLY`
+- `EXPO_PUBLIC_GOOGLE_PLAY_ANDROID_PACKAGE_NAME`
 
-If the goal is Play Store submission with the least ambiguity, do this next:
+Required function secrets:
 
-1. Decide to track `android/` in git for now.
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL`
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY`
+- `GOOGLE_PLAY_ANDROID_PACKAGE_NAME`
+
+### 3.2 Purchase and verification path
+
+- [ ] App starts purchase through Google Play Billing.
+- [ ] Purchase token is sent to `verify-google-play-purchase`.
+- [ ] Backend upserts `subscriptions` with `provider = 'google_play'`.
+- [ ] Access unlocks immediately after successful verification.
+
+### 3.3 Entitlement and restore behavior
+
+- [ ] Paid screens gate on active subscription and non-expired `current_period_end`.
+- [ ] Restore purchases flow re-verifies available purchase tokens.
+- [ ] Expired/canceled subscriptions lose access correctly.
+
+## Phase 4: Signing, build, and internal testing
+
+### 4.1 Signing configuration
+
+Define locally or in CI (recommended: `~/.gradle/gradle.properties`):
+
+- `SPINO_UPLOAD_STORE_FILE`
+- `SPINO_UPLOAD_STORE_PASSWORD`
+- `SPINO_UPLOAD_KEY_ALIAS`
+- `SPINO_UPLOAD_KEY_PASSWORD`
+
+### 4.2 Internal test release checklist
+
+- [ ] Build an Android App Bundle for internal testing.
+- [ ] Upload to the Play internal track.
+- [ ] Validate purchase, entitlement, restore, and cancel/expiry states.
+
+## Definition of done
+
+Release readiness is achieved when all are true:
+
+- [ ] Android identity/version settings are consistent and intentional.
+- [ ] Native Android strategy is explicit and reproducible.
+- [ ] Google Play subscriptions are purchasable from the app.
+- [ ] Verification writes authoritative entitlement state in Supabase.
+- [ ] Access behavior is correct on purchase, restore, expiry, and cancel.
+- [ ] Internal testing build is uploaded successfully.
+
+## Immediate next actions for this repo
+
+1. Track `android/` in git for release reproducibility.
 2. Remove `/android` from `.gitignore`.
-3. Commit the current Android native files except secrets.
-4. Generate or obtain the upload keystore and configure `SPINO_UPLOAD_*` locally.
-5. Build an internal-testing Android App Bundle.
-
-That gives you a stable release baseline before dealing with Play Console submission and billing policy work.
+3. Commit Android native files except secrets.
+4. Configure `SPINO_UPLOAD_*` locally.
+5. Build and upload an internal testing AAB.

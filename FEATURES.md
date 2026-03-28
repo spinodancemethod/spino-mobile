@@ -1,6 +1,7 @@
 # Features
 
 - Switched deck toggling to the server-side `toggle_deck_with_subscription_limit` RPC so advisory locking and limit checks are atomic under concurrent taps/devices.
+- Merged Play Store and subscription docs into a single phased release guide in `READMEPLAYSTORE.md` and kept `READMESUBSCRIBE.md` as a compatibility pointer.
 - Added an ordered `sql/bootstrap/` schema bundle (extensions, tables, functions, indexes, RLS/policies/grants) so a fresh Supabase project can be initialized from the repo quickly.
 - Expanded automated coverage with tests for auth URL handling, entitlement guard decisions, Google verification response mapping, and deck/favourite toggle cache behavior.
 - Added centralized app-side error logging (`lib/observability.ts` + `sql/client_error_logs.sql`) and an operations runbook (`OBSERVABILITY.md`) with edge-function alert thresholds.
