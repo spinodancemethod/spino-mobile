@@ -4,6 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedPill from 'Components/ThemedPill'
+import ThemedLike from 'Components/ThemedLike'
+import ThemedStar from 'Components/ThemedStar'
 import { getLevelLabel, getLevelInfo } from 'constants/Levels'
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
@@ -43,7 +45,19 @@ export default function VideoDetailScreen() {
     const [editorText, setEditorText] = useState<string | null>(null)
     const upsert = useUpsertNote()
     const [saving, setSaving] = useState(false)
-    const { completedVideoIdSet, isCompletionPending, toggleCompletionWithFeedback } = useVideoActionToggles()
+    const {
+        favouriteIdSet,
+        deckIdSet,
+        completedVideoIdSet,
+        isFavouritePending,
+        isDeckPending,
+        isCompletionPending,
+        toggleFavouriteWithFeedback,
+        toggleDeckWithFeedback,
+        toggleCompletionWithFeedback,
+    } = useVideoActionToggles()
+    const isFavourite = !!video?.id && favouriteIdSet.has(video.id)
+    const isDecked = !!video?.id && deckIdSet.has(video.id)
     const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
 
     const onToggleCompletion = async () => {
@@ -203,13 +217,38 @@ export default function VideoDetailScreen() {
 
                     {/* Description (moved below pills) */}
                     <ThemedText variant="subheader" style={{ marginTop: 8 }}>{video?.description || 'No description available.'}</ThemedText>
-                    <View style={{ marginTop: 16, width: '100%' }}>
-                        <ThemedButton
-                            title={isCompletionPending ? 'Saving…' : isComplete ? 'Mark as in progress' : 'Mark as complete'}
-                            onPress={onToggleCompletion}
-                            loading={isCompletionPending}
-                            disabled={!video?.id || isCompletionPending}
+                    <View style={styles.actionRow}>
+                        <ThemedLike
+                            liked={isFavourite}
+                            size={22}
+                            onPress={() => {
+                                if (!video?.id || isFavouritePending) return
+                                toggleFavouriteWithFeedback(video.id)
+                            }}
                         />
+                        <ThemedStar
+                            starred={isDecked}
+                            size={22}
+                            onPress={() => {
+                                if (!video?.id || isDeckPending) return
+                                toggleDeckWithFeedback(video.id)
+                            }}
+                        />
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={onToggleCompletion}
+                            disabled={!video?.id || isCompletionPending}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            style={[
+                                styles.completionIcon,
+                                {
+                                    backgroundColor: isComplete ? '#16a34a' : '#94a3b8',
+                                    opacity: (!video?.id || isCompletionPending) ? 0.6 : 1,
+                                },
+                            ]}
+                        >
+                            <ThemedText style={styles.completionIconText}>✓</ThemedText>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -283,6 +322,24 @@ const styles = StyleSheet.create({
     noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
     noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
     noteScroll: { maxHeight: 300 },
+    actionRow: {
+        marginTop: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 20,
+    },
+    completionIcon: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    completionIconText: {
+        color: '#fff',
+        fontSize: 12,
+        lineHeight: 12,
+    },
     playerOverlay: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8 },
     skelTitle: { height: 20, width: '60%', borderRadius: 6, marginBottom: 8 },
     skelVideo: { width: '100%', aspectRatio: 16 / 9, borderRadius: 8, marginTop: 8 },
