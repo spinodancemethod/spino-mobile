@@ -1,27 +1,10 @@
 import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
-import React, { useEffect } from 'react'
+import React from 'react'
 import { ActivityIndicator, View } from 'react-native';
 import ThemedText from 'Components/ThemedText';
-import { useAuth } from 'lib/auth';
-import { supabase } from 'lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { shouldRedirectForEntitlement } from 'lib/entitlementGuards';
-
-function dashboardEntitlementQueryKey(userId?: string | null) {
-    return ['dashboardEntitlement', userId ?? 'anonymous'];
-}
-
-async function fetchDashboardEntitlement(userId: string) {
-    const { data, error } = await supabase.rpc('has_active_subscription', { p_user_id: userId });
-    if (error) {
-        throw error;
-    }
-
-    return Boolean(data);
-}
+import { useEntitlement } from 'lib/hooks/useEntitlement';
 
 /*
     Dashboard tab layout.
@@ -35,42 +18,24 @@ async function fetchDashboardEntitlement(userId: string) {
     - The toggle is a floating button (absolutely positioned) rather than a header button
         so it appears consistently regardless of which tab is active.
     - Tab icons use `useStyles()` theme tokens so their colors follow the active/inactive state.
+    - Free-tier users are admitted into the dashboard. The subscribe screen is reached
+        only via explicit upsell CTAs within the content screens.
 */
 
 export default function DashboardLayout() {
     const styles = useStyles();
-    const { user, loading: authLoading } = useAuth();
+    const { isLoading } = useEntitlement();
 
-    const entitlement = useQuery({
-        queryKey: dashboardEntitlementQueryKey(user?.id),
-        queryFn: () => fetchDashboardEntitlement(user!.id),
-        enabled: Boolean(user?.id),
-        staleTime: 1000 * 20,
-    });
-
-    useEffect(() => {
-        if (shouldRedirectForEntitlement({ isLoading: authLoading || entitlement.isLoading, hasAccess: Boolean(entitlement.data) })) {
-            router.replace('/subscribe');
-        }
-    }, [authLoading, entitlement.isLoading, entitlement.data]);
-
-    if (authLoading || entitlement.isLoading) {
+    // Show a brief loading state while the entitlement check resolves.
+    // Free and paid users both proceed past this point — no redirect.
+    if (isLoading) {
         return (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
                 <ActivityIndicator />
-                <ThemedText style={{ marginTop: 10 }}>Checking subscription access...</ThemedText>
+                <ThemedText style={{ marginTop: 10 }}>Loading...</ThemedText>
             </View>
         );
     }
-
-    if (!entitlement.data) {
-        return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
-                <ThemedText>Redirecting to subscription...</ThemedText>
-            </View>
-        );
-    }
-
 
     return (
         <>

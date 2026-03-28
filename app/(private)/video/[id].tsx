@@ -14,15 +14,14 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import { useUpsertNote } from 'lib/hooks/useUpsertNote'
 import { showSnack } from 'lib/snackbarService'
-import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
-import { shouldRedirectForEntitlement, shouldShowEntitlementPendingState } from 'lib/entitlementGuards'
+import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 
 
 export default function VideoDetailScreen() {
     const { id } = useLocalSearchParams() as { id?: string }
     const { colors, mode } = useTheme()
-    const subscriptionStatus = useSubscriptionStatus()
+    const { isSubscribed, isLoading: entitlementLoading } = useEntitlement()
 
     // Skeleton colors that contrast the page background
     const skelBase = mode === 'dark' ? '#111827' : '#E9E5FF'
@@ -63,15 +62,6 @@ export default function VideoDetailScreen() {
 
         await toggleCompletionWithFeedback(video.id, isComplete)
     }
-
-    useEffect(() => {
-        if (shouldRedirectForEntitlement({
-            isLoading: subscriptionStatus.isLoading,
-            hasAccess: subscriptionStatus.isActiveSubscription,
-        })) {
-            router.replace('/subscribe')
-        }
-    }, [subscriptionStatus.isLoading, subscriptionStatus.isActiveSubscription])
 
     useEffect(() => {
         setIsPlaying(false)
@@ -119,15 +109,37 @@ export default function VideoDetailScreen() {
         )
     }
 
-    if (shouldShowEntitlementPendingState({
-        isLoading: subscriptionStatus.isLoading,
-        hasAccess: subscriptionStatus.isActiveSubscription,
-    })) {
+    // Show loading spinner while entitlement or video data is still resolving.
+    if (entitlementLoading || isLoading) {
         return (
             <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <ThemedText>
-                    {subscriptionStatus.isLoading ? 'Checking access...' : 'Redirecting to subscription...'}
+                <ThemedText>Loading...</ThemedText>
+            </ThemedView>
+        )
+    }
+
+    // Free users trying to view a paid video see an upsell screen instead of the content.
+    if (!isSubscribed && video?.access_tier === 'paid') {
+        return (
+            <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+                <Ionicons name="lock-closed" size={56} color={colors.primary} style={{ marginBottom: 20 }} />
+                <ThemedText variant="title" style={{ textAlign: 'center', marginBottom: 12 }}>
+                    Premium Content
                 </ThemedText>
+                <ThemedText style={{ textAlign: 'center', marginBottom: 32, opacity: 0.65 }}>
+                    This video is part of the premium library. Subscribe to unlock all videos and build your full roadmap.
+                </ThemedText>
+                <ThemedButton
+                    title="Subscribe to unlock"
+                    onPress={() => router.replace('/subscribe')}
+                    style={{ width: '100%', marginBottom: 12 }}
+                />
+                <ThemedButton
+                    title="Go back"
+                    variant="ghost"
+                    onPress={() => router.back()}
+                    style={{ width: '100%' }}
+                />
             </ThemedView>
         )
     }
