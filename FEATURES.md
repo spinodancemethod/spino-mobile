@@ -41,6 +41,7 @@
 - Raised the roadmap's initial viewport offset so the Positions header appears higher on first load.
 - Hid the dashboard redirect-only `index` route from the tab bar so no `index` tile is shown.
 - Auto-enables `Show empty positions` when a user has no roadmap videos so the roadmap never opens to a blank view.
+- Fixed roadmap empty-position plus navigation so Library reliably auto-selects the tapped position, including when the Library tab is already mounted.
 
 ## Archived Stripe-Era Milestones
 
