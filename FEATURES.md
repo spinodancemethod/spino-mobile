@@ -1,5 +1,14 @@
 # Features
 
+- Removed account-age-based auto logout so sessions are no longer invalidated after 24 hours from signup date.
+- Updated Google Play purchase flow to finalize transactions only after server-side verification succeeds, reducing entitlement drift risk.
+- Added restore-purchase request throttling to align with verify endpoint rate limits and avoid 429 loops.
+- Replaced placeholder legal links with environment-driven URLs (`EXPO_PUBLIC_PRIVACY_POLICY_URL`, `EXPO_PUBLIC_TERMS_URL`) and user-safe fallback messaging.
+- Added dynamic Expo updates URL injection via `app.config.ts` using `EXPO_PUBLIC_EAS_PROJECT_ID`/`EAS_PROJECT_ID`, removing hardcoded `YOUR_PROJECT_ID`.
+- Added an Android release smoke CI job for tags/manual runs that prebuilds and bundles with temporary debug signing.
+- Made `subscriptions.stripe_subscription_id` nullable in bootstrap schema to support non-Stripe providers like Google Play.
+- Cleaned `.env.example` and added missing production env keys for legal URLs and EAS project ID.
+
 - Switched deck toggling to the server-side `toggle_deck_with_subscription_limit` RPC so advisory locking and limit checks are atomic under concurrent taps/devices.
 - Switched release guidance back to generated Android mode: `/android` is ignored again and Play Store docs now describe local regeneration (`expo prebuild`) instead of tracking native files in git.
 - Cleaned production docs to match `sql/bootstrap`, removed stale client-side deck-limit prechecks in favor of server-enforced limits, and tightened bootstrap grants by dropping broad `anon` privileges.
@@ -50,5 +59,5 @@
 - Hardened Android release signing configuration with `SPINO_UPLOAD_*` keystore properties and a release-build guard that blocks accidental unsigned/debug release submissions.
 - Updated Android manifest for Play readiness by removing risky legacy storage/overlay permissions and aligning app deep-link scheme to `spino`.
 - Added `READMEPLAYSTORE.md` with a detailed launch-prep plan for repo app setup decisions and Android native project strategy before Play Store submission.
-- Drafted Google Play Billing migration assets: a provider-agnostic SQL migration (`sql/migrate_stripe_to_google_play_mvp.sql`) and a new Supabase edge function scaffold (`supabase/functions/verify-google-play-purchase/index.ts`) for server-side purchase verification and entitlement upsert.
+- Drafted Google Play Billing migration assets around provider-agnostic subscription fields and the `verify-google-play-purchase` edge function for server-side purchase verification and entitlement upsert.
 - Removed Stripe checkout/webhook/cancel runtime paths and switched subscription purchase + restore flows to Google Play Billing with server-side token verification.

@@ -60,6 +60,15 @@ export default function AccountPage() {
         void Linking.openURL('https://play.google.com/store/account/subscriptions');
     }
 
+    function openLegalUrl(url: string | undefined, label: 'Privacy Policy' | 'Terms of Service') {
+        if (!url) {
+            showSnack(`${label} URL is not configured yet.`);
+            return;
+        }
+
+        void Linking.openURL(url);
+    }
+
     if (accountQuery.isLoading) {
         return (
             <ThemedView safe padded style={styles.centered}>
@@ -146,13 +155,13 @@ export default function AccountPage() {
                     <ThemedButton
                         title="Privacy Policy"
                         variant="ghost"
-                        onPress={() => Linking.openURL('https://example.com/privacy')}
+                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL, 'Privacy Policy')}
                         style={{ width: '100%' }}
                     />
                     <ThemedButton
                         title="Terms of Service"
                         variant="ghost"
-                        onPress={() => Linking.openURL('https://example.com/terms')}
+                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_TERMS_URL, 'Terms of Service')}
                         style={{ width: '100%' }}
                     />
                 </View>

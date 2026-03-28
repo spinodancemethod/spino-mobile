@@ -18,6 +18,7 @@ type GooglePlaySubscriptionPurchaseResult = {
     purchaseToken: string;
     productId: string;
     basePlanId: string | null;
+    purchase: Purchase;
 };
 
 function findSubscriptionById(items: Array<any>, productId: string): ProductSubscription | null {
@@ -73,13 +74,11 @@ async function purchaseGooglePlaySubscription(
         throw new Error('No purchase token was returned by Google Play.');
     }
 
-    // Finalize the client-side transaction so it does not remain pending in Play Billing.
-    await finishTransaction({ purchase, isConsumable: false });
-
     return {
         purchaseToken: purchase.purchaseToken,
         productId: purchase.productId ?? input.productId,
         basePlanId: purchase.currentPlanId ?? null,
+        purchase,
     };
 }
 
@@ -87,4 +86,9 @@ export function useGooglePlaySubscriptionPurchase() {
     return useMutation({
         mutationFn: purchaseGooglePlaySubscription,
     });
+}
+
+export async function finalizeGooglePlaySubscriptionPurchase(purchase: Purchase) {
+    // Finalize only after backend verification succeeds.
+    await finishTransaction({ purchase, isConsumable: false });
 }

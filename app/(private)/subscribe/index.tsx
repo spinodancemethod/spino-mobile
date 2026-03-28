@@ -7,7 +7,10 @@ import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
-import { useGooglePlaySubscriptionPurchase } from 'lib/hooks/useGooglePlaySubscriptionPurchase';
+import {
+    finalizeGooglePlaySubscriptionPurchase,
+    useGooglePlaySubscriptionPurchase,
+} from 'lib/hooks/useGooglePlaySubscriptionPurchase';
 import { useVerifyGooglePlayPurchase } from 'lib/hooks/useVerifyGooglePlayPurchase';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
@@ -78,6 +81,9 @@ export default function Subscribe() {
                 basePlanId: purchaseResult.basePlanId ?? undefined,
             });
 
+            // Acknowledge/finalize only after server verification has accepted this token.
+            await finalizeGooglePlaySubscriptionPurchase(purchaseResult.purchase);
+
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
                 queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
@@ -98,6 +104,7 @@ export default function Subscribe() {
                 metadata: {
                     selectedPlan,
                     platform: Platform.OS,
+                    step: purchaseMutation.isPending ? 'purchase' : 'verify_or_finalize',
                 },
             });
         }

@@ -93,6 +93,9 @@ Required app env:
 - `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_MONTHLY`
 - `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_YEARLY`
 - `EXPO_PUBLIC_GOOGLE_PLAY_ANDROID_PACKAGE_NAME`
+- `EXPO_PUBLIC_PRIVACY_POLICY_URL`
+- `EXPO_PUBLIC_TERMS_URL`
+- `EXPO_PUBLIC_EAS_PROJECT_ID` (used by `app.config.ts` to inject `updates.url`)
 
 Required function secrets:
 
@@ -211,8 +214,8 @@ Copy and complete before tagging `v1.0.0` and submitting to Play Store:
 - [ ] Play store listing details complete: short + full description, support email.
 
 **Legal & Compliance:**
-- [ ] Privacy Policy URL is live (e.g., https://example.com/privacy).
-- [ ] Terms of Service URL is live (e.g., https://example.com/terms).
+- [ ] Privacy Policy URL is live and set as `EXPO_PUBLIC_PRIVACY_POLICY_URL`.
+- [ ] Terms of Service URL is live and set as `EXPO_PUBLIC_TERMS_URL`.
 - [ ] Both links appear in app (`app/(private)/account.tsx` buttons).
 - [ ] Content rating questionnaire completed in Play Console.
 - [ ] Android permissions declared in `app.json` (currently `[]`; update if needed).
@@ -250,8 +253,8 @@ Copy and complete before tagging `v1.0.0` and submitting to Play Store:
 
 ## Immediate next actions for this repo
 
-1. Update `updates.url` in `app.json` to your Expo project: run `eas init`, copy the project ID, and replace `YOUR_PROJECT_ID` in the URL.
-2. Update privacy policy and terms URLs in `app/(private)/account.tsx` to your actual legal pages.
+1. Set `EXPO_PUBLIC_EAS_PROJECT_ID` so `app.config.ts` can inject the correct `updates.url` during builds.
+2. Set `EXPO_PUBLIC_PRIVACY_POLICY_URL` and `EXPO_PUBLIC_TERMS_URL` so legal links resolve in-app.
 3. Configure `SPINO_UPLOAD_*` locally in `~/.gradle/gradle.properties` (never commit).
 4. Keep `/android` ignored in git; regenerate locally only when needed.
 5. Use this checklist before first Play Store submission.

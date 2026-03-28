@@ -115,19 +115,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     if (!data?.session) {
                         // if session went away, snack and let onAuthStateChange/router flow handle redirect
                         showSnack('Session expired, please sign in again');
-                    } else {
-                        // Session timeout policy: log out after 24 hours of inactivity
-                        // Check user.created_at if available, otherwise trust Supabase token expiry
-                        const user = data.session.user;
-                        if (user?.created_at) {
-                            const userAccountAgeMs = Date.now() - new Date(user.created_at).getTime();
-                            const maxSessionAgeMs = 24 * 60 * 60 * 1000; // 24 hours
-
-                            if (userAccountAgeMs > maxSessionAgeMs) {
-                                showSnack('Your session has expired. Please sign in again.');
-                                void signOut();
-                            }
-                        }
                     }
                 }).catch(() => { /* ignore */ });
             }
