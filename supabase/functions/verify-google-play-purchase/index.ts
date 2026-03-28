@@ -349,7 +349,7 @@ Deno.serve(async (req: Request) => {
             });
 
             return jsonResponse(400, {
-                error: purchaseError?.error?.message ?? 'Google Play verification failed',
+                error: sanitizeErrorMessage(new Error(purchaseError?.error?.message ?? 'Google Play verification failed')),
             });
         }
 

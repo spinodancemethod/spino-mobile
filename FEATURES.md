@@ -1,5 +1,10 @@
 # Features
 
+- Removed unused `app/(private)/subscribe/success.tsx` and `app/(private)/subscribe/cancel.tsx` screens left from the old web checkout return flow.
+- Sanitized client-facing Google verification errors in `verify-google-play-purchase` so upstream response details are not leaked.
+- Replaced `@ts-ignore` auth link and OAuth calls with typed-safe Supabase API usage in `lib/auth.tsx`.
+- Pruned stale Stripe-era bullets from this changelog and condensed them into a single archived note.
+
 - Removed the deprecated Supabase `create-checkout-session` Stripe edge function to keep production billing runtime Google Play-only.
 - Added a production SQL migration at `sql/migrations/20260328_make_stripe_subscription_id_nullable.sql` to make `subscriptions.stripe_subscription_id` nullable for non-Stripe providers.
 
@@ -39,25 +44,10 @@
 - Nudged the roadmap's initial vertical viewport upward so the positions tile starts higher on screen without changing toggle/zoom behavior.
 - Added a conditional Subscribe CTA on Home for non-subscribed users that routes to a dedicated subscription flow.
 - Added a new private subscription purchase/cart page with plan selection and checkout placeholder UI.
-- Connected subscription checkout to a Supabase Edge Function + Stripe session flow, including app-side mutation hook and hosted checkout URL launch.
-- Expanded `READMESUBSRCIBE.md` with an explicit Stripe + Supabase ordered completion checklist and prerequisites for database purchase readiness.
-- Clarified subscription MVP scope in `READMESUBSRCIBE.md`: monthly/yearly plans with one shared full-access entitlement.
-- Expanded `READMESUBSRCIBE.md` with major missing production-readiness steps: Stripe event coverage, price allowlist validation, billing portal, reconciliation job, and observability alerts.
-- Extended `READMESUBSRCIBE.md` further with missing integration safeguards: environment separation, Stripe customer mapping strategy, checkout return deep-link states, and server-endpoint entitlement enforcement.
-- Added final major rollout considerations to `READMESUBSRCIBE.md`: app-store billing compliance decision, refund/cancellation entitlement rules, restore purchases flow, and billing-data deletion runbook.
-- Updated `READMESUBSRCIBE.md` with remaining readiness steps for tax/invoice strategy and legal consent tracking before checkout.
-- Added additional production safeguards to `READMESUBSRCIBE.md`: checkout rate limiting, entitlement emergency override controls, and migration rollback planning.
-- Refocused `READMESUBSRCIBE.md` into an MVP-fast Stripe + Supabase launch checklist for test users and added `READMEPOSTMVP.md` to hold deferred non-blocking billing features.
-- Added additional MVP-critical plan details in `READMESUBSRCIBE.md`: webhook secret setup, checkout metadata user mapping, `customer.subscription.created` event handling, and explicit mobile deep-link return validation.
-- Hardened the Stripe checkout edge function with server-side price validation, existing-subscription blocking, and reusable Stripe customer support; added a Stripe webhook edge function plus minimal billing SQL schema for MVP subscription syncing.
-- Added clean in-app Stripe return handling with real `/subscribe/success` and `/subscribe/cancel` routes, a shared subscription status hook, and auth deep-link filtering so checkout return URLs are not treated as auth callbacks.
 - Replaced Home's hardcoded subscription flag with the shared subscription status hook and added a loading-state card to avoid showing the wrong CTA while entitlement is being fetched.
-- Added Stripe price-ID env compatibility for yearly plan naming (`YEARLY` and `ANNUALLY`) across checkout client + edge function allowlist, plus clearer function error text when price env keys are missing.
-- Updated checkout return URL generation to use browser origin on web (`http(s)://.../subscribe/success|cancel`) while keeping custom app-scheme deep links for native flows.
-- Increased checkout return-screen dwell time so success and cancel states stay visible for 5 seconds before automatic navigation.
-- Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows real user account details and clearly surfaces subscription status, period end, and Stripe billing identifiers.
-- Simplified the Account page subscription summary by removing user ID, Stripe identifiers, and the cancel-at-period-end field to keep billing details less sensitive and more user-friendly.
-- Added a Stripe-backed subscription cancellation flow from the Account page with a confirmation modal and post-action query invalidation so status updates are reflected immediately.
+- Archived Stripe-era subscription rollout notes to keep this changelog focused on the current Google Play billing runtime.
+- Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows user account details and current subscription status.
+- Simplified the Account page subscription summary by removing sensitive internal identifiers.
 - Aligned Android release identity for production by setting the app package/namespace to `com.spino.mobile` and updating display branding to `Spino`.
 - Hardened Android release signing configuration with `SPINO_UPLOAD_*` keystore properties and a release-build guard that blocks accidental unsigned/debug release submissions.
 - Updated Android manifest for Play readiness by removing risky legacy storage/overlay permissions and aligning app deep-link scheme to `spino`.

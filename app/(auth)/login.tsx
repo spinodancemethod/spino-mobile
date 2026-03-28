@@ -43,7 +43,7 @@ export default function Login() {
 
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
-    const onOAuth = async (provider: string) => {
+    const onOAuth = async (provider: 'google' | 'apple') => {
         setOauthLoading(provider);
         try {
             const res: any = await signInWithOAuth(provider);

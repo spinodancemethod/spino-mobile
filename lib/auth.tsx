@@ -7,6 +7,10 @@ import { showSnack } from 'lib/snackbarService';
 import { shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 
+type LegacyAuthLinkResult = {
+    error?: { message?: string | null } | null;
+};
+
 type AuthContextValue = {
     session: Session | null;
     user: User | null;
@@ -58,13 +62,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // small delay to ensure overlay is visible for very fast responses
             const start = Date.now();
             try {
-                // prefer supabase helper if available
-                // @ts-ignore
-                if (typeof supabase.auth.getSessionFromUrl === 'function') {
+                // prefer legacy helper if present in the current runtime
+                const authWithLegacy = supabase.auth as typeof supabase.auth & {
+                    getSessionFromUrl?: (params?: { url?: string }) => Promise<LegacyAuthLinkResult>;
+                };
+
+                if (typeof authWithLegacy.getSessionFromUrl === 'function') {
                     // some implementations accept an object with url, others read from current location
                     // try both common signatures
-                    // @ts-ignore
-                    const res = await supabase.auth.getSessionFromUrl({ url });
+                    const res = await authWithLegacy.getSessionFromUrl({ url });
                     // if no error, session will be stored and onAuthStateChange will fire
                     if (res?.error) {
                         showSnack(res.error.message || 'Failed to handle auth link');
@@ -228,8 +234,13 @@ export async function signUp(email: string, password: string) {
         const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
         const redirectTo = `${scheme}://login`;
         // include redirectTo so confirmation/magic links return to the app
-        // @ts-ignore - runtime shape may vary across supabase-js versions
-        const { data, error } = await supabase.auth.signUp({ email, password }, { redirectTo });
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: redirectTo,
+            },
+        });
         if (error) {
             showSnack(error.message || 'Signup failed');
             void reportAppError({
@@ -252,12 +263,14 @@ export async function signUp(email: string, password: string) {
     }
 }
 
-export async function signInWithOAuth(provider: string) {
+export async function signInWithOAuth(provider: 'google' | 'apple') {
     try {
         const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
         const redirectTo = `${scheme}://login`;
-        // @ts-ignore - supabase client signatures differ between versions; call with redirectTo
-        const res = await supabase.auth.signInWithOAuth({ provider }, { redirectTo });
+        const res = await supabase.auth.signInWithOAuth({
+            provider,
+            options: { redirectTo },
+        });
         if (res?.error) {
             showSnack(res.error.message || 'OAuth sign-in failed');
             void reportAppError({
