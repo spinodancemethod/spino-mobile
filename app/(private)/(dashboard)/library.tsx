@@ -1,20 +1,26 @@
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
-import { useEffect } from 'react'
+import ThemedButton from 'Components/ThemedButton'
+import { useEffect, useState } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { LEVELS } from 'constants/Levels'
-import { View } from 'react-native'
-import { FlatList } from 'react-native'
+import { View, FlatList, Modal, TouchableOpacity, StyleSheet } from 'react-native'
 import VideoTile from 'Components/VideoTile'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
-import { useState } from 'react'
+import { useEntitlement } from 'lib/hooks/useEntitlement'
+import { useTheme } from 'constants/useTheme'
+import { Ionicons } from '@expo/vector-icons'
 
 const Library = () => {
     const params = useLocalSearchParams<{ positionId?: string | string[]; positionName?: string | string[] }>()
+    const { isSubscribed } = useEntitlement()
+    const { colors } = useTheme()
+    // Controls the subscribe prompt shown when a free user taps a locked tile.
+    const [lockModalVisible, setLockModalVisible] = useState(false)
     const { data: positions = [] } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
@@ -57,15 +63,35 @@ const Library = () => {
 
     const numColumns = 1;
 
-    const renderTile = ({ item }: { item: any }) => (
-        <VideoTile
-            item={item}
-            positionName={getPosition(item.position_id)?.name}
-            liked={favouriteIds.includes(item.id)}
-            decked={deckIds.includes(item.id)}
-            onPress={() => router.push(`/video/${item.id}`)}
-        />
-    );
+    const renderTile = ({ item }: { item: any }) => {
+        // Free-tier users cannot play paid videos — show a lock overlay instead.
+        const isLocked = !isSubscribed && item.access_tier === 'paid'
+        return (
+            <View style={{ position: 'relative' }}>
+                <VideoTile
+                    item={item}
+                    positionName={getPosition(item.position_id)?.name}
+                    liked={favouriteIds.includes(item.id)}
+                    decked={deckIds.includes(item.id)}
+                    // Tapping a locked tile is handled by the overlay below, not this handler.
+                    onPress={isLocked ? undefined : () => router.push(`/video/${item.id}`)}
+                />
+                {isLocked && (
+                    // Absolute overlay covers the entire tile and intercepts taps.
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => setLockModalVisible(true)}
+                        style={tileStyles.lockOverlay}
+                    >
+                        <View style={tileStyles.lockBadge}>
+                            <Ionicons name="lock-closed" size={16} color="#fff" />
+                            <ThemedText style={tileStyles.lockLabel}>Premium</ThemedText>
+                        </View>
+                    </TouchableOpacity>
+                )}
+            </View>
+        )
+    };
 
     return (
         <ThemedView>
@@ -102,8 +128,76 @@ const Library = () => {
                     showsVerticalScrollIndicator={false}
                 />
             )}
+            {/* Upsell modal shown when a free user taps a locked video tile. */}
+            <Modal visible={lockModalVisible} transparent animationType="fade">
+                <View style={tileStyles.modalBackdrop}>
+                    <View style={[tileStyles.modalCard, { backgroundColor: colors.card }]}>
+                        <Ionicons name="lock-closed" size={40} color={colors.primary} style={{ marginBottom: 16 }} />
+                        <ThemedText variant="title" style={{ textAlign: 'center', marginBottom: 10 }}>
+                            Premium Content
+                        </ThemedText>
+                        <ThemedText style={{ textAlign: 'center', marginBottom: 24, opacity: 0.65 }}>
+                            Subscribe to unlock all videos and build your full roadmap.
+                        </ThemedText>
+                        <ThemedButton
+                            title="Subscribe to unlock"
+                            onPress={() => {
+                                setLockModalVisible(false)
+                                router.push('/subscribe')
+                            }}
+                            style={{ width: '100%', marginBottom: 10 }}
+                        />
+                        <ThemedButton
+                            title="Maybe later"
+                            variant="ghost"
+                            onPress={() => setLockModalVisible(false)}
+                            style={{ width: '100%' }}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </ThemedView>
     );
 };
+
+const tileStyles = StyleSheet.create({
+    lockOverlay: {
+        // Covers the full tile so the entire area is tappable.
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        borderRadius: 8,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        alignItems: 'flex-end',
+        justifyContent: 'flex-start',
+        padding: 10,
+    },
+    lockBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 12,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    lockLabel: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+    },
+    modalCard: {
+        width: '100%',
+        borderRadius: 16,
+        padding: 24,
+        alignItems: 'center',
+    },
+})
 
 export default Library;
