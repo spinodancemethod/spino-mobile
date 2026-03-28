@@ -40,6 +40,18 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'billing_events' AND policyname = 'billing_events_service_role_all'
+  ) THEN
+    CREATE POLICY billing_events_service_role_all
+      ON public.billing_events
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
     WHERE schemaname = 'public' AND tablename = 'client_error_logs' AND policyname = 'client_error_logs_insert_own'
   ) THEN
     CREATE POLICY client_error_logs_insert_own

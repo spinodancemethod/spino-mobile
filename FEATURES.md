@@ -15,6 +15,7 @@
 - Removed Google/Apple OAuth options from the registration screen so account creation is now email/password only.
 - Increased container horizontal padding on login, sign-up, and forgot-password pages to improve auth form spacing and balance.
 - Increased spacing between the Reset password heading and helper text on the forgot-password screen.
+- Added a service-role-only RLS policy on billing events to remove no-policy exposure while keeping client access blocked.
 
 ## Archived Stripe-Era Milestones
 
