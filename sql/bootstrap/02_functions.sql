@@ -20,6 +20,27 @@ AS $$
   );
 $$;
 
+-- Tier-aware video access helper used by the RLS SELECT policy on videos.
+-- Returns true when the requesting user has an active subscription OR
+-- the video is marked as free-tier content (access_tier = 'free').
+CREATE OR REPLACE FUNCTION public.can_access_video(p_user_id uuid, p_video_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    -- Free-tier videos are always accessible to authenticated users.
+    EXISTS (
+      SELECT 1 FROM public.videos v
+      WHERE v.id = p_video_id AND v.access_tier = 'free'
+    )
+    OR
+    -- Paid videos require an active subscription.
+    public.has_active_subscription(p_user_id);
+$$;
+
 -- Atomic deck toggle RPC with a per-user advisory lock to avoid concurrent race issues.
 CREATE OR REPLACE FUNCTION public.toggle_deck_with_subscription_limit(
   p_user uuid,

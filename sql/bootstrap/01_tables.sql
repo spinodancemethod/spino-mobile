@@ -36,8 +36,12 @@ CREATE TABLE IF NOT EXISTS public.videos (
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   level smallint,
+  -- Determines content access tier: 'free' videos are visible to all authenticated users,
+  -- 'paid' videos require an active subscription.
+  access_tier text NOT NULL DEFAULT 'paid',
   CONSTRAINT videos_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions (id) ON DELETE RESTRICT,
-  CONSTRAINT videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
+  CONSTRAINT videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
+  CONSTRAINT videos_access_tier_check CHECK (access_tier IN ('free', 'paid'))
 );
 
 CREATE TABLE IF NOT EXISTS public.deck (

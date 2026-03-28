@@ -317,15 +317,19 @@ BEGIN
       USING (auth.uid() = user_id);
   END IF;
 
+  -- Drop the old binary-subscription-only policy if it still exists from before the free-tier migration.
+  DROP POLICY IF EXISTS videos_select_active_subscription ON public.videos;
+
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'videos' AND policyname = 'videos_select_active_subscription'
+    WHERE schemaname = 'public' AND tablename = 'videos' AND policyname = 'videos_select_tier_access'
   ) THEN
-    CREATE POLICY videos_select_active_subscription
+    -- Allows SELECT when the user has an active subscription OR the video is free-tier.
+    CREATE POLICY videos_select_tier_access
       ON public.videos
       FOR SELECT
       TO authenticated
-      USING (public.has_active_subscription(auth.uid()));
+      USING (public.can_access_video(auth.uid(), id));
   END IF;
 END $$;
 
@@ -370,6 +374,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 -- Function grants
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.can_access_video(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_access_video(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.toggle_deck_with_subscription_limit(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.toggle_deck_with_subscription_limit(uuid, uuid) TO service_role;
 
