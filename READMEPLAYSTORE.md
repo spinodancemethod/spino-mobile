@@ -114,37 +114,144 @@ Required function secrets:
 - [ ] Restore purchases flow re-verifies available purchase tokens.
 - [ ] Expired/canceled subscriptions lose access correctly.
 
-## Phase 4: Signing, build, and internal testing
+## Phase 4: Content rating, builds, and release
 
-### 4.1 Signing configuration
+### 4.1 Play Console setup
 
-Define locally or in CI (recommended: `~/.gradle/gradle.properties`):
+- [ ] Create app listing in Google Play Console.
+- [ ] Complete content rating questionnaire:
+  - App category: `Lifestyle` (fitness/practice content).
+  - Mark all restricted content questions as `No` unless your app has mature themes.
+  - Save and publish rating certificate.
+- [ ] Add store listing details:
+  - Screenshots (min 2, max 8; landscape or portrait).
+  - Feature graphic (1024×500px mandatory).
+  - Short description (80 chars).
+  - Full description (4000 chars).
+  - App support email (visible on store).
 
-- `SPINO_UPLOAD_STORE_FILE`
-- `SPINO_UPLOAD_STORE_PASSWORD`
-- `SPINO_UPLOAD_KEY_ALIAS`
-- `SPINO_UPLOAD_KEY_PASSWORD`
+### 4.2 Local build and signing
 
-### 4.2 Internal test release checklist
+Define signing properties in `~/.gradle/gradle.properties` (local only, never committed):
 
-- [ ] Build an Android App Bundle for internal testing.
-- [ ] Upload to the Play internal track.
-- [ ] Validate purchase, entitlement, restore, and cancel/expiry states.
+```
+SPINO_UPLOAD_STORE_FILE=/path/to/spino.keystore
+SPINO_UPLOAD_STORE_PASSWORD=your_keystore_password
+SPINO_UPLOAD_KEY_ALIAS=spino
+SPINO_UPLOAD_KEY_PASSWORD=your_key_password
+```
+
+Generate a new keystore (first time only):
+
+```bash
+keytool -genkey -v -keystore ~/.android/spino.keystore \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias spino
+```
+
+Build Android App Bundle (AAB):
+
+```bash
+npx expo prebuild --platform android
+cd android && ./gradlew bundleRelease
+```
+
+AAB output: `android/app/build/outputs/bundle/release/app-release.aab`
+
+### 4.3 Internal testing release
+
+- [ ] Upload AAB to Play Console > Internal Testing track.
+- [ ] Invite test accounts (your own accounts or trusted testers).
+- [ ] Test on physical device or emulator:
+  - Auth: sign up, email confirmation, sign in, sign out.
+  - Free content: browse library, add to favorites and deck, view notes.
+  - Paid content: attempt access to restricted videos → redirected to subscribe.
+  - Subscription: purchase, verify completion, check entitlement state.
+  - Restore: uninstall app, re-install, tap "Restore Google Play purchases".
+  - Cancel/expiry: cancel subscription in Play Store, check app reflects loss of access.
+- [ ] Collect feedback and fix critical issues.
+
+### 4.4 Promotion to production
+
+- [ ] Complete all testing and validation.
+- [ ] Run final CI checks locally: `npm run typecheck && npm test`.
+- [ ] Tag git: `git tag -a v1.0.0 -m "Release 1.0.0: Initial public release"`.
+- [ ] Push tag: `git push origin v1.0.0`.
+- [ ] Promote internal testing build to Production track in Play Console.
+- [ ] Publish to Play Store (may take 2-4 hours to go live).
 
 ## Definition of done
 
 Release readiness is achieved when all are true:
 
 - [ ] Android identity/version settings are consistent and intentional.
-- [ ] Native Android strategy is explicit and reproducible.
+- [ ] Native Android strategy is explicit and reproducible (generated mode).
 - [ ] Google Play subscriptions are purchasable from the app.
 - [ ] Verification writes authoritative entitlement state in Supabase.
 - [ ] Access behavior is correct on purchase, restore, expiry, and cancel.
-- [ ] Internal testing build is uploaded successfully.
+- [ ] Internal testing build passes end-to-end validation.
+- [ ] Content rating questionnaire is complete in Play Console.
+- [ ] All legal and support links are live and linked in app.
+- [ ] Pre-release checklist below is satisfied.
+
+---
+
+## Pre-release checklist
+
+Copy and complete before tagging `v1.0.0` and submitting to Play Store:
+
+**Environment & Configuration:**
+- [ ] All Supabase Edge Function secrets are set (Google Play service account, allowed package names, private key in PEM format).
+- [ ] Fresh database: run `sql/bootstrap/*.sql` in order on a test Supabase project without errors.
+- [ ] `app.json`: `version = "1.0.0"`, `versionCode = 1`.
+- [ ] `.env` NOT committed; `.env.example` is current; `git ls-files | grep -E '\\.env|secrets'` returns only `.env.example`.
+
+**App Assets & Branding:**
+- [ ] App icon (`assets/icon.png`), adaptive icon (`assets/adaptive-icon.png`), splash (`assets/splash-icon.png`) are final.
+- [ ] Play listing graphics uploaded: 2–8 screenshots, feature graphic (1024×500).
+- [ ] Play store listing details complete: short + full description, support email.
+
+**Legal & Compliance:**
+- [ ] Privacy Policy URL is live (e.g., https://example.com/privacy).
+- [ ] Terms of Service URL is live (e.g., https://example.com/terms).
+- [ ] Both links appear in app (`app/(private)/account.tsx` buttons).
+- [ ] Content rating questionnaire completed in Play Console.
+- [ ] Android permissions declared in `app.json` (currently `[]`; update if needed).
+
+**Code Quality:**
+- [ ] `npm run typecheck` passes (no TypeScript errors).
+- [ ] `npm test` passes (16 tests).
+- [ ] No `console.log` left in production code paths (except error logging).
+- [ ] No hardcoded secrets or URLs (all env vars used correctly).
+
+**Build & Release:**
+- [ ] Local Android build succeeds:
+  ```bash
+  npx expo prebuild --platform android && cd android && ./gradlew bundleRelease
+  ```
+- [ ] AAB successfully uploaded to Play Console internal testing track.
+- [ ] Internal testing on a real device or emulator passed:
+  - Auth, free content, paid content purchase, restore, expiry.
+  - All snackbar messages display correctly.
+  - No crashes or errors.
+
+**CI & Git:**
+- [ ] All GitHub Actions checks pass (install, audit, typecheck, tests).
+- [ ] Git history is clean; no uncommitted changes (`git status` clean).
+- [ ] Tag created and pushed:
+  ```bash
+  git tag -a v1.0.0 -m "Release 1.0.0: Initial public release with Google Play billing"
+  git push origin v1.0.0
+  ```
+
+**Documentation:**
+- [ ] `READMEPLAYSTORE.md` is up-to-date with Phases 1-4 and this checklist.
+- [ ] `OBSERVABILITY.md` queries tested locally.
+- [ ] Team/maintainers briefed on release and next steps (e.g., monitoring, bug fixes).
 
 ## Immediate next actions for this repo
 
-1. Keep `/android` ignored in git.
-2. Configure `SPINO_UPLOAD_*` locally.
-3. Regenerate Android (`npx expo prebuild --platform android`) when doing Android build/test work.
-4. Build and upload an internal testing AAB.
+1. Update `updates.url` in `app.json` to your Expo project: run `eas init`, copy the project ID, and replace `YOUR_PROJECT_ID` in the URL.
+2. Update privacy policy and terms URLs in `app/(private)/account.tsx` to your actual legal pages.
+3. Configure `SPINO_UPLOAD_*` locally in `~/.gradle/gradle.properties` (never commit).
+4. Keep `/android` ignored in git; regenerate locally only when needed.
+5. Use this checklist before first Play Store submission.

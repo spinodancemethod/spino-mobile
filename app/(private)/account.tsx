@@ -140,6 +140,22 @@ export default function AccountPage() {
                     onPress={handleManageInGooglePlay}
                     style={{ width: '100%', marginTop: 8 }}
                 />
+
+                {/* Legal and support links for Play Store compliance */}
+                <View style={{ marginTop: 32, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 12 }}>
+                    <ThemedButton
+                        title="Privacy Policy"
+                        variant="ghost"
+                        onPress={() => Linking.openURL('https://example.com/privacy')}
+                        style={{ width: '100%' }}
+                    />
+                    <ThemedButton
+                        title="Terms of Service"
+                        variant="ghost"
+                        onPress={() => Linking.openURL('https://example.com/terms')}
+                        style={{ width: '100%' }}
+                    />
+                </View>
             </ScrollView>
         </ThemedView>
     );

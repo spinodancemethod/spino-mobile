@@ -18,6 +18,8 @@
     },
     "android": {
       "package": "com.spino.mobile",
+      "versionCode": 1,
+      "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5F3FF"
@@ -28,6 +30,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_PROJECT_ID",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": "1.0.0",
     "plugins": [
       "expo-sqlite",
       "expo-router",
