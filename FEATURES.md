@@ -49,6 +49,8 @@
 - Normalized authenticated app entry to Home and added a workspace quick-link below the Home subscribe card so free users can open the dashboard without subscribing first.
 - Promoted the Home free-tier `Go to Workspace` quick-link to a visually prominent primary CTA with an icon so it stands out from surrounding content.
 - Added tier-aware access control for positions, including `positions.access_tier`, a `can_access_position` helper, and position-aware video access so free/premium positions can be selectively published later.
+- Updated roadmap tile logic so positions with visible videos but no roadmap items now show the plus tile to jump to Library, while truly unavailable positions keep a subscribe-lock tile.
+- Simplified roadmap position filtering to show only positions with actual roadmap videos, excluding empty and paywalled-only positions, and removed the confusing Show Empty Positions toggle.
 
 ## Archived Stripe-Era Milestones
 
