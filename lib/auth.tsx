@@ -4,6 +4,8 @@ import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import { Linking, AppState, Modal, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { showSnack } from 'lib/snackbarService';
+import { shouldHandleAuthUrl } from 'lib/authUrl';
+import { reportAppError } from 'lib/observability';
 
 type AuthContextValue = {
     session: Session | null;
@@ -11,22 +13,6 @@ type AuthContextValue = {
     loading: boolean;
     processingLink?: boolean;
 };
-
-function shouldHandleAuthUrl(url: string) {
-    const hashIdx = url.indexOf('#');
-    const rawParams = hashIdx >= 0 ? url.slice(hashIdx + 1) : (url.split('?')[1] ?? '');
-    const params = new URLSearchParams(rawParams);
-    const normalizedUrl = url.toLowerCase();
-
-    return (
-        normalizedUrl.includes('access_token=') ||
-        normalizedUrl.includes('refresh_token=') ||
-        params.has('access_token') ||
-        params.has('refresh_token') ||
-        params.has('type') ||
-        normalizedUrl.includes('://login')
-    );
-}
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -98,6 +84,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             } catch (e: any) {
                 showSnack(e?.message ?? 'Failed to process auth link');
+                void reportAppError({
+                    context: 'auth.handleUrl',
+                    error: e,
+                    metadata: { url },
+                });
             } finally {
                 const elapsed = Date.now() - start;
                 const min = 600;
@@ -189,12 +180,20 @@ export async function signOut() {
         const { error } = await supabase.auth.signOut();
         if (error) {
             showSnack(error.message || 'Error signing out');
+            void reportAppError({
+                context: 'auth.signOut',
+                error,
+            });
             return { error };
         }
         showSnack('Signed out successfully');
         return { error: null };
     } catch (e: any) {
         showSnack(e?.message ?? 'Error signing out');
+        void reportAppError({
+            context: 'auth.signOut',
+            error: e,
+        });
         return { error: e };
     }
 }
@@ -204,12 +203,22 @@ export async function signIn(email: string, password: string) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
             showSnack(error.message || 'Login failed');
+            void reportAppError({
+                context: 'auth.signIn',
+                error,
+                metadata: { email },
+            });
             return { error };
         }
         showSnack('Logged in');
         return { error: null };
     } catch (e: any) {
         showSnack(e?.message ?? 'Login failed');
+        void reportAppError({
+            context: 'auth.signIn',
+            error: e,
+            metadata: { email },
+        });
         return { error: e };
     }
 }
@@ -223,12 +232,22 @@ export async function signUp(email: string, password: string) {
         const { data, error } = await supabase.auth.signUp({ email, password }, { redirectTo });
         if (error) {
             showSnack(error.message || 'Signup failed');
+            void reportAppError({
+                context: 'auth.signUp',
+                error,
+                metadata: { email },
+            });
             return { error };
         }
         showSnack('Signup successful. Check your email to confirm.');
         return { error: null, data };
     } catch (e: any) {
         showSnack(e?.message ?? 'Signup failed');
+        void reportAppError({
+            context: 'auth.signUp',
+            error: e,
+            metadata: { email },
+        });
         return { error: e };
     }
 }
@@ -241,11 +260,21 @@ export async function signInWithOAuth(provider: string) {
         const res = await supabase.auth.signInWithOAuth({ provider }, { redirectTo });
         if (res?.error) {
             showSnack(res.error.message || 'OAuth sign-in failed');
+            void reportAppError({
+                context: 'auth.signInWithOAuth',
+                error: res.error,
+                metadata: { provider },
+            });
             return { error: res.error };
         }
         return { error: null, data: res?.data };
     } catch (e: any) {
         showSnack(e?.message ?? 'OAuth sign-in failed');
+        void reportAppError({
+            context: 'auth.signInWithOAuth',
+            error: e,
+            metadata: { provider },
+        });
         return { error: e };
     }
 }

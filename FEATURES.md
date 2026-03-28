@@ -1,5 +1,11 @@
 # Features
 
+- Switched deck toggling to the server-side `toggle_deck_with_subscription_limit` RPC so advisory locking and limit checks are atomic under concurrent taps/devices.
+- Expanded automated coverage with tests for auth URL handling, entitlement guard decisions, Google verification response mapping, and deck/favourite toggle cache behavior.
+- Added centralized app-side error logging (`lib/observability.ts` + `sql/client_error_logs.sql`) and an operations runbook (`OBSERVABILITY.md`) with edge-function alert thresholds.
+- Added a direct video-route entitlement guard so non-subscribed users are redirected to `/subscribe` even when bypassing dashboard tabs.
+- Added strict package-name allowlist validation and per-user verification request throttling in `verify-google-play-purchase`.
+- Added `sql/videos_subscription_rls.sql` to enforce subscription-based video reads at the database policy layer.
 - Removed the legacy Stripe checkout edge function file so Google Play remains the sole active subscription purchase path.
 - Added a dashboard entitlement gate that checks `has_active_subscription` before allowing paid tab access.
 - Hardened Google Play verification by validating missing env keys explicitly, sanitizing upstream error output, and making billing event IDs deterministic per purchase/order.

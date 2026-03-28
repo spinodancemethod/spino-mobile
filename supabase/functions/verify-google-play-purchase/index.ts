@@ -16,6 +16,9 @@ type GoogleErrorResponse = {
     };
 };
 
+const VERIFY_REQUESTS_PER_MINUTE = 10;
+const VERIFY_RATE_WINDOW_MS = 60_000;
+
 function jsonResponse(status: number, body: Record<string, unknown>) {
     return new Response(JSON.stringify(body), {
         status,
@@ -158,7 +161,25 @@ function getRequiredEnv() {
         required,
         missing,
         defaultAndroidPackageName: Deno.env.get('GOOGLE_PLAY_ANDROID_PACKAGE_NAME') ?? '',
+        allowedPackageNames:
+            (Deno.env.get('GOOGLE_PLAY_ALLOWED_PACKAGE_NAMES') ?? '')
+                .split(',')
+                .map((name) => name.trim())
+                .filter(Boolean),
     };
+}
+
+function buildAllowedPackages(defaultAndroidPackageName: string, configuredAllowedPackages: string[]) {
+    const all = new Set<string>();
+    if (defaultAndroidPackageName) {
+        all.add(defaultAndroidPackageName);
+    }
+
+    for (const packageName of configuredAllowedPackages) {
+        all.add(packageName);
+    }
+
+    return all;
 }
 
 function sanitizeErrorMessage(error: unknown) {
@@ -178,6 +199,10 @@ function parseJsonBody(req: Request): Promise<VerifyGooglePlayPurchasePayload> {
 }
 
 Deno.serve(async (req: Request) => {
+    let adminSupabase: any = null;
+    let eventUserId: string | null = null;
+    let eventPurchaseToken: string | null = null;
+
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
@@ -187,7 +212,7 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const { required, missing, defaultAndroidPackageName } = getRequiredEnv();
+        const { required, missing, defaultAndroidPackageName, allowedPackageNames } = getRequiredEnv();
 
         if (missing.length > 0) {
             return jsonResponse(500, {
@@ -200,13 +225,13 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(401, { error: 'Missing Authorization header' });
         }
 
-        const userSupabase = createClient(required.SUPABASE_URL, required.SUPABASE_ANON_KEY, {
+        const userSupabase: any = createClient(required.SUPABASE_URL, required.SUPABASE_ANON_KEY, {
             global: {
                 headers: { Authorization: authHeader },
             },
         });
 
-        const adminSupabase = createClient(required.SUPABASE_URL, required.SUPABASE_SERVICE_ROLE_KEY);
+        adminSupabase = createClient(required.SUPABASE_URL, required.SUPABASE_SERVICE_ROLE_KEY) as any;
 
         const token = authHeader.replace('Bearer ', '');
         const {
@@ -218,9 +243,13 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(401, { error: 'Unauthorized' });
         }
 
+        eventUserId = user.id;
+
         const payload = await parseJsonBody(req);
         const packageName = payload.packageName ?? defaultAndroidPackageName;
         const purchaseToken = payload.purchaseToken;
+        eventPurchaseToken = purchaseToken ?? null;
+        const allowedPackages = buildAllowedPackages(defaultAndroidPackageName, allowedPackageNames);
 
         if (!packageName) {
             return jsonResponse(400, { error: 'packageName is required (or set GOOGLE_PLAY_ANDROID_PACKAGE_NAME)' });
@@ -228,6 +257,63 @@ Deno.serve(async (req: Request) => {
 
         if (!purchaseToken) {
             return jsonResponse(400, { error: 'purchaseToken is required' });
+        }
+
+        if (allowedPackages.size === 0) {
+            return jsonResponse(500, {
+                error: 'Missing allowed package configuration. Set GOOGLE_PLAY_ANDROID_PACKAGE_NAME or GOOGLE_PLAY_ALLOWED_PACKAGE_NAMES.',
+            });
+        }
+
+        if (!allowedPackages.has(packageName)) {
+            return jsonResponse(400, {
+                error: 'packageName is not in the allowed package list',
+            });
+        }
+
+        // Guard Google API calls from repeated spam by limiting requests per user in a 1-minute window.
+        const windowStartIso = new Date(Date.now() - VERIFY_RATE_WINDOW_MS).toISOString();
+        const { count: requestCount, error: countError } = await adminSupabase
+            .from('billing_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('provider', 'google_play')
+            .eq('event_type', 'verification.request')
+            .gte('processed_at', windowStartIso)
+            .contains('payload', { user_id: user.id });
+
+        if (countError) {
+            throw new Error(countError.message);
+        }
+
+        if ((requestCount ?? 0) >= VERIFY_REQUESTS_PER_MINUTE) {
+            await adminSupabase.from('billing_events').insert({
+                provider: 'google_play',
+                event_id: `verify:error:rate_limited:${user.id}:${Date.now()}:${crypto.randomUUID()}`,
+                event_type: 'verification.error',
+                payload: {
+                    user_id: user.id,
+                    purchase_token: purchaseToken,
+                    error: 'rate_limited',
+                },
+            });
+
+            return jsonResponse(429, { error: 'Too many verification requests. Please wait a minute and try again.' });
+        }
+
+        const requestEventId = `verify-request:${user.id}:${purchaseToken}:${Date.now()}:${crypto.randomUUID()}`;
+        const { error: requestEventError } = await adminSupabase.from('billing_events').insert({
+            provider: 'google_play',
+            event_id: requestEventId,
+            event_type: 'verification.request',
+            payload: {
+                user_id: user.id,
+                purchase_token: purchaseToken,
+                package_name: packageName,
+            },
+        });
+
+        if (requestEventError && requestEventError.code !== '23505') {
+            throw new Error(requestEventError.message);
         }
 
         const accessToken = await getGoogleApiAccessToken(
@@ -250,6 +336,18 @@ Deno.serve(async (req: Request) => {
         const purchase = await verifyResponse.json();
         if (!verifyResponse.ok) {
             const purchaseError = purchase as GoogleErrorResponse;
+            await adminSupabase.from('billing_events').insert({
+                provider: 'google_play',
+                event_id: `verify:error:google_api:${user.id}:${purchaseToken}:${Date.now()}:${crypto.randomUUID()}`,
+                event_type: 'verification.error',
+                payload: {
+                    user_id: user.id,
+                    purchase_token: purchaseToken,
+                    package_name: packageName,
+                    error: purchaseError?.error?.message ?? 'Google Play verification failed',
+                },
+            });
+
             return jsonResponse(400, {
                 error: purchaseError?.error?.message ?? 'Google Play verification failed',
             });
@@ -349,6 +447,19 @@ Deno.serve(async (req: Request) => {
             orderId: latestOrderId,
         });
     } catch (error: unknown) {
+        if (adminSupabase) {
+            await adminSupabase.from('billing_events').insert({
+                provider: 'google_play',
+                event_id: `verify:error:unexpected:${eventUserId ?? 'unknown'}:${eventPurchaseToken ?? 'no-token'}:${Date.now()}:${crypto.randomUUID()}`,
+                event_type: 'verification.error',
+                payload: {
+                    user_id: eventUserId,
+                    purchase_token: eventPurchaseToken,
+                    error: sanitizeErrorMessage(error),
+                },
+            });
+        }
+
         return jsonResponse(400, { error: sanitizeErrorMessage(error) });
     }
 });

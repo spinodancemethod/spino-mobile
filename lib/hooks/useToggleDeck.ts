@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { showSnack } from 'lib/snackbarService';
 import { DECK_LIMIT } from 'constants/Config';
 import { useAuth } from 'lib/auth';
+import { computeNextToggledIds } from './toggleMutationUtils';
 
 /**
  * useToggleDeck
@@ -28,43 +29,26 @@ export function useToggleDeck(userId?: string | null) {
 
             if (!actualUserId) throw new Error('No authenticated user available');
 
-            // check server-side whether the video exists in deck
-            const { data: existing, error: fetchErr } = await supabase
-                .from('deck')
-                .select('id')
-                .eq('video_id', videoId)
-                .eq('user_id', actualUserId)
-                .maybeSingle();
-            if (fetchErr) throw fetchErr;
+            // Use RPC with advisory lock + server-side limit logic to avoid race conditions.
+            const { data, error } = await supabase.rpc('toggle_deck_with_subscription_limit', {
+                p_user: actualUserId,
+                p_video: videoId,
+            });
 
-            if (existing && (existing as any).id) {
-                const { error: delErr } = await supabase
-                    .from('deck')
-                    .delete()
-                    .eq('video_id', videoId)
-                    .eq('user_id', actualUserId);
-                if (delErr) throw delErr;
-                return { action: 'deleted' as const };
+            if (error) {
+                const message = error.message ?? 'Failed to toggle deck';
+                if (message.toLowerCase().includes('deck limit reached')) {
+                    showSnack(`You can only save up to ${DECK_LIMIT} classes.`, { duration: 3000 });
+                    const err: any = new Error('deck limit reached');
+                    err.code = 'DECK_LIMIT';
+                    throw err;
+                }
+
+                throw error;
             }
 
-            // enforce code-level limit
-            const { data: rows, error: countErr } = await supabase
-                .from('deck')
-                .select('video_id', { count: 'exact' })
-                .eq('user_id', actualUserId);
-            if (countErr) throw countErr;
-
-            const currentCount = Array.isArray(rows) ? rows.length : 0;
-            if (currentCount >= DECK_LIMIT) {
-                showSnack(`You can only save up to ${DECK_LIMIT} classes.`, { duration: 3000 });
-                const err: any = new Error('deck limit reached');
-                err.code = 'DECK_LIMIT';
-                throw err;
-            }
-
-            const { error: insErr } = await supabase.from('deck').insert({ video_id: videoId, user_id: actualUserId });
-            if (insErr) throw insErr;
-            return { action: 'inserted' as const };
+            const action = data === 'deleted' ? 'deleted' : 'inserted';
+            return { action: action as 'deleted' | 'inserted' };
         },
         onMutate: async (videoId: string) => {
             // Optimistic update: update deck cache and remove video from any
@@ -73,8 +57,7 @@ export function useToggleDeck(userId?: string | null) {
             await qc.cancelQueries({ queryKey: ['videosByIds'] });
 
             const previous = qc.getQueryData<string[]>(key) || [];
-            const exists = previous.includes(videoId);
-            const next = exists ? previous.filter((id) => id !== videoId) : [...previous, videoId];
+            const { next } = computeNextToggledIds(previous, videoId);
             qc.setQueryData(key, next);
 
             // Snapshot and update videosByIds caches, but only those that match

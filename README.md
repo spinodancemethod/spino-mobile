@@ -22,6 +22,8 @@ Developer notes
 - To run locally, provide your Supabase URL and publishable key via Expo environment variables (e.g. `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). See `lib/supabase.ts` for usage.
 - Copy `.env.example` and fill all required Expo public variables for your environment.
 - The `notes` table uses row-level security; apply `sql/notes_rls_policies.sql` in the Supabase SQL editor (as an admin) so authenticated clients can access their own rows.
+- For paid content enforcement at the database layer, apply `sql/videos_subscription_rls.sql` after billing migrations.
+- For app-side auth/billing telemetry, apply `sql/client_error_logs.sql` and use `OBSERVABILITY.md` thresholds/queries.
 - The app uses React Query; if you change query keys, update mutation invalidations accordingly.
 - Run `npm run typecheck` and `npm test` before releasing.
 

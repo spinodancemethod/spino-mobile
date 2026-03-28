@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { View, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedPill from 'Components/ThemedPill'
@@ -13,11 +13,14 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import { useUpsertNote } from 'lib/hooks/useUpsertNote'
 import { showSnack } from 'lib/snackbarService'
+import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
+import { shouldRedirectForEntitlement, shouldShowEntitlementPendingState } from 'lib/entitlementGuards'
 
 
 export default function VideoDetailScreen() {
     const { id } = useLocalSearchParams() as { id?: string }
     const { colors, mode } = useTheme()
+    const subscriptionStatus = useSubscriptionStatus()
 
     // Skeleton colors that contrast the page background
     const skelBase = mode === 'dark' ? '#111827' : '#E9E5FF'
@@ -39,6 +42,15 @@ export default function VideoDetailScreen() {
     const [editorText, setEditorText] = useState<string | null>(null)
     const upsert = useUpsertNote()
     const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        if (shouldRedirectForEntitlement({
+            isLoading: subscriptionStatus.isLoading,
+            hasAccess: subscriptionStatus.isActiveSubscription,
+        })) {
+            router.replace('/subscribe')
+        }
+    }, [subscriptionStatus.isLoading, subscriptionStatus.isActiveSubscription])
 
     useEffect(() => {
         setIsPlaying(false)
@@ -83,6 +95,19 @@ export default function VideoDetailScreen() {
             <View style={[styles.thumb, { backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }]}>
                 <Ionicons name="play-circle" size={72} color={colors.primary} />
             </View>
+        )
+    }
+
+    if (shouldShowEntitlementPendingState({
+        isLoading: subscriptionStatus.isLoading,
+        hasAccess: subscriptionStatus.isActiveSubscription,
+    })) {
+        return (
+            <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ThemedText>
+                    {subscriptionStatus.isLoading ? 'Checking access...' : 'Redirecting to subscription...'}
+                </ThemedText>
+            </ThemedView>
         )
     }
 

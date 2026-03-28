@@ -8,6 +8,7 @@ import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { shouldRedirectForEntitlement } from 'lib/entitlementGuards';
 
 function dashboardEntitlementQueryKey(userId?: string | null) {
     return ['dashboardEntitlement', userId ?? 'anonymous'];
@@ -48,10 +49,10 @@ export default function DashboardLayout() {
     });
 
     useEffect(() => {
-        if (!authLoading && entitlement.isFetched && !entitlement.data) {
+        if (shouldRedirectForEntitlement({ isLoading: authLoading || entitlement.isLoading, hasAccess: Boolean(entitlement.data) })) {
             router.replace('/subscribe');
         }
-    }, [authLoading, entitlement.isFetched, entitlement.data]);
+    }, [authLoading, entitlement.isLoading, entitlement.data]);
 
     if (authLoading || entitlement.isLoading) {
         return (

@@ -12,6 +12,7 @@ import { useVerifyGooglePlayPurchase } from 'lib/hooks/useVerifyGooglePlayPurcha
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
+import { reportAppError } from 'lib/observability';
 
 type Plan = {
     id: 'monthly' | 'yearly';
@@ -90,6 +91,15 @@ export default function Subscribe() {
             showSnack('Subscription activated successfully.');
         } catch (error: any) {
             showSnack(error?.message ?? 'Failed to complete Google Play purchase.');
+            void reportAppError({
+                context: 'billing.checkout',
+                error,
+                userId: user?.id,
+                metadata: {
+                    selectedPlan,
+                    platform: Platform.OS,
+                },
+            });
         }
     };
 
