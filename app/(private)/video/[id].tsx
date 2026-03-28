@@ -165,6 +165,17 @@ export default function VideoDetailScreen() {
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <ThemedText variant="title">{video?.title || 'Video'}</ThemedText>
 
+                    {/* Metadata */}
+                    <View style={{ marginTop: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        {position ? <ThemedPill size="small" color="primary">{position.name}</ThemedPill> : null}
+                        {typeof video?.level === 'number' ? (
+                            (() => {
+                                const info = getLevelInfo(video.level);
+                                return <ThemedPill size="small" color={info?.color ?? '#e5e7eb'}>{getLevelLabel(video.level)}</ThemedPill>
+                            })()
+                        ) : null}
+                    </View>
+
                     {/* playable video if URL or file_path exists */}
                     {(video?.url || video?.file_path) ? (
                         <View style={{ width: '100%', marginTop: 12, position: 'relative' }}>
@@ -204,19 +215,6 @@ export default function VideoDetailScreen() {
                         renderPoster()
                     )}
 
-                    {/* Metadata */}
-                    <View style={{ marginTop: 12, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                        {position ? <ThemedPill size="small" color="primary">{position.name}</ThemedPill> : null}
-                        {typeof video?.level === 'number' ? (
-                            (() => {
-                                const info = getLevelInfo(video.level);
-                                return <ThemedPill size="small" color={info?.color ?? '#e5e7eb'}>{getLevelLabel(video.level)}</ThemedPill>
-                            })()
-                        ) : null}
-                    </View>
-
-                    {/* Description (moved below pills) */}
-                    <ThemedText variant="subheader" style={{ marginTop: 8 }}>{video?.description || 'No description available.'}</ThemedText>
                     <View style={styles.actionRow}>
                         <ThemedLike
                             liked={isFavourite}
@@ -250,6 +248,9 @@ export default function VideoDetailScreen() {
                             <ThemedText style={styles.completionIconText}>✓</ThemedText>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Description */}
+                    <ThemedText variant="subheader" style={{ marginTop: 12 }}>{video?.description || 'No description available.'}</ThemedText>
                 </View>
 
                 {/* Single read-only note area */}
