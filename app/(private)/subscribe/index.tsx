@@ -162,7 +162,7 @@ export default function Subscribe() {
                         title={purchaseMutation.isPending || verifyMutation.isPending ? 'Processing Purchase...' : 'Buy with Google Play'}
                         onPress={onCheckout}
                         style={{ width: '100%', marginTop: 12 }}
-                        disabled={purchaseMutation.isPending || verifyMutation.isPending || Platform.OS !== 'android'}
+                        disabled={purchaseMutation.isPending || verifyMutation.isPending}
                     />
                     <ThemedText variant="small" style={styles.disclaimer}>
                         Purchases are processed by Google Play and verified by your secure Supabase backend.

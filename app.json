@@ -31,7 +31,15 @@
     "plugins": [
       "expo-sqlite",
       "expo-router",
-      "react-native-iap"
+      "react-native-iap",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.0"
+          }
+        }
+      ]
     ]
   }
 }
