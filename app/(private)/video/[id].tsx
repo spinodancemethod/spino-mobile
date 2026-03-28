@@ -16,11 +16,14 @@ import { useUpsertNote } from 'lib/hooks/useUpsertNote'
 import { showSnack } from 'lib/snackbarService'
 import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
+import { useAuth } from 'lib/auth'
+import { reportAppEvent } from 'lib/observability'
 
 
 export default function VideoDetailScreen() {
     const { id } = useLocalSearchParams() as { id?: string }
     const { colors, mode } = useTheme()
+    const { user } = useAuth()
     const { isSubscribed, isLoading: entitlementLoading } = useEntitlement()
 
     // Skeleton colors that contrast the page background
@@ -131,7 +134,17 @@ export default function VideoDetailScreen() {
                 </ThemedText>
                 <ThemedButton
                     title="Subscribe to unlock"
-                    onPress={() => router.replace('/subscribe')}
+                    onPress={() => {
+                        void reportAppEvent({
+                            event: 'locked_screen_subscribe_cta_press',
+                            userId: user?.id,
+                            metadata: {
+                                screen: 'video_locked_screen',
+                                videoId: video?.id ?? null,
+                            },
+                        })
+                        router.replace('/subscribe')
+                    }}
                     style={{ width: '100%', marginBottom: 12 }}
                 />
                 <ThemedButton

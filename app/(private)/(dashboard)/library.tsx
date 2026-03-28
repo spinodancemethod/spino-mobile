@@ -12,12 +12,15 @@ import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
 import { useEntitlement } from 'lib/hooks/useEntitlement'
+import { useAuth } from 'lib/auth'
 import { useTheme } from 'constants/useTheme'
 import { Ionicons } from '@expo/vector-icons'
+import { reportAppEvent } from 'lib/observability'
 
 const Library = () => {
     const params = useLocalSearchParams<{ positionId?: string | string[]; positionName?: string | string[] }>()
     const { isSubscribed } = useEntitlement()
+    const { user } = useAuth()
     const { colors } = useTheme()
     // Controls the subscribe prompt shown when a free user taps a locked tile.
     const [lockModalVisible, setLockModalVisible] = useState(false)
@@ -36,6 +39,23 @@ const Library = () => {
     // Level filter (client-side). 5 levels
     // using shared LEVELS constant
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
+
+    useEffect(() => {
+        if (isSubscribed || !selected?.id) return
+
+        const freeCount = videos.filter((video: any) => video?.access_tier === 'free').length
+        if (freeCount <= 0) return
+
+        void reportAppEvent({
+            event: 'free_content_impression',
+            userId: user?.id,
+            metadata: {
+                screen: 'library',
+                positionId: selected.id,
+                freeVideoCount: freeCount,
+            },
+        })
+    }, [isSubscribed, selected?.id, videos, user?.id])
 
     useEffect(() => {
         if (!selectedPositionIdFromRoute) return
@@ -80,7 +100,18 @@ const Library = () => {
                     // Absolute overlay covers the entire tile and intercepts taps.
                     <TouchableOpacity
                         activeOpacity={0.85}
-                        onPress={() => setLockModalVisible(true)}
+                        onPress={() => {
+                            void reportAppEvent({
+                                event: 'locked_content_tap',
+                                userId: user?.id,
+                                metadata: {
+                                    screen: 'library',
+                                    videoId: item?.id ?? null,
+                                    positionId: item?.position_id ?? null,
+                                },
+                            })
+                            setLockModalVisible(true)
+                        }}
                         style={tileStyles.lockOverlay}
                     >
                         <View style={tileStyles.lockBadge}>
@@ -142,6 +173,13 @@ const Library = () => {
                         <ThemedButton
                             title="Subscribe to unlock"
                             onPress={() => {
+                                void reportAppEvent({
+                                    event: 'locked_screen_subscribe_cta_press',
+                                    userId: user?.id,
+                                    metadata: {
+                                        screen: 'library_locked_modal',
+                                    },
+                                })
                                 setLockModalVisible(false)
                                 router.push('/subscribe')
                             }}

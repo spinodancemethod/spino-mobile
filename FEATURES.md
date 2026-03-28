@@ -44,6 +44,8 @@
 - Fixed roadmap empty-position plus navigation so Library reliably auto-selects the tapped position, including when the Library tab is already mounted.
 - Added free-tier roadmap population via a dedicated `access_tier = 'free'` query and rendered grey locked premium placeholders that route free users to Subscribe.
 - Added free-tier entitlement test coverage: mocked `useEntitlement` hook behavior, SQL `can_access_video` logic mirror tests, and expanded entitlement guard assertions.
+- Added a structured free tier experience: free users can browse starter free videos, paid content presents locked upsell states, and analytics now log free content impressions, locked-content taps, and subscribe CTA presses from locked screens.
+- Added observability analytics unit coverage for `reportAppEvent`, including successful event inserts, missing-user short-circuit behavior, and failure-safe non-throwing inserts.
 
 ## Archived Stripe-Era Milestones
 

@@ -11,6 +11,8 @@ import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useFreeTierVideos } from 'lib/hooks/useFreeTierVideos'
+import { useAuth } from 'lib/auth'
+import { reportAppEvent } from 'lib/observability'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
@@ -42,6 +44,7 @@ const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/924
 
 const YourRoadmap = () => {
     const { mode, colors } = useTheme()
+    const { user } = useAuth()
 
     const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
@@ -195,6 +198,19 @@ const YourRoadmap = () => {
         () => (isSubscribed ? favouriteVideos : freeTierVideos),
         [isSubscribed, favouriteVideos, freeTierVideos]
     )
+
+    useEffect(() => {
+        if (isSubscribed || freeTierVideos.length <= 0) return
+
+        void reportAppEvent({
+            event: 'free_content_impression',
+            userId: user?.id,
+            metadata: {
+                screen: 'your_roadmap',
+                freeVideoCount: freeTierVideos.length,
+            },
+        })
+    }, [isSubscribed, freeTierVideos.length, user?.id])
 
     const videosByPosition = useMemo(() => {
         const grouped = new Map<string, any[]>()
@@ -359,6 +375,15 @@ const YourRoadmap = () => {
                             key={key}
                             onPress={() => {
                                 if (isLocked) {
+                                    void reportAppEvent({
+                                        event: 'locked_content_tap',
+                                        userId: user?.id,
+                                        metadata: {
+                                            screen: 'your_roadmap',
+                                            positionId: pos?.id ?? null,
+                                            videoId: video?.id ?? null,
+                                        },
+                                    })
                                     router.push('/subscribe')
                                     return
                                 }
