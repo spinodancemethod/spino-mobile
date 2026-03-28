@@ -83,6 +83,13 @@ export default function DashboardLayout() {
                     tabBarInactiveTintColor: styles.inactiveIcon.color,
                 }}
             >
+                <Tabs.Screen
+                    name="index"
+                    options={{
+                        // Hide redirect-only route from tab bar.
+                        href: null,
+                    }}
+                />
                 {/* home moved into the burger menu */}
                 <Tabs.Screen
                     name="inprogress"
