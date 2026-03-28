@@ -9,6 +9,12 @@
 - Hardened Google Play runtime paths: verification error sanitization, finalize-after-verify purchase flow, and restore throttling.
 - Simplified release operations with dynamic Expo updates URL injection, legal URL env wiring, and Android release smoke CI.
 - Maintained production access controls via subscription-backed entitlement guards in app UI and SQL bootstrap policies.
+- Removed Google/Apple OAuth options from the login screen so authentication is now email/password only.
+- Increased the vertical spacing between the login title and welcome-back helper text for clearer visual hierarchy.
+- Increased the vertical spacing between the Create account title and sign-up helper text on the registration page.
+- Removed Google/Apple OAuth options from the registration screen so account creation is now email/password only.
+- Increased container horizontal padding on login, sign-up, and forgot-password pages to improve auth form spacing and balance.
+- Increased spacing between the Reset password heading and helper text on the forgot-password screen.
 
 ## Archived Stripe-Era Milestones
 

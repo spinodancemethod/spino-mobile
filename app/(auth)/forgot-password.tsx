@@ -40,8 +40,9 @@ export default function ForgotPassword() {
     };
 
     return (
-        <ThemedView padded safe>
+        <ThemedView padded safe style={{ paddingHorizontal: 24 }}>
             <ThemedText variant="title">Reset password</ThemedText>
+            <Spacer />
             <ThemedText variant="small">Enter your email and we'll send a reset link.</ThemedText>
 
             <Spacer />
