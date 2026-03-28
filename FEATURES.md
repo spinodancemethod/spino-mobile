@@ -23,6 +23,11 @@
 - Fixed roadmap pinch drift by making pinch gestures scale-only and applying scale before translation transforms.
 - Refined roadmap pinch focal compensation so zoom keeps the roadmap centered instead of panning upward while scaling.
 - Stabilized roadmap pinch transitions by anchoring zoom in screen coordinates and re-seeding pinch state when a second finger is added mid-gesture.
+- Expanded roadmap video tiles to include a title + GIF preview area, with zoom-threshold GIF activation and CDN-backed sample media wiring.
+- Switched roadmap GIF tiles to `expo-image` rendering for reliable animated playback on Android when zoom threshold is crossed.
+- Updated roadmap video nodes to use static placeholder previews and show the animated GIF inside the video-detail modal with a dedicated Go to video action.
+- Added static placeholder preview images for position nodes with a backend-ready `roadmap_preview_url` fallback path.
+- Restyled position nodes to mirror video tile composition with top-aligned titles and matched tile height for consistent roadmap rhythm.
 - Fixed web runtime compatibility by adding a Google Play finalize stub export in the `.web` hook so web bundles avoid loading Nitro-based native IAP modules.
 
 ## Archived Stripe-Era Milestones

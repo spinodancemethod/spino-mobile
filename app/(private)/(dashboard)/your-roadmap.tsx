@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch, LayoutChangeEvent } from 'react-native'
+import { Image as ExpoImage } from 'expo-image'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
@@ -20,12 +21,17 @@ const DEFAULT_PAN_COMPENSATION_RATIO = 0.6
 const SURFACE_WIDTH = 1800
 const POSITION_COLUMN_WIDTH = 180
 const SURFACE_HORIZONTAL_PADDING = 24
-const VIDEO_W = 120
-const VIDEO_H = 66
-const VIDEO_MARGIN = 12
+const VIDEO_W = 170
+const VIDEO_H = 128
+const POSITION_BOX_MIN_HEIGHT = VIDEO_H
+const VIDEO_MARGIN = 10
+const VIDEO_GIF_HEIGHT = 78
 const ICON_SIZE = 18
 const ROW_GAP = 18
 const VIDEO_GAP = 12
+const SAMPLE_GIF_URL = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif'
+const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Video+Preview'
+const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Position+Preview'
 
 const YourRoadmap = () => {
     const { mode, colors } = useTheme()
@@ -251,16 +257,14 @@ const YourRoadmap = () => {
                         ? pos.completedVideoIds.includes(video?.id)
                         : index % 2 === 0
                     const bgColor = isComplete ? '#16a34a' : '#94a3b8'
+                    const tileImageSource = {
+                        uri: video?.roadmap_preview_url ?? SAMPLE_PLACEHOLDER_URL,
+                    }
 
                     return (
                         <TouchableOpacity
                             key={key}
                             onPress={() => {
-                                if (video?.id) {
-                                    router.push(`/video/${video.id}`)
-                                    return
-                                }
-
                                 onVideoPress(pos, index, video)
                             }}
                             activeOpacity={0.85}
@@ -274,25 +278,32 @@ const YourRoadmap = () => {
                                         marginVertical: VIDEO_MARGIN / 2,
                                         marginRight: VIDEO_GAP,
                                         paddingHorizontal: 8,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
+                                        paddingVertical: 8,
                                     },
                                 ]}
                             >
-                                <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>{title}</ThemedText>
-                                <View
-                                    style={{
-                                        width: ICON_SIZE,
-                                        height: ICON_SIZE,
-                                        borderRadius: ICON_SIZE / 2,
-                                        backgroundColor: bgColor,
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                <View style={styles.videoTileHeaderRow}>
+                                    <ThemedText variant="small" style={{ ...styles.nodeText, ...styles.videoTitleText }} numberOfLines={1}>{title}</ThemedText>
+                                    <View
+                                        style={{
+                                            width: ICON_SIZE,
+                                            height: ICON_SIZE,
+                                            borderRadius: ICON_SIZE / 2,
+                                            backgroundColor: bgColor,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginLeft: 6,
+                                        }}
+                                    >
+                                        <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                    </View>
                                 </View>
+                                <ExpoImage
+                                    source={tileImageSource}
+                                    style={styles.videoGif}
+                                    contentFit="cover"
+                                />
+                                <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>
                         </TouchableOpacity>
                     )
@@ -359,11 +370,17 @@ const YourRoadmap = () => {
                                                 ]}
                                             >
                                                 <ThemedText
-                                                    variant="subheader"
-                                                    style={{ ...styles.nodeText, fontSize: 16, textAlign: 'center', width: POSITION_COLUMN_WIDTH - 16 }}
+                                                    variant="small"
+                                                    style={{ ...styles.nodeText, ...styles.positionTitleText }}
+                                                    numberOfLines={1}
                                                 >
                                                     {position.name || position.title || 'Position'}
                                                 </ThemedText>
+                                                <ExpoImage
+                                                    source={{ uri: position?.roadmap_preview_url ?? SAMPLE_POSITION_PLACEHOLDER_URL }}
+                                                    style={styles.positionPlaceholderImage}
+                                                    contentFit="cover"
+                                                />
                                             </View>
                                         </TouchableOpacity>
                                     </View>
@@ -371,7 +388,11 @@ const YourRoadmap = () => {
                                     <View style={styles.connectorStub} />
 
                                     <View style={styles.videosColumn}>
-                                        <PositionVideoStack pos={position} videos={positionFavouriteVideos} showEmptyState={showEmptyPositions} />
+                                        <PositionVideoStack
+                                            pos={position}
+                                            videos={positionFavouriteVideos}
+                                            showEmptyState={showEmptyPositions}
+                                        />
                                     </View>
                                 </View>
                             )
@@ -425,13 +446,27 @@ const YourRoadmap = () => {
                                 >
                                     {selectedVideo?.pos?.name || 'No position'}
                                 </ThemedText>
+                                <ExpoImage
+                                    source={{ uri: selectedVideo?.video?.roadmap_gif_url ?? SAMPLE_GIF_URL }}
+                                    style={styles.modalGifPreview}
+                                    contentFit="cover"
+                                    autoplay
+                                />
                                 <TouchableOpacity
                                     onPress={() => {
                                         if (selectedVideo?.video?.id) {
                                             router.push(`/video/${selectedVideo.video.id}`)
+                                            closeVideoModal()
                                         }
                                     }}
-                                    style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}
+                                    disabled={!selectedVideo?.video?.id}
+                                    style={[
+                                        styles.modalCloseBtn,
+                                        {
+                                            backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor,
+                                            opacity: selectedVideo?.video?.id ? 1 : 0.6,
+                                        },
+                                    ]}
                                 >
                                     <ThemedText style={{ color: '#fff' }}>Go to video</ThemedText>
                                 </TouchableOpacity>
@@ -540,14 +575,36 @@ const styles = StyleSheet.create({
     videoRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     leafBox: {
         backgroundColor: '#f2f7e7',
         borderRadius: 6,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
         elevation: 1,
+    },
+    videoTileHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    videoTitleText: {
+        flex: 1,
+        fontWeight: '700',
+    },
+    videoGif: {
+        width: '100%',
+        height: VIDEO_GIF_HEIGHT,
+        borderRadius: 6,
+        backgroundColor: '#dbe4ee',
+    },
+    zoomHintText: {
+        marginTop: 4,
+        textAlign: 'center',
+        color: '#64748b',
+        fontSize: 10,
     },
     emptyLeafBox: {
         backgroundColor: '#f8fafc',
@@ -563,8 +620,8 @@ const styles = StyleSheet.create({
     positionBox: {
         backgroundColor: '#fff7f9',
         borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
         elevation: 2,
         shadowColor: '#000',
         shadowOpacity: 0.06,
@@ -572,8 +629,20 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
     },
     positionBoxStatic: {
-        minHeight: VIDEO_H,
+        height: POSITION_BOX_MIN_HEIGHT,
         paddingHorizontal: 8,
+        paddingVertical: 8,
+    },
+    positionTitleText: {
+        fontWeight: '700',
+        marginBottom: 6,
+        textAlign: 'left',
+    },
+    positionPlaceholderImage: {
+        width: '100%',
+        height: VIDEO_GIF_HEIGHT,
+        borderRadius: 6,
+        backgroundColor: '#fde68a',
     },
     emptyRoadmapState: {
         marginTop: 24,
@@ -618,6 +687,13 @@ const styles = StyleSheet.create({
     },
     modalBodyText: {
         color: '#0f172a',
+    },
+    modalGifPreview: {
+        width: '100%',
+        height: 160,
+        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: '#dbe4ee',
     },
 })
 
