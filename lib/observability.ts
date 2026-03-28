@@ -1,47 +1,47 @@
 import { supabase } from 'lib/supabase';
 
 type ReportAppErrorInput = {
-  context: string;
-  error: unknown;
-  userId?: string | null;
-  metadata?: Record<string, unknown>;
+    context: string;
+    error: unknown;
+    userId?: string | null;
+    metadata?: Record<string, unknown>;
 };
 
 function toErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
+    if (error instanceof Error) {
+        return error.message;
+    }
 
-  if (typeof error === 'string') {
-    return error;
-  }
+    if (typeof error === 'string') {
+        return error;
+    }
 
-  return 'Unknown error';
+    return 'Unknown error';
 }
 
 export async function reportAppError(input: ReportAppErrorInput) {
-  const message = toErrorMessage(input.error);
+    const message = toErrorMessage(input.error);
 
-  // Keep local logs for immediate debugging in development and in native logs.
-  console.error('[app-error]', {
-    context: input.context,
-    message,
-    metadata: input.metadata ?? null,
-  });
-
-  // Best-effort centralized error log in Supabase.
-  if (!input.userId) {
-    return;
-  }
-
-  try {
-    await supabase.from('client_error_logs').insert({
-      user_id: input.userId,
-      context: input.context,
-      message,
-      metadata: input.metadata ?? {},
+    // Keep local logs for immediate debugging in development and in native logs.
+    console.error('[app-error]', {
+        context: input.context,
+        message,
+        metadata: input.metadata ?? null,
     });
-  } catch {
-    // Never block UX on telemetry failures.
-  }
+
+    // Best-effort centralized error log in Supabase.
+    if (!input.userId) {
+        return;
+    }
+
+    try {
+        await supabase.from('client_error_logs').insert({
+            user_id: input.userId,
+            context: input.context,
+            message,
+            metadata: input.metadata ?? {},
+        });
+    } catch {
+        // Never block UX on telemetry failures.
+    }
 }
