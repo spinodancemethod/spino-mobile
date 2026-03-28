@@ -234,6 +234,19 @@ const YourRoadmap = () => {
         setSelectedPos(position)
     }, [])
 
+    const onEmptyPositionPress = useCallback((position: any) => {
+        if (!position?.id) return
+
+        // Pass the position context so Library can preselect it on entry.
+        router.push({
+            pathname: '/library',
+            params: {
+                positionId: String(position.id),
+                positionName: String(position.name || position.title || 'Position'),
+            },
+        })
+    }, [])
+
     const onVideoPress = useCallback((position: any, index: number, video: any) => {
         setSelectedVideo({ pos: position, index, video })
     }, [])
@@ -251,7 +264,9 @@ const YourRoadmap = () => {
         return (
             <View style={styles.videoRow}>
                 {videos.length === 0 && showEmptyState && (
-                    <View
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => onEmptyPositionPress(pos)}
                         style={[
                             styles.leafBox,
                             styles.emptyLeafBox,
@@ -263,8 +278,11 @@ const YourRoadmap = () => {
                             },
                         ]}
                     >
-                        <ThemedText variant="small" style={styles.emptyLeafText}>No favourites yet</ThemedText>
-                    </View>
+                        <View style={styles.emptyLeafActionWrap}>
+                            <Ionicons name="add-circle-outline" size={42} color="#64748b" />
+                            <ThemedText variant="small" style={styles.emptyLeafText}>No favourites yet</ThemedText>
+                        </View>
+                    </TouchableOpacity>
                 )}
                 {videos.map((video: any, index: number) => {
                     const key = video?.id ?? `${pos?.id}-fav-${index}`
@@ -679,8 +697,15 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderStyle: 'dashed',
         borderColor: '#94a3b8',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyLeafActionWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyLeafText: {
+        marginTop: 6,
         color: '#64748b',
         textAlign: 'center',
         fontWeight: '600',

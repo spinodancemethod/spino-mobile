@@ -7,15 +7,21 @@ import { LEVELS } from 'constants/Levels'
 import { View } from 'react-native'
 import { FlatList } from 'react-native'
 import VideoTile from 'Components/VideoTile'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useVideos } from '@/lib/hooks/useVideos'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useDeckByUser } from '@/lib/hooks/useDeckByUser'
 import { useState } from 'react'
+import { useRef } from 'react'
 
 const Library = () => {
+    const params = useLocalSearchParams<{ positionId?: string | string[]; positionName?: string | string[] }>()
     const { data: positions = [] } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+    const hasAppliedRoutePosition = useRef(false)
+
+    const selectedPositionIdFromRoute = Array.isArray(params.positionId) ? params.positionId[0] : params.positionId
+    const selectedPositionNameFromRoute = Array.isArray(params.positionName) ? params.positionName[0] : params.positionName
 
     const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id } : undefined);
     const { data: favouriteIds = [] } = useFavouritesByUser();
@@ -26,6 +32,29 @@ const Library = () => {
     // Level filter (client-side). 5 levels
     // using shared LEVELS constant
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
+
+    useEffect(() => {
+        if (hasAppliedRoutePosition.current) return
+
+        if (!selectedPositionIdFromRoute) {
+            hasAppliedRoutePosition.current = true
+            return
+        }
+
+        if (!positions.length) return
+
+        const matchedPosition = positions.find((position: any) => position.id === selectedPositionIdFromRoute)
+
+        if (matchedPosition) {
+            // Prefill the position filter when navigating from roadmap empty cards.
+            setSelected({
+                id: matchedPosition.id,
+                name: matchedPosition.name || matchedPosition.title || selectedPositionNameFromRoute || 'Position',
+            })
+        }
+
+        hasAppliedRoutePosition.current = true
+    }, [positions, selectedPositionIdFromRoute, selectedPositionNameFromRoute]);
 
 
     const getPosition = (id: string) => {
