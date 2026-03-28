@@ -30,3 +30,9 @@
 - Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows real user account details and clearly surfaces subscription status, period end, and Stripe billing identifiers.
 - Simplified the Account page subscription summary by removing user ID, Stripe identifiers, and the cancel-at-period-end field to keep billing details less sensitive and more user-friendly.
 - Added a Stripe-backed subscription cancellation flow from the Account page with a confirmation modal and post-action query invalidation so status updates are reflected immediately.
+- Aligned Android release identity for production by setting the app package/namespace to `com.spino.mobile` and updating display branding to `Spino`.
+- Hardened Android release signing configuration with `SPINO_UPLOAD_*` keystore properties and a release-build guard that blocks accidental unsigned/debug release submissions.
+- Updated Android manifest for Play readiness by removing risky legacy storage/overlay permissions and aligning app deep-link scheme to `spino`.
+- Added `READMEPLAYSTORE.md` with a detailed launch-prep plan for repo app setup decisions and Android native project strategy before Play Store submission.
+- Drafted Google Play Billing migration assets: a provider-agnostic SQL migration (`sql/migrate_stripe_to_google_play_mvp.sql`) and a new Supabase edge function scaffold (`supabase/functions/verify-google-play-purchase/index.ts`) for server-side purchase verification and entitlement upsert.
+- Removed Stripe checkout/webhook/cancel runtime paths and switched subscription purchase + restore flows to Google Play Billing with server-side token verification.

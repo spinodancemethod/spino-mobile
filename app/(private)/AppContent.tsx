@@ -36,8 +36,6 @@ const AppContent: React.FC = () => {
                 <Stack.Screen name="home" options={{ headerShown: false }} />
                 <Stack.Screen name="account" options={{ title: 'Account' }} />
                 <Stack.Screen name="subscribe" options={{ title: 'Subscription' }} />
-                <Stack.Screen name="subscribe/success" options={{ title: 'Subscription Success' }} />
-                <Stack.Screen name="subscribe/cancel" options={{ title: 'Subscription Canceled' }} />
                 <Stack.Screen name="video/[id]" options={{ title: 'Video' }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>

@@ -30,7 +30,7 @@ export default function SubscribeSuccess() {
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <ThemedText variant="title" style={styles.title}>Payment received</ThemedText>
                 <ThemedText style={styles.body}>
-                    Stripe returned to the app successfully. We are refreshing your subscription status now.
+                    Purchase returned to the app successfully. We are refreshing your subscription status now.
                 </ThemedText>
 
                 {subscriptionStatus.isActiveSubscription ? (
@@ -40,7 +40,7 @@ export default function SubscribeSuccess() {
                 ) : (
                     <View style={styles.processingRow}>
                         <ActivityIndicator />
-                        <ThemedText style={styles.processingText}>Waiting for Stripe webhook confirmation...</ThemedText>
+                        <ThemedText style={styles.processingText}>Waiting for purchase verification confirmation...</ThemedText>
                     </View>
                 )}
 

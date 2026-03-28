@@ -4,6 +4,7 @@ import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
 
 type SubscriptionStatusRow = {
+    provider: string | null;
     status: string | null;
     current_period_end: string | null;
 };
@@ -19,8 +20,9 @@ export function subscriptionStatusQueryKey(userId?: string | null) {
 async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStatusRow> {
     const { data, error } = await supabase
         .from('subscriptions')
-        .select('status,current_period_end')
+        .select('provider,status,current_period_end')
         .eq('user_id', userId)
+        .eq('provider', 'google_play')
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle();
@@ -30,13 +32,14 @@ async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStat
     }
 
     return {
+        provider: data?.provider ?? null,
         status: data?.status ?? null,
         current_period_end: data?.current_period_end ?? null,
     };
 }
 
 function isActiveSubscription(status: string | null, currentPeriodEnd: string | null) {
-    if (!status || !['active', 'trialing'].includes(status)) {
+    if (!status || !['active', 'trialing', 'grace_period'].includes(status)) {
         return false;
     }
 

@@ -3,23 +3,22 @@ import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
 
 type SubscriptionRow = {
+    provider: string | null;
     status: string | null;
     current_period_end: string | null;
-    stripe_price_id: string | null;
+    product_id: string | null;
+    base_plan_id: string | null;
     cancel_at_period_end: boolean | null;
-};
-
-type BillingCustomerRow = {
-    stripe_customer_id: string | null;
 };
 
 export type AccountDetails = {
     userId: string;
     email: string | null;
     createdAt: string | null;
-    stripeCustomerId: string | null;
+    subscriptionProvider: string | null;
     subscriptionStatus: string | null;
-    subscriptionPriceId: string | null;
+    subscriptionProductId: string | null;
+    subscriptionBasePlanId: string | null;
     currentPeriodEnd: string | null;
     cancelAtPeriodEnd: boolean;
     hasActiveSubscription: boolean;
@@ -30,7 +29,7 @@ export function accountDetailsQueryKey(userId?: string | null) {
 }
 
 function hasActiveSubscription(status: string | null, currentPeriodEnd: string | null) {
-    if (!status || !['active', 'trialing'].includes(status)) {
+    if (!status || !['active', 'trialing', 'grace_period'].includes(status)) {
         return false;
     }
 
@@ -42,36 +41,27 @@ function hasActiveSubscription(status: string | null, currentPeriodEnd: string |
 }
 
 async function fetchAccountDetails(userId: string, email: string | null, createdAt: string | null): Promise<AccountDetails> {
-    const [{ data: subscriptionRow, error: subscriptionError }, { data: billingCustomerRow, error: billingCustomerError }] = await Promise.all([
-        supabase
-            .from('subscriptions')
-            .select('status,current_period_end,stripe_price_id,cancel_at_period_end')
-            .eq('user_id', userId)
-            .order('current_period_end', { ascending: false, nullsFirst: false })
-            .limit(1)
-            .maybeSingle<SubscriptionRow>(),
-        supabase
-            .from('billing_customers')
-            .select('stripe_customer_id')
-            .eq('user_id', userId)
-            .maybeSingle<BillingCustomerRow>(),
-    ]);
+    const { data: subscriptionRow, error: subscriptionError } = await supabase
+        .from('subscriptions')
+        .select('provider,status,current_period_end,product_id,base_plan_id,cancel_at_period_end')
+        .eq('user_id', userId)
+        .eq('provider', 'google_play')
+        .order('current_period_end', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle<SubscriptionRow>();
 
     if (subscriptionError) {
         throw subscriptionError;
-    }
-
-    if (billingCustomerError) {
-        throw billingCustomerError;
     }
 
     return {
         userId,
         email,
         createdAt,
-        stripeCustomerId: billingCustomerRow?.stripe_customer_id ?? null,
+        subscriptionProvider: subscriptionRow?.provider ?? null,
         subscriptionStatus: subscriptionRow?.status ?? null,
-        subscriptionPriceId: subscriptionRow?.stripe_price_id ?? null,
+        subscriptionProductId: subscriptionRow?.product_id ?? null,
+        subscriptionBasePlanId: subscriptionRow?.base_plan_id ?? null,
         currentPeriodEnd: subscriptionRow?.current_period_end ?? null,
         cancelAtPeriodEnd: Boolean(subscriptionRow?.cancel_at_period_end),
         hasActiveSubscription: hasActiveSubscription(

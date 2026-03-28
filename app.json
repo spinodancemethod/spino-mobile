@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "spino-mobile",
+    "name": "Spino",
     "scheme": "spino",
     "slug": "spino-mobile",
     "version": "1.0.0",
@@ -17,6 +17,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.spino.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5F3FF"
@@ -29,7 +30,8 @@
     },
     "plugins": [
       "expo-sqlite",
-      "expo-router"
+      "expo-router",
+      "react-native-iap"
     ]
   }
 }
