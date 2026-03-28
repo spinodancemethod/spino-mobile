@@ -3,9 +3,7 @@
 
 BEGIN;
 
-ALTER TABLE public.billing_customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.stripe_webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_provider_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.client_error_logs ENABLE ROW LEVEL SECURITY;
@@ -18,17 +16,6 @@ ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'billing_customers' AND policyname = 'billing_customers_select_own'
-  ) THEN
-    CREATE POLICY billing_customers_select_own
-      ON public.billing_customers
-      FOR SELECT
-      TO authenticated
-      USING (user_id = auth.uid());
-  END IF;
-
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
     WHERE schemaname = 'public' AND tablename = 'subscriptions' AND policyname = 'subscriptions_select_own'

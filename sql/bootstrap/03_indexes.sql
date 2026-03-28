@@ -4,9 +4,6 @@
 CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx
   ON public.subscriptions (user_id);
 
-CREATE INDEX IF NOT EXISTS subscriptions_customer_idx
-  ON public.subscriptions (stripe_customer_id);
-
 CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_provider_subscription_uidx
   ON public.subscriptions (provider, provider_subscription_id)
   WHERE provider_subscription_id IS NOT NULL;

@@ -2,8 +2,10 @@ import React from 'react';
 import { TouchableOpacity, ViewStyle, StyleSheet } from 'react-native';
 import ThemedText from './ThemedText';
 import { useTheme } from '../constants/useTheme';
+import { ThemeColors } from '../constants/Colors';
 
 type Size = 'small' | 'medium' | 'large';
+type PillVariant = 'small' | 'large' | 'subheader';
 
 interface Props {
     children: React.ReactNode;
@@ -20,7 +22,7 @@ const SIZE_MAP: Record<Size, { paddingV: number; paddingH: number; fontVariant: 
     large: { paddingV: 8, paddingH: 12, fontVariant: 'subheader', borderRadius: 16 },
 };
 
-function isThemeToken(key: string, colors: Record<string, string>) {
+function isThemeToken(key: string, colors: ThemeColors): key is keyof ThemeColors {
     return Object.prototype.hasOwnProperty.call(colors, key);
 }
 
@@ -45,8 +47,8 @@ const ThemedPill: React.FC<Props> = ({ children, color, textColor, size = 'mediu
 
     let backgroundColor = colors.uiBackground;
     if (color) {
-        if (isThemeToken(color, colors as any)) {
-            backgroundColor = (colors as any)[color];
+        if (isThemeToken(color, colors)) {
+            backgroundColor = colors[color];
         } else {
             backgroundColor = color;
         }
@@ -65,6 +67,7 @@ const ThemedPill: React.FC<Props> = ({ children, color, textColor, size = 'mediu
     }
 
     const sizeCfg = SIZE_MAP[size];
+    const variant: PillVariant = sizeCfg.fontVariant;
 
     return (
         <TouchableOpacity
@@ -81,7 +84,7 @@ const ThemedPill: React.FC<Props> = ({ children, color, textColor, size = 'mediu
                 style,
             ]}
         >
-            <ThemedText variant={sizeCfg.fontVariant as any} style={{ color: resolvedTextColor }}>{children}</ThemedText>
+            <ThemedText variant={variant} style={{ color: resolvedTextColor }}>{children}</ThemedText>
         </TouchableOpacity>
     );
 };
