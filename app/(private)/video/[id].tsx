@@ -15,6 +15,7 @@ import { useUpsertNote } from 'lib/hooks/useUpsertNote'
 import { showSnack } from 'lib/snackbarService'
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
 import { shouldRedirectForEntitlement, shouldShowEntitlementPendingState } from 'lib/entitlementGuards'
+import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 
 
 export default function VideoDetailScreen() {
@@ -42,6 +43,17 @@ export default function VideoDetailScreen() {
     const [editorText, setEditorText] = useState<string | null>(null)
     const upsert = useUpsertNote()
     const [saving, setSaving] = useState(false)
+    const { completedVideoIdSet, isCompletionPending, toggleCompletionWithFeedback } = useVideoActionToggles()
+    const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
+
+    const onToggleCompletion = async () => {
+        if (!video?.id) {
+            showSnack('Unable to determine video id');
+            return;
+        }
+
+        await toggleCompletionWithFeedback(video.id, isComplete)
+    }
 
     useEffect(() => {
         if (shouldRedirectForEntitlement({
@@ -191,6 +203,14 @@ export default function VideoDetailScreen() {
 
                     {/* Description (moved below pills) */}
                     <ThemedText variant="subheader" style={{ marginTop: 8 }}>{video?.description || 'No description available.'}</ThemedText>
+                    <View style={{ marginTop: 16, width: '100%' }}>
+                        <ThemedButton
+                            title={isCompletionPending ? 'Saving…' : isComplete ? 'Mark as in progress' : 'Mark as complete'}
+                            onPress={onToggleCompletion}
+                            loading={isCompletionPending}
+                            disabled={!video?.id || isCompletionPending}
+                        />
+                    </View>
                 </View>
 
                 {/* Single read-only note area */}

@@ -1,11 +1,15 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
+import ThemedLike from 'Components/ThemedLike'
+import ThemedStar from 'Components/ThemedStar'
+import { Ionicons } from '@expo/vector-icons'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch, LayoutChangeEvent } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
+import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
@@ -170,6 +174,18 @@ const YourRoadmap = () => {
     const { data: favouriteVideos = [] } = useVideosByIds(favouriteIds)
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
 
+    const {
+        favouriteIdSet,
+        deckIdSet,
+        completedVideoIdSet,
+        isFavouritePending,
+        isDeckPending,
+        isCompletionPending,
+        toggleFavouriteWithFeedback,
+        toggleDeckWithFeedback,
+        toggleCompletionWithFeedback,
+    } = useVideoActionToggles()
+
     const videosByPosition = useMemo(() => {
         const grouped = new Map<string, any[]>()
 
@@ -253,9 +269,8 @@ const YourRoadmap = () => {
                 {videos.map((video: any, index: number) => {
                     const key = video?.id ?? `${pos?.id}-fav-${index}`
                     const title = video?.title ?? `Video ${index + 1}`
-                    const isComplete = Array.isArray(pos?.completedVideoIds)
-                        ? pos.completedVideoIds.includes(video?.id)
-                        : index % 2 === 0
+                    // Completion is now driven by per-user DB rows instead of placeholder tile order.
+                    const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
                     const bgColor = isComplete ? '#16a34a' : '#94a3b8'
                     const tileImageSource = {
                         uri: video?.roadmap_preview_url ?? SAMPLE_PLACEHOLDER_URL,
@@ -284,7 +299,15 @@ const YourRoadmap = () => {
                             >
                                 <View style={styles.videoTileHeaderRow}>
                                     <ThemedText variant="small" style={{ ...styles.nodeText, ...styles.videoTitleText }} numberOfLines={1}>{title}</ThemedText>
-                                    <View
+                                    <Pressable
+                                        onPress={(event) => {
+                                            event.stopPropagation()
+                                            if (!video?.id) return
+
+                                            toggleCompletionWithFeedback(video.id, isComplete)
+                                        }}
+                                        disabled={!video?.id}
+                                        hitSlop={8}
                                         style={{
                                             width: ICON_SIZE,
                                             height: ICON_SIZE,
@@ -296,7 +319,7 @@ const YourRoadmap = () => {
                                         }}
                                     >
                                         <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
-                                    </View>
+                                    </Pressable>
                                 </View>
                                 <ExpoImage
                                     source={tileImageSource}
@@ -314,6 +337,10 @@ const YourRoadmap = () => {
 
     const closeModal = useCallback(() => setSelectedPos(null), [])
     const closeVideoModal = useCallback(() => setSelectedVideo(null), [])
+    const selectedVideoIsFavourite = !!selectedVideo?.video?.id && favouriteIdSet.has(selectedVideo.video.id)
+    const selectedVideoIsDecked = !!selectedVideo?.video?.id && deckIdSet.has(selectedVideo.video.id)
+    const selectedVideoIsComplete = !!selectedVideo?.video?.id && completedVideoIdSet.has(selectedVideo.video.id)
+    const videoNavColor = mode === 'dark' ? colors.primary : '#111827'
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -434,6 +461,13 @@ const YourRoadmap = () => {
                     <Modal visible={selectedVideo != null} transparent animationType="fade" onRequestClose={closeVideoModal}>
                         <Pressable style={styles.modalBackdrop} onPress={closeVideoModal}>
                             <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}>
+                                <Pressable
+                                    onPress={closeVideoModal}
+                                    hitSlop={8}
+                                    style={styles.modalDismissIcon}
+                                >
+                                    <Ionicons name="close-circle" size={22} color={mode === 'dark' ? colors.text : '#111827'} />
+                                </Pressable>
                                 <ThemedText
                                     variant="title"
                                     style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}
@@ -442,7 +476,12 @@ const YourRoadmap = () => {
                                 </ThemedText>
                                 <ThemedText
                                     variant="subheader"
-                                    style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}
+                                    style={{
+                                        ...(styles.modalBodyText as any),
+                                        ...(styles.modalPositionText as any),
+                                        marginBottom: 16,
+                                        color: mode === 'dark' ? colors.text : styles.modalBodyText.color,
+                                    }}
                                 >
                                     {selectedVideo?.pos?.name || 'No position'}
                                 </ThemedText>
@@ -452,30 +491,59 @@ const YourRoadmap = () => {
                                     contentFit="cover"
                                     autoplay
                                 />
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        if (selectedVideo?.video?.id) {
-                                            router.push(`/video/${selectedVideo.video.id}`)
-                                            closeVideoModal()
-                                        }
-                                    }}
-                                    disabled={!selectedVideo?.video?.id}
-                                    style={[
-                                        styles.modalCloseBtn,
-                                        {
-                                            backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor,
-                                            opacity: selectedVideo?.video?.id ? 1 : 0.6,
-                                        },
-                                    ]}
-                                >
-                                    <ThemedText style={{ color: '#fff' }}>Go to video</ThemedText>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={closeVideoModal}
-                                    style={[styles.modalCloseBtn, { marginTop: 8, backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}
-                                >
-                                    <ThemedText style={{ color: '#fff' }}>Close</ThemedText>
-                                </TouchableOpacity>
+                                <View style={styles.modalActionRow}>
+                                    <View style={styles.modalActionGroup}>
+                                        <ThemedLike
+                                            liked={selectedVideoIsFavourite}
+                                            size={22}
+                                            onPress={() => {
+                                                if (!selectedVideo?.video?.id || isFavouritePending) return
+                                                toggleFavouriteWithFeedback(selectedVideo.video.id)
+                                            }}
+                                        />
+                                        <ThemedStar
+                                            starred={selectedVideoIsDecked}
+                                            size={22}
+                                            onPress={() => {
+                                                if (!selectedVideo?.video?.id || isDeckPending) return
+                                                toggleDeckWithFeedback(selectedVideo.video.id)
+                                            }}
+                                        />
+                                        <Pressable
+                                            onPress={() => {
+                                                if (!selectedVideo?.video?.id || isCompletionPending) return
+                                                toggleCompletionWithFeedback(selectedVideo.video.id, selectedVideoIsComplete)
+                                            }}
+                                            disabled={!selectedVideo?.video?.id || isCompletionPending}
+                                            hitSlop={8}
+                                            style={[
+                                                styles.modalCompletionIcon,
+                                                {
+                                                    backgroundColor: selectedVideoIsComplete ? '#16a34a' : '#94a3b8',
+                                                    opacity: (!selectedVideo?.video?.id || isCompletionPending) ? 0.6 : 1,
+                                                },
+                                            ]}
+                                        >
+                                            <ThemedText style={styles.modalCompletionText}>✓</ThemedText>
+                                        </Pressable>
+                                    </View>
+                                    <Pressable
+                                        onPress={() => {
+                                            if (selectedVideo?.video?.id) {
+                                                router.push(`/video/${selectedVideo.video.id}`)
+                                                closeVideoModal()
+                                            }
+                                        }}
+                                        disabled={!selectedVideo?.video?.id}
+                                        hitSlop={8}
+                                        style={[
+                                            styles.modalVideoLink,
+                                            { opacity: selectedVideo?.video?.id ? 1 : 0.6 },
+                                        ]}
+                                    >
+                                        <Ionicons name="videocam" size={22} color={videoNavColor} />
+                                    </Pressable>
+                                </View>
                             </View>
                         </Pressable>
                     </Modal>
@@ -673,6 +741,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f7fafc',
         borderRadius: 12,
         alignItems: 'center',
+        position: 'relative',
     },
     modalCloseBtn: {
         marginTop: 8,
@@ -687,6 +756,46 @@ const styles = StyleSheet.create({
     },
     modalBodyText: {
         color: '#0f172a',
+    },
+    modalPositionText: {
+        width: '100%',
+        textAlign: 'left',
+    },
+    modalDismissIcon: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 1,
+    },
+    modalActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginTop: 4,
+    },
+    modalActionGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 20,
+    },
+    modalCompletionIcon: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalVideoLink: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 24,
+        minHeight: 24,
+    },
+    modalCompletionText: {
+        color: '#fff',
+        fontSize: 12,
+        lineHeight: 12,
     },
     modalGifPreview: {
         width: '100%',

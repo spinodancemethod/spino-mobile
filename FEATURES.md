@@ -29,6 +29,8 @@
 - Added static placeholder preview images for position nodes with a backend-ready `roadmap_preview_url` fallback path.
 - Restyled position nodes to mirror video tile composition with top-aligned titles and matched tile height for consistent roadmap rhythm.
 - Fixed web runtime compatibility by adding a Google Play finalize stub export in the `.web` hook so web bundles avoid loading Nitro-based native IAP modules.
+- Added a `user_video_progress` SQL migration plus bootstrap/RLS updates so per-user roadmap completion can be stored independently for each video.
+- Wired roadmap completion badges to Supabase-backed per-user progress rows and made the badge toggle insert/delete completion records directly from the roadmap view.
 
 ## Archived Stripe-Era Milestones
 

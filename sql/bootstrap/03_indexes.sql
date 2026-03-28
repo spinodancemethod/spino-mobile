@@ -29,3 +29,9 @@ CREATE INDEX IF NOT EXISTS client_error_logs_created_idx
 
 CREATE INDEX IF NOT EXISTS client_error_logs_context_idx
   ON public.client_error_logs (context);
+
+CREATE INDEX IF NOT EXISTS user_video_progress_video_id_idx
+  ON public.user_video_progress (video_id);
+
+CREATE INDEX IF NOT EXISTS user_video_progress_user_status_idx
+  ON public.user_video_progress (user_id, status);

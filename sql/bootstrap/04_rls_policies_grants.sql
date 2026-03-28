@@ -11,6 +11,7 @@ ALTER TABLE public.deck ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_video_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 
@@ -185,6 +186,51 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_video_progress' AND policyname = 'user_video_progress_select_own'
+  ) THEN
+    CREATE POLICY user_video_progress_select_own
+      ON public.user_video_progress
+      FOR SELECT
+      TO authenticated
+      USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_video_progress' AND policyname = 'user_video_progress_insert_own'
+  ) THEN
+    CREATE POLICY user_video_progress_insert_own
+      ON public.user_video_progress
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_video_progress' AND policyname = 'user_video_progress_update_own'
+  ) THEN
+    CREATE POLICY user_video_progress_update_own
+      ON public.user_video_progress
+      FOR UPDATE
+      TO authenticated
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_video_progress' AND policyname = 'user_video_progress_delete_own'
+  ) THEN
+    CREATE POLICY user_video_progress_delete_own
+      ON public.user_video_progress
+      FOR DELETE
+      TO authenticated
+      USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
     WHERE schemaname = 'public' AND tablename = 'positions' AND policyname = 'Categories are viewable by everyone'
   ) THEN
     CREATE POLICY "Categories are viewable by everyone"
@@ -302,6 +348,10 @@ GRANT INSERT ON public.notes TO authenticated;
 GRANT UPDATE ON public.notes TO authenticated;
 GRANT DELETE ON public.notes TO authenticated;
 GRANT SELECT ON public.positions TO authenticated;
+GRANT SELECT ON public.user_video_progress TO authenticated;
+GRANT INSERT ON public.user_video_progress TO authenticated;
+GRANT UPDATE ON public.user_video_progress TO authenticated;
+GRANT DELETE ON public.user_video_progress TO authenticated;
 GRANT SELECT ON public.user_profiles TO authenticated;
 GRANT INSERT ON public.user_profiles TO authenticated;
 GRANT UPDATE ON public.user_profiles TO authenticated;
