@@ -33,6 +33,8 @@
 - Wired roadmap completion badges to Supabase-backed per-user progress rows and made the badge toggle insert/delete completion records directly from the roadmap view.
 - Replaced named video level pills (Beginner/Improver/etc.) with numeric levels 1-5 and mapped pill colors progressively from green (1) to red (5).
 - Added a centered plus-circle CTA to empty roadmap position cards (when "Show empty positions" is on) that opens Library with that position preselected in the filter.
+- Added a "Hide completed" toggle on Your Roadmap that filters out videos the user has already marked complete.
+- Increased vertical spacing between video tiles in Library so each item has clearer visual separation.
 
 ## Archived Stripe-Era Milestones
 

@@ -101,6 +101,8 @@ const Library = () => {
                     data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
+                    // Add explicit vertical separation so each tile reads as its own card.
+                    ItemSeparatorComponent={() => <View style={{ height: 30 }} />}
                     numColumns={numColumns}
                     contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
                     showsVerticalScrollIndicator={false}

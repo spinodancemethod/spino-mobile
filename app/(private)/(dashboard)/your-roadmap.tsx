@@ -173,6 +173,7 @@ const YourRoadmap = () => {
     const { data: favouriteIds = [] } = useFavouritesByUser()
     const { data: favouriteVideos = [] } = useVideosByIds(favouriteIds)
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
+    const [hideCompleted, setHideCompleted] = useState(false)
 
     const {
         favouriteIdSet,
@@ -200,10 +201,26 @@ const YourRoadmap = () => {
         return grouped
     }, [favouriteVideos])
 
+    const visibleVideosByPosition = useMemo(() => {
+        if (!hideCompleted) return videosByPosition
+
+        const grouped = new Map<string, any[]>()
+
+        // When enabled, only keep videos that are not complete for the current user.
+        for (const [positionId, videos] of videosByPosition.entries()) {
+            grouped.set(
+                positionId,
+                videos.filter((video: any) => !video?.id || !completedVideoIdSet.has(video.id))
+            )
+        }
+
+        return grouped
+    }, [videosByPosition, hideCompleted, completedVideoIdSet])
+
     const roadmapPositions = useMemo(() => {
         if (showEmptyPositions) return positions
-        return positions.filter((position: any) => (videosByPosition.get(position.id)?.length ?? 0) > 0)
-    }, [positions, videosByPosition, showEmptyPositions])
+        return positions.filter((position: any) => (visibleVideosByPosition.get(position.id)?.length ?? 0) > 0)
+    }, [positions, visibleVideosByPosition, showEmptyPositions])
 
     const estimatedSurfaceHeight = useMemo(() => {
         const rowHeight = VIDEO_H + VIDEO_MARGIN * 2
@@ -373,6 +390,15 @@ const YourRoadmap = () => {
                         thumbColor="#ffffff"
                     />
                 </View>
+                <View style={styles.toggleRow}>
+                    <ThemedText variant="small" style={styles.toggleText}>Hide completed</ThemedText>
+                    <Switch
+                        value={hideCompleted}
+                        onValueChange={setHideCompleted}
+                        trackColor={{ false: '#cbd5e1', true: colors.primary }}
+                        thumbColor="#ffffff"
+                    />
+                </View>
             </View>
             <View ref={canvasRef} onLayout={onCanvasLayout} style={styles.canvasOuter} {...panResponder.panHandlers}>
                 <Animated.View
@@ -399,7 +425,7 @@ const YourRoadmap = () => {
                         </View>
 
                         {roadmapPositions.map((position: any) => {
-                            const positionFavouriteVideos = videosByPosition.get(position.id) ?? []
+                            const positionFavouriteVideos = visibleVideosByPosition.get(position.id) ?? []
 
                             return (
                                 <View key={position.id} style={styles.roadmapRow}>
