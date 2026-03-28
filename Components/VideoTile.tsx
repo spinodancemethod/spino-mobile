@@ -47,7 +47,7 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {typeof item?.level === 'number' ? (
                             (() => {
                                 const lvl = item.level as number;
-                                const info = getLevelInfo(lvl) || { label: String(lvl), color: '#8B5CF6' };
+                                const info = getLevelInfo(lvl) || { label: String(lvl), color: '#e5e7eb' };
                                 return <ThemedPill color={info.color} size="small">{info.label}</ThemedPill>;
                             })()
                         ) : null}

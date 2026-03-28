@@ -6,7 +6,7 @@ import ThemedText from 'Components/ThemedText'
 import ThemedPill from 'Components/ThemedPill'
 import ThemedLike from 'Components/ThemedLike'
 import ThemedStar from 'Components/ThemedStar'
-import { getLevelLabel, getLevelInfo } from 'constants/Levels'
+import { getLevelInfo } from 'constants/Levels'
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
 import { usePositions } from 'lib/hooks/usePositions'
@@ -171,7 +171,7 @@ export default function VideoDetailScreen() {
                         {typeof video?.level === 'number' ? (
                             (() => {
                                 const info = getLevelInfo(video.level);
-                                return <ThemedPill size="small" color={info?.color ?? '#e5e7eb'}>{getLevelLabel(video.level)}</ThemedPill>
+                                return <ThemedPill size="small" color={info?.color ?? '#e5e7eb'}>{info?.label ?? String(video.level)}</ThemedPill>
                             })()
                         ) : null}
                     </View>
