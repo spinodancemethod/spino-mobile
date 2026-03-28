@@ -58,7 +58,8 @@ const InProgress = () => {
                         <VideoTile
                             item={item}
                             positionName={getPosition(item.position_id)?.name}
-                            showDeckToggle={true}
+                            // On Deck is deprecated in UI, so hide add/remove deck controls.
+                            showDeckToggle={false}
                             decked={deckIds.includes(item.id)}
                             showFavouriteToggle={false}
                             onPress={() => router.push(`/video/${item.id}`)}

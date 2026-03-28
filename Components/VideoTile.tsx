@@ -29,7 +29,7 @@ interface Props {
     showDeckToggle?: boolean;
 }
 
-const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false, decked = false, showFavouriteToggle = true, showDeckToggle = true }) => {
+const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false, decked = false, showFavouriteToggle = true, showDeckToggle = false }) => {
     const { colors } = useTheme();
     const toggleFav = useToggleFavourite();
     const toggleDeck = useToggleDeck();

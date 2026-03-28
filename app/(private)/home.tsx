@@ -61,7 +61,7 @@ const Home = () => {
                         </ThemedText>
                         <ThemedButton
                             title="Go to your Workspace"
-                            onPress={() => router.push('/inprogress')}
+                            onPress={() => router.push('/your-roadmap')}
                             style={{ width: '100%', marginTop: 4 }}
                         />
                     </View>

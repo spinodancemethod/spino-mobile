@@ -5,7 +5,6 @@ import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedPill from 'Components/ThemedPill'
 import ThemedLike from 'Components/ThemedLike'
-import ThemedStar from 'Components/ThemedStar'
 import { getLevelInfo } from 'constants/Levels'
 import { useVideoById } from 'lib/hooks/useVideoById'
 import { useTheme } from 'constants/useTheme'
@@ -47,17 +46,13 @@ export default function VideoDetailScreen() {
     const [saving, setSaving] = useState(false)
     const {
         favouriteIdSet,
-        deckIdSet,
         completedVideoIdSet,
         isFavouritePending,
-        isDeckPending,
         isCompletionPending,
         toggleFavouriteWithFeedback,
-        toggleDeckWithFeedback,
         toggleCompletionWithFeedback,
     } = useVideoActionToggles()
     const isFavourite = !!video?.id && favouriteIdSet.has(video.id)
-    const isDecked = !!video?.id && deckIdSet.has(video.id)
     const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
 
     const onToggleCompletion = async () => {
@@ -222,14 +217,6 @@ export default function VideoDetailScreen() {
                             onPress={() => {
                                 if (!video?.id || isFavouritePending) return
                                 toggleFavouriteWithFeedback(video.id)
-                            }}
-                        />
-                        <ThemedStar
-                            starred={isDecked}
-                            size={22}
-                            onPress={() => {
-                                if (!video?.id || isDeckPending) return
-                                toggleDeckWithFeedback(video.id)
                             }}
                         />
                         <TouchableOpacity

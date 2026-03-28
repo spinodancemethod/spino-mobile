@@ -75,6 +75,7 @@ export default function DashboardLayout() {
     return (
         <>
             <Tabs
+                initialRouteName="your-roadmap"
                 screenOptions={{
                     headerShown: false,
                     tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
@@ -86,6 +87,8 @@ export default function DashboardLayout() {
                 <Tabs.Screen
                     name="inprogress"
                     options={{
+                        // Keep route available but hide it from the dashboard tab bar while deprecating On Deck.
+                        href: null,
                         title: "On Deck", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}

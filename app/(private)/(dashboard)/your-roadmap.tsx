@@ -2,7 +2,6 @@ import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedLike from 'Components/ThemedLike'
-import ThemedStar from 'Components/ThemedStar'
 import { Ionicons } from '@expo/vector-icons'
 import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch, LayoutChangeEvent } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
@@ -177,13 +176,10 @@ const YourRoadmap = () => {
 
     const {
         favouriteIdSet,
-        deckIdSet,
         completedVideoIdSet,
         isFavouritePending,
-        isDeckPending,
         isCompletionPending,
         toggleFavouriteWithFeedback,
-        toggleDeckWithFeedback,
         toggleCompletionWithFeedback,
     } = useVideoActionToggles()
 
@@ -373,7 +369,6 @@ const YourRoadmap = () => {
     const closeModal = useCallback(() => setSelectedPos(null), [])
     const closeVideoModal = useCallback(() => setSelectedVideo(null), [])
     const selectedVideoIsFavourite = !!selectedVideo?.video?.id && favouriteIdSet.has(selectedVideo.video.id)
-    const selectedVideoIsDecked = !!selectedVideo?.video?.id && deckIdSet.has(selectedVideo.video.id)
     const selectedVideoIsComplete = !!selectedVideo?.video?.id && completedVideoIdSet.has(selectedVideo.video.id)
     const videoNavColor = mode === 'dark' ? colors.primary : '#111827'
 
@@ -543,14 +538,6 @@ const YourRoadmap = () => {
                                             onPress={() => {
                                                 if (!selectedVideo?.video?.id || isFavouritePending) return
                                                 toggleFavouriteWithFeedback(selectedVideo.video.id)
-                                            }}
-                                        />
-                                        <ThemedStar
-                                            starred={selectedVideoIsDecked}
-                                            size={22}
-                                            onPress={() => {
-                                                if (!selectedVideo?.video?.id || isDeckPending) return
-                                                toggleDeckWithFeedback(selectedVideo.video.id)
                                             }}
                                         />
                                         <Pressable

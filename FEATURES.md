@@ -35,6 +35,9 @@
 - Added a centered plus-circle CTA to empty roadmap position cards (when "Show empty positions" is on) that opens Library with that position preselected in the filter.
 - Added a "Hide completed" toggle on Your Roadmap that filters out videos the user has already marked complete.
 - Increased vertical spacing between video tiles in Library so each item has clearer visual separation.
+- Deprecated On Deck in UI by hiding the dashboard tab entry and suppressing add-to-deck star toggles while leaving underlying deck code in place.
+- Set the dashboard tabs to open on Your Roadmap by default instead of In Progress.
+- Added an explicit dashboard root redirect to Your Roadmap and updated the home workspace CTA to open roadmap instead of In Progress.
 
 ## Archived Stripe-Era Milestones
 
