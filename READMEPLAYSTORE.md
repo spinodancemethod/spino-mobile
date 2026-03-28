@@ -96,9 +96,10 @@ Required app env:
 
 Required function secrets:
 
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL`
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY`
-- `GOOGLE_PLAY_ANDROID_PACKAGE_NAME`
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL` — Service account email for Google Play API authentication.
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY` — Service account private key (PEM format). Supabase stores as literal `\n` separators; the function normalizes them.
+- `GOOGLE_PLAY_ANDROID_PACKAGE_NAME` — Default package name for verification (e.g., `com.spino.mobile`). Falls back to this if not provided by client.
+- `GOOGLE_PLAY_ALLOWED_PACKAGE_NAMES` (optional) — Comma-separated list of allowed package names. Example: `com.spino.mobile,com.spino.mobile.beta`. If both this and the default are empty, verification fails. Use this to allowlist production, beta, and staging builds independently.
 
 ### 3.2 Purchase and verification path
 

@@ -284,13 +284,41 @@ BEGIN
   END IF;
 END $$;
 
--- Keep authenticated/service_role broad grants for app compatibility.
--- Avoid broad anon grants; anonymous access should remain explicit and policy-driven.
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO authenticated;
+-- Least-privilege grants: authenticated users get only the permissions required by RLS policies.
+-- Avoid broad grants to reduce blast radius; service_role retains admin privileges.
+
+-- Authenticated user grants (minimal per-table permissions)
+GRANT SELECT ON public.subscriptions TO authenticated;
+GRANT SELECT ON public.billing_provider_accounts TO authenticated;
+GRANT SELECT ON public.client_error_logs TO authenticated;
+GRANT INSERT ON public.client_error_logs TO authenticated;
+GRANT SELECT ON public.deck TO authenticated;
+GRANT INSERT ON public.deck TO authenticated;
+GRANT DELETE ON public.deck TO authenticated;
+GRANT SELECT ON public.favourites TO authenticated;
+GRANT INSERT ON public.favourites TO authenticated;
+GRANT DELETE ON public.favourites TO authenticated;
+GRANT SELECT ON public.notes TO authenticated;
+GRANT INSERT ON public.notes TO authenticated;
+GRANT UPDATE ON public.notes TO authenticated;
+GRANT DELETE ON public.notes TO authenticated;
+GRANT SELECT ON public.positions TO authenticated;
+GRANT SELECT ON public.user_profiles TO authenticated;
+GRANT INSERT ON public.user_profiles TO authenticated;
+GRANT UPDATE ON public.user_profiles TO authenticated;
+GRANT SELECT ON public.videos TO authenticated;
+GRANT INSERT ON public.videos TO authenticated;
+GRANT UPDATE ON public.videos TO authenticated;
+GRANT DELETE ON public.videos TO authenticated;
+
+-- Sequence grants for authenticated (only USAGE needed, not ALL)
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Service role retains full admin privileges for backend operations
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
+-- Function grants
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.toggle_deck_with_subscription_limit(uuid, uuid) TO authenticated;

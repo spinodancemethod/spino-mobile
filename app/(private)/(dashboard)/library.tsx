@@ -32,12 +32,6 @@ const Library = () => {
         return positions.find((position: any) => position.id === id) || null;
     };
 
-    useEffect(() => {
-        if (selected) {
-            console.log('Selected position:', selected);
-        }
-    }, [selected]);
-
     const numColumns = 1;
 
     const renderTile = ({ item }: { item: any }) => (
