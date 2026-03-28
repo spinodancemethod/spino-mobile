@@ -1,5 +1,8 @@
 # Features
 
+- Removed the deprecated Supabase `create-checkout-session` Stripe edge function to keep production billing runtime Google Play-only.
+- Added a production SQL migration at `sql/migrations/20260328_make_stripe_subscription_id_nullable.sql` to make `subscriptions.stripe_subscription_id` nullable for non-Stripe providers.
+
 - Removed account-age-based auto logout so sessions are no longer invalidated after 24 hours from signup date.
 - Updated Google Play purchase flow to finalize transactions only after server-side verification succeeds, reducing entitlement drift risk.
 - Added restore-purchase request throttling to align with verify endpoint rate limits and avoid 429 loops.
