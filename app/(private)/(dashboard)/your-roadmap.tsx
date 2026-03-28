@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
-import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch } from 'react-native'
+import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch, LayoutChangeEvent } from 'react-native'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
@@ -41,6 +41,19 @@ const YourRoadmap = () => {
     const lastScale = useRef(DEFAULT_SCALE)
     const initialTouches = useRef<{ x: number; y: number }[] | null>(null)
     const initialDistance = useRef<number | null>(null)
+    // Tracks the Animated.View height so the pinch handler can compensate
+    // for React Native scaling around the element center, not the origin.
+    const surfaceHeightRef = useRef(0)
+
+    // Absolute screen position of the canvas container — needed so the
+    // pinch handler can convert pageX/pageY into container-relative coords.
+    const canvasRef = useRef<View>(null)
+    const canvasOffset = useRef({ x: 0, y: 0 })
+    const onCanvasLayout = useCallback((_e: LayoutChangeEvent) => {
+        canvasRef.current?.measureInWindow((x, y) => {
+            canvasOffset.current = { x: x ?? 0, y: y ?? 0 }
+        })
+    }, [])
 
     const panResponder = useRef(
         PanResponder.create({
@@ -103,16 +116,25 @@ const YourRoadmap = () => {
                         const nextScale = clamp(lastScale.current * scaleFactor, MIN_SCALE, MAX_SCALE)
                         scale.setValue(nextScale)
 
-                        // Midpoint movement lets a pinch gesture also pan the canvas.
-                        const midX = (touches[0].pageX + touches[1].pageX) / 2
-                        const midY = (touches[0].pageY + touches[1].pageY) / 2
+                        // Convert absolute touch positions to canvas-relative
+                        // so the focal-point formula works regardless of header offset.
+                        const ox = canvasOffset.current.x
+                        const oy = canvasOffset.current.y
+                        const midX = (touches[0].pageX + touches[1].pageX) / 2 - ox
+                        const midY = (touches[0].pageY + touches[1].pageY) / 2 - oy
 
                         if (initialTouches.current) {
-                            const initMidX = (initialTouches.current[0].x + initialTouches.current[1].x) / 2
-                            const initMidY = (initialTouches.current[0].y + initialTouches.current[1].y) / 2
-                            const deltaX = midX - initMidX
-                            const deltaY = midY - initMidY
-                            pan.setValue({ x: lastPan.current.x + deltaX, y: lastPan.current.y + deltaY })
+                            const initMidX = (initialTouches.current[0].x + initialTouches.current[1].x) / 2 - ox
+                            const initMidY = (initialTouches.current[0].y + initialTouches.current[1].y) / 2 - oy
+                            // Focal-point zoom: RN scales around the element center, so
+                            // we include a center*(r-1) correction to keep the content
+                            // point under the fingers stationary.
+                            const r = nextScale / lastScale.current
+                            const cx = SURFACE_WIDTH / 2
+                            const cy = surfaceHeightRef.current / 2
+                            const newPanX = midX + r * (lastPan.current.x - initMidX) + cx * (r - 1)
+                            const newPanY = midY + r * (lastPan.current.y - initMidY) + cy * (r - 1)
+                            pan.setValue({ x: newPanX, y: newPanY })
                         }
                     }
                 } else {
@@ -167,6 +189,11 @@ const YourRoadmap = () => {
         // Keep a stable canvas height across filter toggles to avoid viewport jumps.
         return Math.max(baseHeight, positions.length * (rowHeight + ROW_GAP) + 96)
     }, [positions.length])
+
+    // Sync ref so the pan-responder (stale closure) can read the latest height.
+    useEffect(() => {
+        surfaceHeightRef.current = estimatedSurfaceHeight
+    }, [estimatedSurfaceHeight])
 
     const defaultPanX = useMemo(
         // Compensate for initial zoom so the left column stays visible on first render.
@@ -291,7 +318,7 @@ const YourRoadmap = () => {
                     />
                 </View>
             </View>
-            <View style={styles.canvasOuter} {...panResponder.panHandlers}>
+            <View ref={canvasRef} onLayout={onCanvasLayout} style={styles.canvasOuter} {...panResponder.panHandlers}>
                 <Animated.View
                     style={[
                         styles.canvasInner,
