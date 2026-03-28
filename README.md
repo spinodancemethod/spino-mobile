@@ -32,6 +32,19 @@ Developer notes
 - The app uses React Query; if you change query keys, update mutation invalidations accordingly.
 - Run `npm run typecheck` and `npm test` before releasing.
 
+## Production monitoring
+
+After deploying, monitor app health and billing:
+
+- **Observability Guide:** See [OBSERVABILITY.md](OBSERVABILITY.md) for detailed monitoring queries and runbook (error rates, request volumes, billing events, client error logs).
+- **First week after launch:**
+  - Monitor `billing_events` for verification errors (target: < 5 per 10 min).
+  - Monitor `client_error_logs` grouped by context (targeting zero auth/billing errors).
+  - Check app crash logs in Supabase console.
+- **Ongoing:**
+  - Review `client_error_logs` weekly for patterns.
+  - Archive billing events older than 90 days (see [OBSERVABILITY.md](OBSERVABILITY.md) for SQL).
+
 Short TODOs
 
 - Redo the roadmap. the roadmap should reflect the users repertoire of moves that they have mastered for easy reviewing. This will require an additional table maybe called mastered which has user_id and video_id
