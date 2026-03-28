@@ -46,6 +46,8 @@
 - Added free-tier entitlement test coverage: mocked `useEntitlement` hook behavior, SQL `can_access_video` logic mirror tests, and expanded entitlement guard assertions.
 - Added a structured free tier experience: free users can browse starter free videos, paid content presents locked upsell states, and analytics now log free content impressions, locked-content taps, and subscribe CTA presses from locked screens.
 - Added observability analytics unit coverage for `reportAppEvent`, including successful event inserts, missing-user short-circuit behavior, and failure-safe non-throwing inserts.
+- Normalized authenticated app entry to Home and added a workspace quick-link below the Home subscribe card so free users can open the dashboard without subscribing first.
+- Promoted the Home free-tier `Go to Workspace` quick-link to a visually prominent primary CTA with an icon so it stands out from surrounding content.
 
 ## Archived Stripe-Era Milestones
 

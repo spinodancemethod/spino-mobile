@@ -31,7 +31,7 @@ export default function Login() {
             if (res?.error) {
                 // signIn already shows snack
             } else {
-                router.replace('/');
+                router.replace('/home');
             }
         } finally {
             setLoading(false);
