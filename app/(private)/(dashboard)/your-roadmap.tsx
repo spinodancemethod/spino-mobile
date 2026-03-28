@@ -9,6 +9,8 @@ import { usePositions } from 'lib/hooks/usePositions'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
+import { useEntitlement } from 'lib/hooks/useEntitlement'
+import { useFreeTierVideos } from 'lib/hooks/useFreeTierVideos'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
@@ -35,6 +37,7 @@ const ROW_GAP = 18
 const VIDEO_GAP = 12
 const SAMPLE_GIF_URL = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif'
 const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Video+Preview'
+const LOCKED_PLACEHOLDER_URL = 'https://placehold.co/240x135/e5e7eb/6b7280?text=Premium+Locked'
 const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Position+Preview'
 
 const YourRoadmap = () => {
@@ -170,8 +173,10 @@ const YourRoadmap = () => {
     ).current
 
     const { data: positions = [] } = usePositions(undefined)
+    const { isSubscribed } = useEntitlement()
     const { data: favouriteIds = [], isLoading: isFavouritesLoading } = useFavouritesByUser()
     const { data: favouriteVideos = [], isLoading: isFavouriteVideosLoading } = useVideosByIds(favouriteIds)
+    const { data: freeTierVideos = [], isLoading: isFreeTierVideosLoading } = useFreeTierVideos()
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
     const [hideCompleted, setHideCompleted] = useState(false)
 
@@ -184,10 +189,17 @@ const YourRoadmap = () => {
         toggleCompletionWithFeedback,
     } = useVideoActionToggles()
 
+    // Paid users see their curated roadmap (favourites).
+    // Free users see all free-tier videos without needing favourites.
+    const roadmapSourceVideos = useMemo(
+        () => (isSubscribed ? favouriteVideos : freeTierVideos),
+        [isSubscribed, favouriteVideos, freeTierVideos]
+    )
+
     const videosByPosition = useMemo(() => {
         const grouped = new Map<string, any[]>()
 
-        for (const video of favouriteVideos) {
+        for (const video of roadmapSourceVideos) {
             const positionId = video?.position_id
             if (!positionId) continue
             const current = grouped.get(positionId) ?? []
@@ -196,7 +208,7 @@ const YourRoadmap = () => {
         }
 
         return grouped
-    }, [favouriteVideos])
+    }, [roadmapSourceVideos])
 
     const visibleVideosByPosition = useMemo(() => {
         if (!hideCompleted) return videosByPosition
@@ -215,9 +227,11 @@ const YourRoadmap = () => {
     }, [videosByPosition, hideCompleted, completedVideoIdSet])
 
     const roadmapPositions = useMemo(() => {
-        if (showEmptyPositions) return positions
+        // Free-tier users should always see position rows so locked premium placeholders
+        // can be displayed even when a position has no free videos.
+        if (showEmptyPositions || !isSubscribed) return positions
         return positions.filter((position: any) => (visibleVideosByPosition.get(position.id)?.length ?? 0) > 0)
-    }, [positions, visibleVideosByPosition, showEmptyPositions])
+    }, [positions, visibleVideosByPosition, showEmptyPositions, isSubscribed])
 
     const estimatedSurfaceHeight = useMemo(() => {
         const rowHeight = VIDEO_H + VIDEO_MARGIN * 2
@@ -268,14 +282,17 @@ const YourRoadmap = () => {
     useEffect(() => {
         // If the user has no roadmap videos, default to showing empty positions
         // so the screen is still informative instead of appearing blank.
-        if (isFavouritesLoading || isFavouriteVideosLoading) return
-        if (favouriteVideos.length === 0 && !showEmptyPositions) {
+        if (!isSubscribed) return
+        if (isFavouritesLoading || isFavouriteVideosLoading || isFreeTierVideosLoading) return
+        if (roadmapSourceVideos.length === 0 && !showEmptyPositions) {
             setShowEmptyPositions(true)
         }
     }, [
+        isSubscribed,
         isFavouritesLoading,
         isFavouriteVideosLoading,
-        favouriteVideos.length,
+        isFreeTierVideosLoading,
+        roadmapSourceVideos.length,
         showEmptyPositions,
     ])
 
@@ -287,7 +304,21 @@ const YourRoadmap = () => {
     }, [defaultPanX, defaultPanY, pan, scale])
 
     const PositionVideoStack: React.FC<{ pos: any; videos: any[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
-        if (videos.length === 0 && !showEmptyState) return null
+        const shouldShowLockedPlaceholder = !isSubscribed
+        if (videos.length === 0 && !showEmptyState && !shouldShowLockedPlaceholder) return null
+
+        const videosToRender = shouldShowLockedPlaceholder
+            ? [
+                ...videos,
+                {
+                    id: `locked-placeholder-${String(pos?.id ?? 'position')}`,
+                    is_locked: true,
+                    access_tier: 'paid',
+                    title: 'Premium videos locked',
+                    roadmap_preview_url: LOCKED_PLACEHOLDER_URL,
+                },
+            ]
+            : videos
 
         return (
             <View style={styles.videoRow}>
@@ -312,20 +343,25 @@ const YourRoadmap = () => {
                         </View>
                     </TouchableOpacity>
                 )}
-                {videos.map((video: any, index: number) => {
+                {videosToRender.map((video: any, index: number) => {
                     const key = video?.id ?? `${pos?.id}-fav-${index}`
                     const title = video?.title ?? `Video ${index + 1}`
+                    const isLocked = Boolean(video?.is_locked) || (!isSubscribed && video?.access_tier === 'paid')
                     // Completion is now driven by per-user DB rows instead of placeholder tile order.
                     const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
                     const bgColor = isComplete ? '#16a34a' : '#94a3b8'
                     const tileImageSource = {
-                        uri: video?.roadmap_preview_url ?? SAMPLE_PLACEHOLDER_URL,
+                        uri: video?.roadmap_preview_url ?? (isLocked ? LOCKED_PLACEHOLDER_URL : SAMPLE_PLACEHOLDER_URL),
                     }
 
                     return (
                         <TouchableOpacity
                             key={key}
                             onPress={() => {
+                                if (isLocked) {
+                                    router.push('/subscribe')
+                                    return
+                                }
                                 onVideoPress(pos, index, video)
                             }}
                             activeOpacity={0.85}
@@ -340,39 +376,47 @@ const YourRoadmap = () => {
                                         marginRight: VIDEO_GAP,
                                         paddingHorizontal: 8,
                                         paddingVertical: 8,
+                                        backgroundColor: isLocked ? '#e5e7eb' : '#f2f7e7',
+                                        opacity: isLocked ? 0.78 : 1,
                                     },
                                 ]}
                             >
                                 <View style={styles.videoTileHeaderRow}>
                                     <ThemedText variant="small" style={{ ...styles.nodeText, ...styles.videoTitleText }} numberOfLines={1}>{title}</ThemedText>
-                                    <Pressable
-                                        onPress={(event) => {
-                                            event.stopPropagation()
-                                            if (!video?.id) return
+                                    {isLocked ? (
+                                        <View style={styles.lockedIconPill}>
+                                            <Ionicons name="lock-closed" size={10} color="#ffffff" />
+                                        </View>
+                                    ) : (
+                                        <Pressable
+                                            onPress={(event) => {
+                                                event.stopPropagation()
+                                                if (!video?.id) return
 
-                                            toggleCompletionWithFeedback(video.id, isComplete)
-                                        }}
-                                        disabled={!video?.id}
-                                        hitSlop={8}
-                                        style={{
-                                            width: ICON_SIZE,
-                                            height: ICON_SIZE,
-                                            borderRadius: ICON_SIZE / 2,
-                                            backgroundColor: bgColor,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            marginLeft: 6,
-                                        }}
-                                    >
-                                        <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
-                                    </Pressable>
+                                                toggleCompletionWithFeedback(video.id, isComplete)
+                                            }}
+                                            disabled={!video?.id}
+                                            hitSlop={8}
+                                            style={{
+                                                width: ICON_SIZE,
+                                                height: ICON_SIZE,
+                                                borderRadius: ICON_SIZE / 2,
+                                                backgroundColor: bgColor,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                marginLeft: 6,
+                                            }}
+                                        >
+                                            <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                        </Pressable>
+                                    )}
                                 </View>
                                 <ExpoImage
                                     source={tileImageSource}
                                     style={styles.videoGif}
                                     contentFit="cover"
                                 />
-                                <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
+                                <ThemedText variant="small" style={styles.zoomHintText}>{isLocked ? 'Subscribe to unlock' : 'Tap to preview'}</ThemedText>
                             </View>
                         </TouchableOpacity>
                     )
@@ -472,7 +516,7 @@ const YourRoadmap = () => {
                                         <PositionVideoStack
                                             pos={position}
                                             videos={positionFavouriteVideos}
-                                            showEmptyState={showEmptyPositions}
+                                            showEmptyState={showEmptyPositions && isSubscribed}
                                         />
                                     </View>
                                 </View>
@@ -719,6 +763,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: '#64748b',
         fontSize: 10,
+    },
+    lockedIconPill: {
+        width: ICON_SIZE,
+        height: ICON_SIZE,
+        borderRadius: ICON_SIZE / 2,
+        backgroundColor: '#6b7280',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 6,
     },
     emptyLeafBox: {
         backgroundColor: '#f8fafc',

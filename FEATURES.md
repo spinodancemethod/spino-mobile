@@ -42,6 +42,7 @@
 - Hid the dashboard redirect-only `index` route from the tab bar so no `index` tile is shown.
 - Auto-enables `Show empty positions` when a user has no roadmap videos so the roadmap never opens to a blank view.
 - Fixed roadmap empty-position plus navigation so Library reliably auto-selects the tapped position, including when the Library tab is already mounted.
+- Added free-tier roadmap population via a dedicated `access_tier = 'free'` query and rendered grey locked premium placeholders that route free users to Subscribe.
 
 ## Archived Stripe-Era Milestones
 
