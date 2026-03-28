@@ -170,8 +170,8 @@ const YourRoadmap = () => {
     ).current
 
     const { data: positions = [] } = usePositions(undefined)
-    const { data: favouriteIds = [] } = useFavouritesByUser()
-    const { data: favouriteVideos = [] } = useVideosByIds(favouriteIds)
+    const { data: favouriteIds = [], isLoading: isFavouritesLoading } = useFavouritesByUser()
+    const { data: favouriteVideos = [], isLoading: isFavouriteVideosLoading } = useVideosByIds(favouriteIds)
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
     const [hideCompleted, setHideCompleted] = useState(false)
 
@@ -264,6 +264,20 @@ const YourRoadmap = () => {
     const onVideoPress = useCallback((position: any, index: number, video: any) => {
         setSelectedVideo({ pos: position, index, video })
     }, [])
+
+    useEffect(() => {
+        // If the user has no roadmap videos, default to showing empty positions
+        // so the screen is still informative instead of appearing blank.
+        if (isFavouritesLoading || isFavouriteVideosLoading) return
+        if (favouriteVideos.length === 0 && !showEmptyPositions) {
+            setShowEmptyPositions(true)
+        }
+    }, [
+        isFavouritesLoading,
+        isFavouriteVideosLoading,
+        favouriteVideos.length,
+        showEmptyPositions,
+    ])
 
     useEffect(() => {
         pan.setValue({ x: defaultPanX, y: defaultPanY })
