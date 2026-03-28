@@ -1,12 +1,12 @@
 # Features
 
+## Current Product (Google Play Runtime)
+
+- Updated transitive production dependencies via `npm audit fix --omit=dev` to clear high-severity audit findings; only one moderate advisory remains (`brace-expansion`).
 - Removed unused `app/(private)/subscribe/success.tsx` and `app/(private)/subscribe/cancel.tsx` screens left from the old web checkout return flow.
 - Sanitized client-facing Google verification errors in `verify-google-play-purchase` so upstream response details are not leaked.
 - Replaced `@ts-ignore` auth link and OAuth calls with typed-safe Supabase API usage in `lib/auth.tsx`.
-- Pruned stale Stripe-era bullets from this changelog and condensed them into a single archived note.
-
-- Removed the deprecated Supabase `create-checkout-session` Stripe edge function to keep production billing runtime Google Play-only.
-- Added a production SQL migration at `sql/migrations/20260328_make_stripe_subscription_id_nullable.sql` to make `subscriptions.stripe_subscription_id` nullable for non-Stripe providers.
+- Made `subscriptions.stripe_subscription_id` nullable for non-Stripe providers (Google Play) across bootstrap schema and production migration (`sql/migrations/20260328_make_stripe_subscription_id_nullable.sql`).
 
 - Removed account-age-based auto logout so sessions are no longer invalidated after 24 hours from signup date.
 - Updated Google Play purchase flow to finalize transactions only after server-side verification succeeds, reducing entitlement drift risk.
@@ -14,7 +14,6 @@
 - Replaced placeholder legal links with environment-driven URLs (`EXPO_PUBLIC_PRIVACY_POLICY_URL`, `EXPO_PUBLIC_TERMS_URL`) and user-safe fallback messaging.
 - Added dynamic Expo updates URL injection via `app.config.ts` using `EXPO_PUBLIC_EAS_PROJECT_ID`/`EAS_PROJECT_ID`, removing hardcoded `YOUR_PROJECT_ID`.
 - Added an Android release smoke CI job for tags/manual runs that prebuilds and bundles with temporary debug signing.
-- Made `subscriptions.stripe_subscription_id` nullable in bootstrap schema to support non-Stripe providers like Google Play.
 - Cleaned `.env.example` and added missing production env keys for legal URLs and EAS project ID.
 
 - Switched deck toggling to the server-side `toggle_deck_with_subscription_limit` RPC so advisory locking and limit checks are atomic under concurrent taps/devices.
@@ -27,7 +26,6 @@
 - Added a direct video-route entitlement guard so non-subscribed users are redirected to `/subscribe` even when bypassing dashboard tabs.
 - Added strict package-name allowlist validation and per-user verification request throttling in `verify-google-play-purchase`.
 - Added `sql/videos_subscription_rls.sql` to enforce subscription-based video reads at the database policy layer.
-- Removed the legacy Stripe checkout edge function file so Google Play remains the sole active subscription purchase path.
 - Added a dashboard entitlement gate that checks `has_active_subscription` before allowing paid tab access.
 - Hardened Google Play verification by validating missing env keys explicitly, sanitizing upstream error output, and making billing event IDs deterministic per purchase/order.
 - Fixed deck pre-check cache key usage to read user-specific deck cache entries instead of a stale `current` key.
@@ -45,7 +43,6 @@
 - Added a conditional Subscribe CTA on Home for non-subscribed users that routes to a dedicated subscription flow.
 - Added a new private subscription purchase/cart page with plan selection and checkout placeholder UI.
 - Replaced Home's hardcoded subscription flag with the shared subscription status hook and added a loading-state card to avoid showing the wrong CTA while entitlement is being fetched.
-- Archived Stripe-era subscription rollout notes to keep this changelog focused on the current Google Play billing runtime.
 - Replaced the burger-menu Profile entry with a new Account page backed by TanStack Query (`useAccountDetails`) that shows user account details and current subscription status.
 - Simplified the Account page subscription summary by removing sensitive internal identifiers.
 - Aligned Android release identity for production by setting the app package/namespace to `com.spino.mobile` and updating display branding to `Spino`.
@@ -53,4 +50,8 @@
 - Updated Android manifest for Play readiness by removing risky legacy storage/overlay permissions and aligning app deep-link scheme to `spino`.
 - Added `READMEPLAYSTORE.md` with a detailed launch-prep plan for repo app setup decisions and Android native project strategy before Play Store submission.
 - Drafted Google Play Billing migration assets around provider-agnostic subscription fields and the `verify-google-play-purchase` edge function for server-side purchase verification and entitlement upsert.
-- Removed Stripe checkout/webhook/cancel runtime paths and switched subscription purchase + restore flows to Google Play Billing with server-side token verification.
+
+## Archived Stripe-Era Milestones
+
+- Stripe checkout/webhook/cancel runtime paths were removed and billing was migrated to Google Play verification flows.
+- The deprecated Supabase `create-checkout-session` Stripe edge function was removed as part of the Google Play-only runtime cutover.

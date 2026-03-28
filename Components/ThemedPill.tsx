@@ -46,7 +46,6 @@ const ThemedPill: React.FC<Props> = ({ children, color, textColor, size = 'mediu
     let backgroundColor = colors.uiBackground;
     if (color) {
         if (isThemeToken(color, colors as any)) {
-            // @ts-ignore - dynamic access
             backgroundColor = (colors as any)[color];
         } else {
             backgroundColor = color;
