@@ -38,6 +38,7 @@
 - Deprecated On Deck in UI by hiding the dashboard tab entry and suppressing add-to-deck star toggles while leaving underlying deck code in place.
 - Set the dashboard tabs to open on Your Roadmap by default instead of In Progress.
 - Added an explicit dashboard root redirect to Your Roadmap and updated the home workspace CTA to open roadmap instead of In Progress.
+- Raised the roadmap's initial viewport offset so the Positions header appears higher on first load.
 
 ## Archived Stripe-Era Milestones
 

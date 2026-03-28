@@ -17,7 +17,8 @@ const MIN_SCALE = 0.2
 const MAX_SCALE = 3
 const DEFAULT_SCALE = 0.5
 const DEFAULT_VIEWPORT_MARGIN_LEFT = 16
-const DEFAULT_VIEWPORT_MARGIN_TOP = -440
+// Lift the roadmap further on initial render so the header row starts nearer the top.
+const DEFAULT_VIEWPORT_MARGIN_TOP = -700
 const DEFAULT_PAN_COMPENSATION_RATIO = 0.6
 
 // Node sizing for the roadmap row layout.
