@@ -42,7 +42,7 @@ order by 2 desc;
 
 ## Client app monitoring
 
-Apply `sql/client_error_logs.sql` and monitor auth/billing contexts:
+Ensure `sql/bootstrap/01_tables.sql` and `sql/bootstrap/04_rls_policies_grants.sql` are applied, then monitor auth/billing contexts:
 - `auth.signIn`
 - `auth.signUp`
 - `auth.signOut`

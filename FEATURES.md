@@ -1,6 +1,8 @@
 # Features
 
 - Switched deck toggling to the server-side `toggle_deck_with_subscription_limit` RPC so advisory locking and limit checks are atomic under concurrent taps/devices.
+- Switched release guidance back to generated Android mode: `/android` is ignored again and Play Store docs now describe local regeneration (`expo prebuild`) instead of tracking native files in git.
+- Cleaned production docs to match `sql/bootstrap`, removed stale client-side deck-limit prechecks in favor of server-enforced limits, and tightened bootstrap grants by dropping broad `anon` privileges.
 - Merged Play Store and subscription docs into a single phased release guide in `READMEPLAYSTORE.md` and kept `READMESUBSCRIBE.md` as a compatibility pointer.
 - Added an ordered `sql/bootstrap/` schema bundle (extensions, tables, functions, indexes, RLS/policies/grants) so a fresh Supabase project can be initialized from the repo quickly.
 - Expanded automated coverage with tests for auth URL handling, entitlement guard decisions, Google verification response mapping, and deck/favourite toggle cache behavior.

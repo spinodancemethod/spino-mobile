@@ -284,15 +284,13 @@ BEGIN
   END IF;
 END $$;
 
--- Existing production setup grants table/sequence privileges broadly and relies on RLS.
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon;
+-- Keep authenticated/service_role broad grants for app compatibility.
+-- Avoid broad anon grants; anonymous access should remain explicit and policy-driven.
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 
-GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO anon;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.toggle_deck_with_subscription_limit(uuid, uuid) TO authenticated;

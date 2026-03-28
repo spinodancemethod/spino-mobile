@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { showSnack } from 'lib/snackbarService';
-import { DECK_LIMIT } from 'constants/Config';
 import { useAuth } from 'lib/auth';
 import { computeNextToggledIds } from './toggleMutationUtils';
 
@@ -38,7 +37,8 @@ export function useToggleDeck(userId?: string | null) {
             if (error) {
                 const message = error.message ?? 'Failed to toggle deck';
                 if (message.toLowerCase().includes('deck limit reached')) {
-                    showSnack(`You can only save up to ${DECK_LIMIT} classes.`, { duration: 3000 });
+                    // Server enforces tier-aware limits (free vs subscribed).
+                    showSnack('Deck limit reached for your current plan.', { duration: 3000 });
                     const err: any = new Error('deck limit reached');
                     err.code = 'DECK_LIMIT';
                     throw err;

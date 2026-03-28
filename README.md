@@ -3,7 +3,7 @@
 This repository is a small Expo + React Native app (expo-router) focused on a video library with practice tooling. Current implemented features:
 
 - Video library and detail pages — browse videos, view metadata and play back media. See `app/` and `app/(private)/video/[id].tsx`.
-- Notes (CRUD) on videos — per-user notes stored in `public.notes` with a composite primary key `(user_id, video_id)`. UI: read-only note area and an edit modal (editable TextInput) on the video page. Hooks: `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`. Server: `sql/notes_rls_policies.sql` contains recommended RLS policies.
+- Notes (CRUD) on videos — per-user notes stored in `public.notes` with a composite primary key `(user_id, video_id)`. UI: read-only note area and an edit modal (editable TextInput) on the video page. Hooks: `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`.
 - Favourites and deck features — per-user favourites and deck management via `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useToggleFavourite.ts`, `lib/hooks/useToggleDeck.ts`.
 - Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedStar`, etc.
 - Position/category filtering — `usePositions` and `ThemedFilter` support selecting categories to drive video queries.
@@ -15,15 +15,13 @@ Quick files of interest
 
 - Screens: `app/`, `app/(private)/video/[id].tsx` (video page)
 - Hooks: `lib/hooks/useVideos.ts`, `lib/hooks/usePositions.ts`, `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`
-- Supabase / SQL: `lib/supabase.ts`, `sql/notes_rls_policies.sql`, `sql/get_videos_with_fav.sql`
+- Supabase / SQL: `lib/supabase.ts`, `sql/bootstrap/`
 
 Developer notes
 
 - To run locally, provide your Supabase URL and publishable key via Expo environment variables (e.g. `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). See `lib/supabase.ts` for usage.
 - Copy `.env.example` and fill all required Expo public variables for your environment.
-- The `notes` table uses row-level security; apply `sql/notes_rls_policies.sql` in the Supabase SQL editor (as an admin) so authenticated clients can access their own rows.
-- For paid content enforcement at the database layer, apply `sql/videos_subscription_rls.sql` after billing migrations.
-- For app-side auth/billing telemetry, apply `sql/client_error_logs.sql` and use `OBSERVABILITY.md` thresholds/queries.
+- Apply the `sql/bootstrap/` files in order on a fresh database so notes/video entitlement policies and billing telemetry tables are created consistently.
 - For full schema bootstrap on a fresh Supabase project, run the files in `sql/bootstrap/` in this order:
 	1. `sql/bootstrap/00_extensions.sql`
 	2. `sql/bootstrap/01_tables.sql`

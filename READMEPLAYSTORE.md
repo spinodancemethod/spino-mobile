@@ -17,11 +17,10 @@ Use this guide when preparing an Android release that includes paid digital acce
 Primary files involved:
 
 - `app.json`
-- `android/app/build.gradle`
-- `android/app/src/main/AndroidManifest.xml`
-- `android/app/src/main/res/values/strings.xml`
 - `supabase/functions/verify-google-play-purchase/index.ts`
 - `sql/bootstrap/`
+
+`android/` can be generated locally when needed (for example with `npx expo prebuild --platform android`) and does not need to be tracked in git.
 
 ## Phase 1: App identity and release config
 
@@ -61,23 +60,23 @@ Option B: Tracked native project
 
 ### 2.2 Recommended for this repo now
 
-For Play submission with minimal ambiguity, use a tracked native project now.
+For this repo, use generated native Android mode.
 
-- [ ] Stop ignoring `/android` in `.gitignore`.
-- [ ] Commit current native Android files (excluding secrets).
+- [ ] Keep `/android` ignored in `.gitignore`.
+- [ ] Regenerate native Android locally only when needed (`npx expo prebuild --platform android`).
 - [ ] Keep signing secrets outside git.
 
 ### 2.3 Commit and secret boundaries
 
 Commit:
 
-- `android/app/build.gradle`
-- `android/gradle.properties` (without secrets)
-- `android/app/src/main/AndroidManifest.xml`
-- Android resources/source needed for reproducible builds
+- `app.json`
+- Expo config/plugin source files that define native behavior
+- scripts/docs used to regenerate native files consistently
 
 Do not commit:
 
+- generated `android/` folder
 - `.jks` keystore files
 - passwords
 - secret env files
@@ -144,8 +143,7 @@ Release readiness is achieved when all are true:
 
 ## Immediate next actions for this repo
 
-1. Track `android/` in git for release reproducibility.
-2. Remove `/android` from `.gitignore`.
-3. Commit Android native files except secrets.
-4. Configure `SPINO_UPLOAD_*` locally.
-5. Build and upload an internal testing AAB.
+1. Keep `/android` ignored in git.
+2. Configure `SPINO_UPLOAD_*` locally.
+3. Regenerate Android (`npx expo prebuild --platform android`) when doing Android build/test work.
+4. Build and upload an internal testing AAB.
