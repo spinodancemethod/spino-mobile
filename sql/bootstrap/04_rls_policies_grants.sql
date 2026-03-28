@@ -229,26 +229,18 @@ BEGIN
       USING (auth.uid() = user_id);
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'positions' AND policyname = 'Categories are viewable by everyone'
-  ) THEN
-    CREATE POLICY "Categories are viewable by everyone"
-      ON public.positions
-      FOR SELECT
-      TO public
-      USING (true);
-  END IF;
+  DROP POLICY IF EXISTS "Categories are viewable by everyone" ON public.positions;
+  DROP POLICY IF EXISTS "public can read positions" ON public.positions;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'positions' AND policyname = 'public can read positions'
+    WHERE schemaname = 'public' AND tablename = 'positions' AND policyname = 'positions_select_tier_access'
   ) THEN
-    CREATE POLICY "public can read positions"
+    CREATE POLICY positions_select_tier_access
       ON public.positions
       FOR SELECT
-      TO anon
-      USING (true);
+      TO authenticated
+      USING (public.can_access_position(auth.uid(), id));
   END IF;
 
   IF NOT EXISTS (
@@ -374,6 +366,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 -- Function grants
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.can_access_position(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.can_access_position(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.can_access_video(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_access_video(uuid, uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.toggle_deck_with_subscription_limit(uuid, uuid) TO authenticated;

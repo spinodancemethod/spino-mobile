@@ -11,7 +11,10 @@ CREATE SEQUENCE IF NOT EXISTS public.likes_id_seq;
 CREATE TABLE IF NOT EXISTS public.positions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  description text
+  description text,
+  -- Allows positions to be selectively available on the free tier or kept premium.
+  access_tier text NOT NULL DEFAULT 'paid',
+  CONSTRAINT positions_access_tier_check CHECK (access_tier IN ('free', 'paid'))
 );
 
 CREATE TABLE IF NOT EXISTS public.user_profiles (

@@ -20,6 +20,25 @@ AS $$
   );
 $$;
 
+-- Tier-aware position access helper used by the RLS SELECT policy on positions.
+-- Returns true when the requesting user has an active subscription OR
+-- the position is marked as free-tier content (access_tier = 'free').
+CREATE OR REPLACE FUNCTION public.can_access_position(p_user_id uuid, p_position_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    EXISTS (
+      SELECT 1 FROM public.positions p
+      WHERE p.id = p_position_id AND p.access_tier = 'free'
+    )
+    OR
+    public.has_active_subscription(p_user_id);
+$$;
+
 -- Tier-aware video access helper used by the RLS SELECT policy on videos.
 -- Returns true when the requesting user has an active subscription OR
 -- the video is marked as free-tier content (access_tier = 'free').
@@ -31,14 +50,16 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT
-    -- Free-tier videos are always accessible to authenticated users.
     EXISTS (
-      SELECT 1 FROM public.videos v
-      WHERE v.id = p_video_id AND v.access_tier = 'free'
-    )
-    OR
-    -- Paid videos require an active subscription.
-    public.has_active_subscription(p_user_id);
+      SELECT 1
+      FROM public.videos v
+      WHERE v.id = p_video_id
+        AND public.can_access_position(p_user_id, v.position_id)
+        AND (
+          v.access_tier = 'free'
+          OR public.has_active_subscription(p_user_id)
+        )
+    );
 $$;
 
 -- Atomic deck toggle RPC with a per-user advisory lock to avoid concurrent race issues.

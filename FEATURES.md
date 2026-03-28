@@ -48,6 +48,7 @@
 - Added observability analytics unit coverage for `reportAppEvent`, including successful event inserts, missing-user short-circuit behavior, and failure-safe non-throwing inserts.
 - Normalized authenticated app entry to Home and added a workspace quick-link below the Home subscribe card so free users can open the dashboard without subscribing first.
 - Promoted the Home free-tier `Go to Workspace` quick-link to a visually prominent primary CTA with an icon so it stands out from surrounding content.
+- Added tier-aware access control for positions, including `positions.access_tier`, a `can_access_position` helper, and position-aware video access so free/premium positions can be selectively published later.
 
 ## Archived Stripe-Era Milestones
 
