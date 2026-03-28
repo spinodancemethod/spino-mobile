@@ -24,6 +24,13 @@ Developer notes
 - The `notes` table uses row-level security; apply `sql/notes_rls_policies.sql` in the Supabase SQL editor (as an admin) so authenticated clients can access their own rows.
 - For paid content enforcement at the database layer, apply `sql/videos_subscription_rls.sql` after billing migrations.
 - For app-side auth/billing telemetry, apply `sql/client_error_logs.sql` and use `OBSERVABILITY.md` thresholds/queries.
+- For full schema bootstrap on a fresh Supabase project, run the files in `sql/bootstrap/` in this order:
+	1. `sql/bootstrap/00_extensions.sql`
+	2. `sql/bootstrap/01_tables.sql`
+	3. `sql/bootstrap/02_functions.sql`
+	4. `sql/bootstrap/03_indexes.sql`
+	5. `sql/bootstrap/04_rls_policies_grants.sql`
+	This recreates the current `public` schema tables, functions, indexes, RLS policies, and grants.
 - The app uses React Query; if you change query keys, update mutation invalidations accordingly.
 - Run `npm run typecheck` and `npm test` before releasing.
 
