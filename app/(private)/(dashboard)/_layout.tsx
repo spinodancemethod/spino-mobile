@@ -1,7 +1,26 @@
 import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
-import React from 'react'
+import React, { useEffect } from 'react'
+import { ActivityIndicator, View } from 'react-native';
+import ThemedText from 'Components/ThemedText';
+import { useAuth } from 'lib/auth';
+import { supabase } from 'lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { router } from 'expo-router';
+
+function dashboardEntitlementQueryKey(userId?: string | null) {
+    return ['dashboardEntitlement', userId ?? 'anonymous'];
+}
+
+async function fetchDashboardEntitlement(userId: string) {
+    const { data, error } = await supabase.rpc('has_active_subscription', { p_user_id: userId });
+    if (error) {
+        throw error;
+    }
+
+    return Boolean(data);
+}
 
 /*
     Dashboard tab layout.
@@ -19,6 +38,37 @@ import React from 'react'
 
 export default function DashboardLayout() {
     const styles = useStyles();
+    const { user, loading: authLoading } = useAuth();
+
+    const entitlement = useQuery({
+        queryKey: dashboardEntitlementQueryKey(user?.id),
+        queryFn: () => fetchDashboardEntitlement(user!.id),
+        enabled: Boolean(user?.id),
+        staleTime: 1000 * 20,
+    });
+
+    useEffect(() => {
+        if (!authLoading && entitlement.isFetched && !entitlement.data) {
+            router.replace('/subscribe');
+        }
+    }, [authLoading, entitlement.isFetched, entitlement.data]);
+
+    if (authLoading || entitlement.isLoading) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
+                <ActivityIndicator />
+                <ThemedText style={{ marginTop: 10 }}>Checking subscription access...</ThemedText>
+            </View>
+        );
+    }
+
+    if (!entitlement.data) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
+                <ThemedText>Redirecting to subscription...</ThemedText>
+            </View>
+        );
+    }
 
 
     return (

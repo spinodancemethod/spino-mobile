@@ -1,4 +1,4 @@
-// @ts-nocheck
+/// <reference path="../_shared/edge-runtime-types.d.ts" />
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -8,6 +8,12 @@ type VerifyGooglePlayPurchasePayload = {
     purchaseToken?: string;
     productId?: string;
     basePlanId?: string;
+};
+
+type GoogleErrorResponse = {
+    error?: {
+        message?: string;
+    };
 };
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
@@ -135,6 +141,42 @@ function toIsoOrNull(value: string | undefined) {
     return date.toISOString();
 }
 
+function getRequiredEnv() {
+    const required = {
+        SUPABASE_URL: Deno.env.get('SUPABASE_URL') ?? '',
+        SUPABASE_ANON_KEY: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+        SUPABASE_SERVICE_ROLE_KEY: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL: Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL') ?? '',
+        GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY: Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY') ?? '',
+    };
+
+    const missing = Object.entries(required)
+        .filter(([, value]) => !value)
+        .map(([key]) => key);
+
+    return {
+        required,
+        missing,
+        defaultAndroidPackageName: Deno.env.get('GOOGLE_PLAY_ANDROID_PACKAGE_NAME') ?? '',
+    };
+}
+
+function sanitizeErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unexpected error';
+    // Keep prod error responses generic for external upstream/auth failures.
+    if (
+        /oauth2\.googleapis\.com|androidpublisher\.googleapis\.com|jwt|private key|service account/i.test(message)
+    ) {
+        return 'Google Play verification failed';
+    }
+
+    return message;
+}
+
+function parseJsonBody(req: Request): Promise<VerifyGooglePlayPurchasePayload> {
+    return req.json() as Promise<VerifyGooglePlayPurchasePayload>;
+}
+
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
@@ -145,21 +187,12 @@ Deno.serve(async (req: Request) => {
     }
 
     try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-        const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-        const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-        const googleServiceAccountEmail = Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL') ?? '';
-        const googleServiceAccountPrivateKey = Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY') ?? '';
-        const defaultAndroidPackageName = Deno.env.get('GOOGLE_PLAY_ANDROID_PACKAGE_NAME') ?? '';
+        const { required, missing, defaultAndroidPackageName } = getRequiredEnv();
 
-        if (
-            !supabaseUrl ||
-            !supabaseAnonKey ||
-            !supabaseServiceRoleKey ||
-            !googleServiceAccountEmail ||
-            !googleServiceAccountPrivateKey
-        ) {
-            throw new Error('Missing function environment variables');
+        if (missing.length > 0) {
+            return jsonResponse(500, {
+                error: `Missing function environment variables: ${missing.join(', ')}`,
+            });
         }
 
         const authHeader = req.headers.get('Authorization');
@@ -167,13 +200,13 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(401, { error: 'Missing Authorization header' });
         }
 
-        const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        const userSupabase = createClient(required.SUPABASE_URL, required.SUPABASE_ANON_KEY, {
             global: {
                 headers: { Authorization: authHeader },
             },
         });
 
-        const adminSupabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+        const adminSupabase = createClient(required.SUPABASE_URL, required.SUPABASE_SERVICE_ROLE_KEY);
 
         const token = authHeader.replace('Bearer ', '');
         const {
@@ -185,7 +218,7 @@ Deno.serve(async (req: Request) => {
             return jsonResponse(401, { error: 'Unauthorized' });
         }
 
-        const payload = (await req.json()) as VerifyGooglePlayPurchasePayload;
+        const payload = await parseJsonBody(req);
         const packageName = payload.packageName ?? defaultAndroidPackageName;
         const purchaseToken = payload.purchaseToken;
 
@@ -198,8 +231,8 @@ Deno.serve(async (req: Request) => {
         }
 
         const accessToken = await getGoogleApiAccessToken(
-            googleServiceAccountEmail,
-            normalizePrivateKey(googleServiceAccountPrivateKey),
+            required.GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL,
+            normalizePrivateKey(required.GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY),
         );
 
         // subscriptionsv2 endpoint uses only package + token and returns line items.
@@ -216,8 +249,9 @@ Deno.serve(async (req: Request) => {
 
         const purchase = await verifyResponse.json();
         if (!verifyResponse.ok) {
+            const purchaseError = purchase as GoogleErrorResponse;
             return jsonResponse(400, {
-                error: purchase?.error?.message ?? 'Google Play verification failed',
+                error: purchaseError?.error?.message ?? 'Google Play verification failed',
             });
         }
 
@@ -291,7 +325,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Store a generic idempotency/debug event row.
-        const syntheticEventId = `verify:${purchaseToken}:${Date.now()}`;
+        const syntheticEventId = `verify:google_play:${purchaseToken}:${latestOrderId ?? 'no-order-id'}`;
         const { error: eventError } = await adminSupabase.from('billing_events').insert({
             provider: 'google_play',
             event_id: syntheticEventId,
@@ -314,7 +348,7 @@ Deno.serve(async (req: Request) => {
             basePlanId,
             orderId: latestOrderId,
         });
-    } catch (error: any) {
-        return jsonResponse(400, { error: error?.message ?? 'Unexpected error' });
+    } catch (error: unknown) {
+        return jsonResponse(400, { error: sanitizeErrorMessage(error) });
     }
 });

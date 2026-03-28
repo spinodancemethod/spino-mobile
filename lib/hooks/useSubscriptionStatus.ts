@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
+import { hasActiveSubscription } from 'lib/subscriptionAccess';
 
 type SubscriptionStatusRow = {
     provider: string | null;
@@ -38,18 +39,6 @@ async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStat
     };
 }
 
-function isActiveSubscription(status: string | null, currentPeriodEnd: string | null) {
-    if (!status || !['active', 'trialing', 'grace_period'].includes(status)) {
-        return false;
-    }
-
-    if (!currentPeriodEnd) {
-        return true;
-    }
-
-    return new Date(currentPeriodEnd).getTime() > Date.now();
-}
-
 export function useSubscriptionStatus(options?: UseSubscriptionStatusOptions) {
     const { user } = useAuth();
     const query = useQuery({
@@ -61,7 +50,7 @@ export function useSubscriptionStatus(options?: UseSubscriptionStatusOptions) {
         refetchIntervalInBackground: false,
     });
 
-    const isActive = isActiveSubscription(query.data?.status ?? null, query.data?.current_period_end ?? null);
+    const isActive = hasActiveSubscription(query.data?.status ?? null, query.data?.current_period_end ?? null);
 
     useEffect(() => {
         // Stop the short polling loop once access becomes active.

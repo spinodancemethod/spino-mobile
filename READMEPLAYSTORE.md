@@ -104,7 +104,7 @@ This is not a cosmetic choice. It affects whether the app can be approved on Pla
 Current repo state:
 
 - The app has in-app subscription purchase UI.
-- The current flow opens Stripe checkout.
+- The current flow uses Google Play Billing and verifies purchase tokens via Supabase.
 
 Important rule:
 
@@ -114,8 +114,8 @@ That means you should treat this as a required product decision before productio
 
 Practical interpretation for this app:
 
-- If the subscription unlocks app content/features for end users inside the Android app, plan for Play Billing.
-- If Stripe remains the only path, expect Play review risk or rejection.
+- If the subscription unlocks app content/features for end users inside the Android app, Play Billing is the correct production path.
+- Keep Stripe runtime paths removed from Android release branches to avoid review confusion.
 
 ### 1.7 Set up release signing inputs
 

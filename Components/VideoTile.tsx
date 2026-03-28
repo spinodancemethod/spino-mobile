@@ -11,6 +11,7 @@ import { DECK_LIMIT } from 'constants/Config';
 import { showSnack } from 'lib/snackbarService';
 import { useToggleFavourite } from 'lib/hooks/useToggleFavourite';
 import { useToggleDeck } from '../lib/hooks/useToggleDeck';
+import { useAuth } from 'lib/auth';
 
 interface Props {
     // core data
@@ -33,10 +34,11 @@ interface Props {
 
 const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false, decked = false, showFavouriteToggle = true, showDeckToggle = true }) => {
     const { colors } = useTheme();
+    const { user } = useAuth();
     const toggleFav = useToggleFavourite();
     const toggleDeck = useToggleDeck();
     const qc = useQueryClient();
-    const deckKey = ['deck', 'current'];
+    const deckKey = ['deck', user?.id ?? null];
     const FREE_LIMIT = DECK_LIMIT;
 
     // render inner content, wrapper chosen based on whether an onPress was provided

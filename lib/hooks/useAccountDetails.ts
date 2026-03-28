@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
+import { hasActiveSubscription } from 'lib/subscriptionAccess';
 
 type SubscriptionRow = {
     provider: string | null;
@@ -26,18 +27,6 @@ export type AccountDetails = {
 
 export function accountDetailsQueryKey(userId?: string | null) {
     return ['accountDetails', userId ?? 'anonymous'];
-}
-
-function hasActiveSubscription(status: string | null, currentPeriodEnd: string | null) {
-    if (!status || !['active', 'trialing', 'grace_period'].includes(status)) {
-        return false;
-    }
-
-    if (!currentPeriodEnd) {
-        return true;
-    }
-
-    return new Date(currentPeriodEnd).getTime() > Date.now();
 }
 
 async function fetchAccountDetails(userId: string, email: string | null, createdAt: string | null): Promise<AccountDetails> {

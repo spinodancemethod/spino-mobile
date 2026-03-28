@@ -1,5 +1,11 @@
 # Features
 
+- Removed the legacy Stripe checkout edge function file so Google Play remains the sole active subscription purchase path.
+- Added a dashboard entitlement gate that checks `has_active_subscription` before allowing paid tab access.
+- Hardened Google Play verification by validating missing env keys explicitly, sanitizing upstream error output, and making billing event IDs deterministic per purchase/order.
+- Fixed deck pre-check cache key usage to read user-specific deck cache entries instead of a stale `current` key.
+- Added a shared subscription access utility with baseline Jest tests, plus project scripts for `typecheck` and `test`.
+- Added `.env.example` and `PRODUCTION_READINESS.md` to improve onboarding and release execution consistency.
 - Added the roadmap screen as a dedicated dashboard tab between On Deck and Library.
 - Grouped the home subscription status text and workspace CTA into a single conditional subscription tile for clearer paid-state UX.
 - Switched favourite action icons from heart/heart-outline to map/map-outline across shared UI components and dashboard tab config.
