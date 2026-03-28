@@ -9,3 +9,7 @@ export function useGooglePlaySubscriptionPurchase() {
         },
     });
 }
+
+export async function finalizeGooglePlaySubscriptionPurchase() {
+    throw new Error('Google Play subscription finalization is not available on web.');
+}

@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Platform } from 'react-native';
-import { getAvailablePurchases, initConnection } from 'react-native-iap';
 import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
@@ -16,13 +15,24 @@ function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function loadGooglePlayIap() {
+    try {
+        return await import('react-native-iap');
+    } catch (error) {
+        throw new Error(
+            'Google Play restore is unavailable in this runtime. Use an Android development build or production app (Expo Go does not include react-native-iap).'
+        );
+    }
+}
+
 async function restoreGooglePlayPurchases(): Promise<RestoreGooglePlayPurchasesResult> {
     if (Platform.OS !== 'android') {
         return { restoredCount: 0 };
     }
 
-    await initConnection();
-    const purchases = await getAvailablePurchases();
+    const iap = await loadGooglePlayIap();
+    await iap.initConnection();
+    const purchases = await iap.getAvailablePurchases();
 
     let restoredCount = 0;
     for (let index = 0; index < purchases.length; index += 1) {
