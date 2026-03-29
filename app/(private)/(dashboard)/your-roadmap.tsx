@@ -380,11 +380,11 @@ const YourRoadmap = () => {
         // 1) Free videos exist + nothing on roadmap -> show "No favourites added yet" tile only.
         // 2) No free videos + some roadmap videos -> show roadmap videos only.
         // 3) No free videos + nothing on roadmap -> show "Subscribe to unlock" tile only.
-        const shouldShowNoFavouritesTile = !hasRoadmapVideos && hasVisibleVideos
+        const shouldShowNoFavouritesTile = !isSubscribed && !hasRoadmapVideos && hasVisibleFreeVideos
         const shouldShowSubscribeTile = !isSubscribed && !hasVisibleFreeVideos && !hasRoadmapVideos
 
         // Paid behavior keeps existing empty-tile toggle behavior.
-        const shouldShowAddTile = isSubscribed && (showEmptyState || hasVisibleVideos)
+        const shouldShowAddTile = isSubscribed && !hasRoadmapVideos && (showEmptyState || hasVisibleVideos)
 
         if (videos.length === 0 && !shouldShowAddTile && !shouldShowNoFavouritesTile && !shouldShowSubscribeTile) return null
 
