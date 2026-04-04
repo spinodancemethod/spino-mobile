@@ -5,11 +5,31 @@ import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
+import ErrorBoundary from 'Components/ErrorBoundary';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from 'lib/queryClient';
 import { ThemeProvider } from 'constants/ThemeProvider';
 import { AuthProvider } from 'lib/auth';
 import Snackbar from 'Components/Snackbar';
+import { showSnack } from 'lib/snackbarService';
+
+function validateStartupEnv() {
+    const critical = {
+        EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    };
+
+    const warnings = Object.entries(critical)
+        .filter(([, value]) => !value)
+        .map(([key]) => key);
+
+    if (warnings.length > 0) {
+        const msg = `Missing critical env vars: ${warnings.join(', ')}`;
+        // eslint-disable-next-line no-console
+        console.warn('[startup] ' + msg);
+        showSnack(msg);
+    }
+}
 
 export default function RootLayout() {
     const [ready, setReady] = useState(false);
@@ -25,7 +45,11 @@ export default function RootLayout() {
                 // eslint-disable-next-line no-console
                 console.warn('[fonts] preload failed', e);
             } finally {
-                if (mounted) setReady(true);
+                if (mounted) {
+                    // validate startup environment
+                    validateStartupEnv();
+                    setReady(true);
+                }
             }
         }
 
@@ -44,13 +68,15 @@ export default function RootLayout() {
     }
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-                <AuthProvider>
-                    <Slot />
-                    <Snackbar />
-                </AuthProvider>
-            </ThemeProvider>
-        </QueryClientProvider>
+        <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+                <ThemeProvider>
+                    <AuthProvider>
+                        <Slot />
+                        <Snackbar />
+                    </AuthProvider>
+                </ThemeProvider>
+            </QueryClientProvider>
+        </ErrorBoundary>
     );
 }

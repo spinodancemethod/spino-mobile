@@ -3,6 +3,7 @@ import ThemedText from 'Components/ThemedText'
 import ThemedButton from 'Components/ThemedButton'
 import { ScrollView, View } from 'react-native'
 import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from 'constants/useTheme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
@@ -61,33 +62,43 @@ const Home = () => {
                         </ThemedText>
                         <ThemedButton
                             title="Go to your Workspace"
-                            onPress={() => router.push('/inprogress')}
+                            onPress={() => router.push('/your-roadmap')}
                             style={{ width: '100%', marginTop: 4 }}
                         />
                     </View>
                 )}
 
                 {!isCheckingSubscription && !hasActiveSubscription && (
-                    <View
-                        style={{
-                            backgroundColor: colors.card,
-                            borderRadius: 14,
-                            padding: 16,
-                            marginBottom: 16,
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                        }}
-                    >
-                        {/* Keep purchase CTA visible for users who have not activated a subscription. */}
-                        <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
-                            Unlock your full roadmap
-                        </ThemedText>
+                    <>
+                        <View
+                            style={{
+                                backgroundColor: colors.card,
+                                borderRadius: 14,
+                                padding: 16,
+                                marginBottom: 10,
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                            }}
+                        >
+                            {/* Keep purchase CTA visible for users who have not activated a subscription. */}
+                            <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
+                                Unlock your full roadmap
+                            </ThemedText>
+                            <ThemedButton
+                                title="Subscribe"
+                                onPress={() => router.push('/subscribe')}
+                                style={{ width: '100%', marginTop: 4 }}
+                            />
+                        </View>
+
+                        {/* Keep workspace quick-link outside the subscribe card container. */}
                         <ThemedButton
-                            title="Subscribe"
-                            onPress={() => router.push('/subscribe')}
-                            style={{ width: '100%', marginTop: 4 }}
+                            title="Trial the Workspace"
+                            leftIcon={<Ionicons name="compass" size={16} color={colors.onPrimary} style={{ marginRight: 8 }} />}
+                            onPress={() => router.push('/your-roadmap')}
+                            style={{ width: '86%', alignSelf: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}
                         />
-                    </View>
+                    </>
                 )}
 
                 {/* Supporting copy — larger, increased line-height for readability */}

@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from 'lib/auth';
 import { supabase } from 'lib/supabase';
+import { hasActiveSubscription } from 'lib/subscriptionAccess';
 
 type SubscriptionStatusRow = {
+    provider: string | null;
     status: string | null;
     current_period_end: string | null;
 };
@@ -19,8 +21,9 @@ export function subscriptionStatusQueryKey(userId?: string | null) {
 async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStatusRow> {
     const { data, error } = await supabase
         .from('subscriptions')
-        .select('status,current_period_end')
+        .select('provider,status,current_period_end')
         .eq('user_id', userId)
+        .eq('provider', 'google_play')
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle();
@@ -30,21 +33,10 @@ async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStat
     }
 
     return {
+        provider: data?.provider ?? null,
         status: data?.status ?? null,
         current_period_end: data?.current_period_end ?? null,
     };
-}
-
-function isActiveSubscription(status: string | null, currentPeriodEnd: string | null) {
-    if (!status || !['active', 'trialing'].includes(status)) {
-        return false;
-    }
-
-    if (!currentPeriodEnd) {
-        return true;
-    }
-
-    return new Date(currentPeriodEnd).getTime() > Date.now();
 }
 
 export function useSubscriptionStatus(options?: UseSubscriptionStatusOptions) {
@@ -58,7 +50,7 @@ export function useSubscriptionStatus(options?: UseSubscriptionStatusOptions) {
         refetchIntervalInBackground: false,
     });
 
-    const isActive = isActiveSubscription(query.data?.status ?? null, query.data?.current_period_end ?? null);
+    const isActive = hasActiveSubscription(query.data?.status ?? null, query.data?.current_period_end ?? null);
 
     useEffect(() => {
         // Stop the short polling loop once access becomes active.

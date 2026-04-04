@@ -5,10 +5,7 @@ import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedSearch from 'Components/ThemedSearch';
 import Spacer from 'Components/Spacer';
-import { showSnack } from 'lib/snackbarService';
-import { signUp, signInWithOAuth } from 'lib/auth';
-import { Linking } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
+import { signUp } from 'lib/auth';
 import { useTheme } from 'constants/useTheme';
 
 export default function Signup() {
@@ -37,24 +34,10 @@ export default function Signup() {
         }
     };
 
-    const [oauthLoading, setOauthLoading] = useState<string | null>(null);
-
-    const onOAuth = async (provider: string) => {
-        setOauthLoading(provider);
-        try {
-            const res: any = await signInWithOAuth(provider);
-            const url = res?.data?.url ?? res?.url ?? res?.data?.provider_url;
-            if (url) {
-                try { await Linking.openURL(url); } catch (e: any) { showSnack(e?.message ?? 'Could not open auth provider'); }
-            }
-        } finally {
-            setOauthLoading(null);
-        }
-    };
-
     return (
-        <ThemedView padded safe>
+        <ThemedView padded safe style={{ paddingHorizontal: 24 }}>
             <ThemedText variant="title">Create account</ThemedText>
+            <Spacer />
             <ThemedText variant="small">Sign up to get started.</ThemedText>
 
             <Spacer />
@@ -67,13 +50,6 @@ export default function Signup() {
 
             <Spacer />
             <ThemedButton title="Create account" onPress={onSignup} loading={loading} />
-
-            <Spacer />
-            <ThemedText variant="small" style={{ textAlign: 'center' }}>Or continue with</ThemedText>
-            <Spacer />
-            <ThemedButton title="Continue with Google" onPress={() => onOAuth('google')} loading={oauthLoading === 'google'} leftIcon={<FontAwesome name="google" size={18} style={{ marginRight: 12 }} />} />
-            <Spacer />
-            <ThemedButton title="Continue with Apple" onPress={() => onOAuth('apple')} loading={oauthLoading === 'apple'} leftIcon={<FontAwesome name="apple" size={18} style={{ marginRight: 12 }} />} />
 
             <Spacer />
             <ThemedText variant="small">Already have an account?</ThemedText>

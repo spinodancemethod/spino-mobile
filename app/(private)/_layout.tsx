@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import AppContent from './AppContent';
 import { useAuth, signOut } from 'lib/auth';
 import { ActivityIndicator } from 'react-native';
@@ -6,12 +6,14 @@ import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import Spacer from 'Components/Spacer';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { supabase } from 'lib/supabase';
 import { showSnack } from 'lib/snackbarService';
 
 const RootLayout = () => {
     const { user, loading } = useAuth();
+    const pathname = usePathname();
+    const redirectedToHomeOnEntry = useRef(false);
 
     useEffect(() => {
         // Redirect to login after render if not loading and no user.
@@ -20,6 +22,20 @@ const RootLayout = () => {
             router.replace('/login');
         }
     }, [user, loading]);
+
+    useEffect(() => {
+        if (loading || !user) return;
+        if (!Boolean((user as any)?.email_confirmed_at)) return;
+        if (redirectedToHomeOnEntry.current) return;
+
+        redirectedToHomeOnEntry.current = true;
+
+        // On authenticated app entry, normalize to Home once so users always
+        // start from the same landing page after logging in/opening the app.
+        if (pathname !== '/home') {
+            router.replace('/home');
+        }
+    }, [loading, user, pathname]);
 
     if (loading) {
         return (

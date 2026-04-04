@@ -6,8 +6,6 @@ import { getLevelInfo } from 'constants/Levels';
 import ThemedLike from 'Components/ThemedLike';
 import ThemedStar from 'Components/ThemedStar';
 import { useTheme } from 'constants/useTheme';
-import { useQueryClient } from '@tanstack/react-query';
-import { DECK_LIMIT } from 'constants/Config';
 import { showSnack } from 'lib/snackbarService';
 import { useToggleFavourite } from 'lib/hooks/useToggleFavourite';
 import { useToggleDeck } from '../lib/hooks/useToggleDeck';
@@ -31,13 +29,10 @@ interface Props {
     showDeckToggle?: boolean;
 }
 
-const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false, decked = false, showFavouriteToggle = true, showDeckToggle = true }) => {
+const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false, decked = false, showFavouriteToggle = true, showDeckToggle = false }) => {
     const { colors } = useTheme();
     const toggleFav = useToggleFavourite();
     const toggleDeck = useToggleDeck();
-    const qc = useQueryClient();
-    const deckKey = ['deck', 'current'];
-    const FREE_LIMIT = DECK_LIMIT;
 
     // render inner content, wrapper chosen based on whether an onPress was provided
     const content = (
@@ -52,7 +47,7 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {typeof item?.level === 'number' ? (
                             (() => {
                                 const lvl = item.level as number;
-                                const info = getLevelInfo(lvl) || { label: String(lvl), color: '#8B5CF6' };
+                                const info = getLevelInfo(lvl) || { label: String(lvl), color: '#e5e7eb' };
                                 return <ThemedPill color={info.color} size="small">{info.label}</ThemedPill>;
                             })()
                         ) : null}
@@ -81,14 +76,6 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
                         {showDeckToggle ? (
                             <ThemedStar starred={decked} onPress={async () => {
                                 try {
-                                    // client-side pre-check for free limit
-                                    const currentDeck: string[] = qc.getQueryData(deckKey) || [];
-                                    const isAlready = currentDeck.includes(item.id);
-                                    if (!isAlready && currentDeck.length >= FREE_LIMIT) {
-                                        showSnack('The deck is full. Focus on mastering those.', { duration: 3000 });
-                                        return;
-                                    }
-
                                     const res = await toggleDeck.mutateAsync(item.id);
                                     showSnack(res?.action === 'deleted' ? 'Removed from deck' : 'Added to deck', {
                                         actionTitle: 'Undo',

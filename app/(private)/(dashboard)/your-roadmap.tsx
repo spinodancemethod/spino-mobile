@@ -1,10 +1,19 @@
 import React, { useRef, useCallback, useEffect, useMemo, useState } from 'react'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
-import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch } from 'react-native'
+import ThemedLike from 'Components/ThemedLike'
+import { Ionicons } from '@expo/vector-icons'
+import { View, Animated, PanResponder, StyleSheet, TouchableOpacity, Modal, Pressable, Switch, LayoutChangeEvent } from 'react-native'
+import { Image as ExpoImage } from 'expo-image'
 import { usePositions } from 'lib/hooks/usePositions'
 import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
 import { useVideosByIds } from 'lib/hooks/useVideosByIds'
+import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
+import { useEntitlement } from 'lib/hooks/useEntitlement'
+import { useFreeTierVideos } from 'lib/hooks/useFreeTierVideos'
+import { useVisibleVideos } from 'lib/hooks/useVisibleVideos'
+import { useAuth } from 'lib/auth'
+import { reportAppEvent } from 'lib/observability'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
 
@@ -13,22 +22,29 @@ const MIN_SCALE = 0.2
 const MAX_SCALE = 3
 const DEFAULT_SCALE = 0.5
 const DEFAULT_VIEWPORT_MARGIN_LEFT = 16
-const DEFAULT_VIEWPORT_MARGIN_TOP = -440
+// Lift the roadmap further on initial render so the header row starts nearer the top.
+const DEFAULT_VIEWPORT_MARGIN_TOP = -700
 const DEFAULT_PAN_COMPENSATION_RATIO = 0.6
 
 // Node sizing for the roadmap row layout.
 const SURFACE_WIDTH = 1800
 const POSITION_COLUMN_WIDTH = 180
 const SURFACE_HORIZONTAL_PADDING = 24
-const VIDEO_W = 120
-const VIDEO_H = 66
-const VIDEO_MARGIN = 12
+const VIDEO_W = 170
+const VIDEO_H = 128
+const POSITION_BOX_MIN_HEIGHT = VIDEO_H
+const VIDEO_MARGIN = 10
+const VIDEO_GIF_HEIGHT = 78
 const ICON_SIZE = 18
 const ROW_GAP = 18
 const VIDEO_GAP = 12
+const SAMPLE_GIF_URL = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif'
+const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Video+Preview'
+const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Position+Preview'
 
 const YourRoadmap = () => {
     const { mode, colors } = useTheme()
+    const { user } = useAuth()
 
     const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
@@ -41,6 +57,19 @@ const YourRoadmap = () => {
     const lastScale = useRef(DEFAULT_SCALE)
     const initialTouches = useRef<{ x: number; y: number }[] | null>(null)
     const initialDistance = useRef<number | null>(null)
+    // Tracks the Animated.View height so the pinch handler can compensate
+    // for React Native scaling around the element center, not the origin.
+    const surfaceHeightRef = useRef(0)
+
+    // Absolute screen position of the canvas container — needed so the
+    // pinch handler can convert pageX/pageY into container-relative coords.
+    const canvasRef = useRef<View>(null)
+    const canvasOffset = useRef({ x: 0, y: 0 })
+    const onCanvasLayout = useCallback((_e: LayoutChangeEvent) => {
+        canvasRef.current?.measureInWindow((x, y) => {
+            canvasOffset.current = { x: x ?? 0, y: y ?? 0 }
+        })
+    }, [])
 
     const panResponder = useRef(
         PanResponder.create({
@@ -103,16 +132,25 @@ const YourRoadmap = () => {
                         const nextScale = clamp(lastScale.current * scaleFactor, MIN_SCALE, MAX_SCALE)
                         scale.setValue(nextScale)
 
-                        // Midpoint movement lets a pinch gesture also pan the canvas.
-                        const midX = (touches[0].pageX + touches[1].pageX) / 2
-                        const midY = (touches[0].pageY + touches[1].pageY) / 2
+                        // Convert absolute touch positions to canvas-relative
+                        // so the focal-point formula works regardless of header offset.
+                        const ox = canvasOffset.current.x
+                        const oy = canvasOffset.current.y
+                        const midX = (touches[0].pageX + touches[1].pageX) / 2 - ox
+                        const midY = (touches[0].pageY + touches[1].pageY) / 2 - oy
 
                         if (initialTouches.current) {
-                            const initMidX = (initialTouches.current[0].x + initialTouches.current[1].x) / 2
-                            const initMidY = (initialTouches.current[0].y + initialTouches.current[1].y) / 2
-                            const deltaX = midX - initMidX
-                            const deltaY = midY - initMidY
-                            pan.setValue({ x: lastPan.current.x + deltaX, y: lastPan.current.y + deltaY })
+                            const initMidX = (initialTouches.current[0].x + initialTouches.current[1].x) / 2 - ox
+                            const initMidY = (initialTouches.current[0].y + initialTouches.current[1].y) / 2 - oy
+                            // Focal-point zoom: RN scales around the element center, so
+                            // we include a center*(r-1) correction to keep the content
+                            // point under the fingers stationary.
+                            const r = nextScale / lastScale.current
+                            const cx = SURFACE_WIDTH / 2
+                            const cy = surfaceHeightRef.current / 2
+                            const newPanX = midX + r * (lastPan.current.x - initMidX) + cx * (r - 1)
+                            const newPanY = midY + r * (lastPan.current.y - initMidY) + cy * (r - 1)
+                            pan.setValue({ x: newPanX, y: newPanY })
                         }
                     }
                 } else {
@@ -138,14 +176,46 @@ const YourRoadmap = () => {
     ).current
 
     const { data: positions = [] } = usePositions(undefined)
-    const { data: favouriteIds = [] } = useFavouritesByUser()
-    const { data: favouriteVideos = [] } = useVideosByIds(favouriteIds)
+    const { isSubscribed } = useEntitlement()
+    const { data: favouriteIds = [], isLoading: isFavouritesLoading } = useFavouritesByUser()
+    const { data: favouriteVideos = [], isLoading: isFavouriteVideosLoading } = useVideosByIds(favouriteIds)
+    const { data: freeTierVideos = [], isLoading: isFreeTierVideosLoading } = useFreeTierVideos()
+    const { data: visibleVideos = [] } = useVisibleVideos()
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
+    const [hideCompleted, setHideCompleted] = useState(false)
+
+    const {
+        favouriteIdSet,
+        completedVideoIdSet,
+        isFavouritePending,
+        isCompletionPending,
+        toggleFavouriteWithFeedback,
+        toggleCompletionWithFeedback,
+    } = useVideoActionToggles()
+
+    // Roadmap remains driven by user-selected favourites for both free and paid users.
+    const roadmapSourceVideos = useMemo(
+        () => favouriteVideos,
+        [favouriteVideos]
+    )
+
+    useEffect(() => {
+        if (isSubscribed || freeTierVideos.length <= 0) return
+
+        void reportAppEvent({
+            event: 'free_content_impression',
+            userId: user?.id,
+            metadata: {
+                screen: 'your_roadmap',
+                freeVideoCount: freeTierVideos.length,
+            },
+        })
+    }, [isSubscribed, freeTierVideos.length, user?.id])
 
     const videosByPosition = useMemo(() => {
         const grouped = new Map<string, any[]>()
 
-        for (const video of favouriteVideos) {
+        for (const video of roadmapSourceVideos) {
             const positionId = video?.position_id
             if (!positionId) continue
             const current = grouped.get(positionId) ?? []
@@ -154,12 +224,85 @@ const YourRoadmap = () => {
         }
 
         return grouped
-    }, [favouriteVideos])
+    }, [roadmapSourceVideos])
+
+    // All free-tier videos grouped by position, regardless of whether they are on roadmap.
+    const freeTierVideosByPosition = useMemo(() => {
+        const grouped = new Map<string, any[]>()
+
+        for (const video of freeTierVideos) {
+            const positionId = video?.position_id
+            if (!positionId) continue
+
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [freeTierVideos])
+
+    // Free-tier users can add any free video that is visible but not yet on their roadmap.
+    const addableFreeVideosByPosition = useMemo(() => {
+        const grouped = new Map<string, any[]>()
+
+        if (isSubscribed) {
+            return grouped
+        }
+
+        for (const video of freeTierVideos) {
+            if (!video?.id || favouriteIdSet.has(video.id)) continue
+
+            const positionId = video?.position_id
+            if (!positionId) continue
+
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [isSubscribed, freeTierVideos, favouriteIdSet])
+
+    // Every currently visible video (respecting RLS) grouped by position.
+    const availableVideosByPosition = useMemo(() => {
+        const grouped = new Map<string, any[]>()
+
+        for (const video of visibleVideos) {
+            const positionId = video?.position_id
+            if (!positionId) continue
+
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [visibleVideos])
+
+    const roadmapVideosByPosition = useMemo(() => {
+        if (!hideCompleted) return videosByPosition
+
+        const grouped = new Map<string, any[]>()
+
+        // When enabled, only keep videos that are not complete for the current user.
+        for (const [positionId, videos] of videosByPosition.entries()) {
+            grouped.set(
+                positionId,
+                videos.filter((video: any) => !video?.id || !completedVideoIdSet.has(video.id))
+            )
+        }
+
+        return grouped
+    }, [videosByPosition, hideCompleted, completedVideoIdSet])
 
     const roadmapPositions = useMemo(() => {
+        // Toggle off: only positions with roadmap videos.
+        // Toggle on: all currently available positions (RLS-filtered from backend).
         if (showEmptyPositions) return positions
-        return positions.filter((position: any) => (videosByPosition.get(position.id)?.length ?? 0) > 0)
-    }, [positions, videosByPosition, showEmptyPositions])
+
+        return positions.filter((position: any) => (roadmapVideosByPosition.get(position.id)?.length ?? 0) > 0)
+    }, [positions, roadmapVideosByPosition, showEmptyPositions])
 
     const estimatedSurfaceHeight = useMemo(() => {
         const rowHeight = VIDEO_H + VIDEO_MARGIN * 2
@@ -167,6 +310,11 @@ const YourRoadmap = () => {
         // Keep a stable canvas height across filter toggles to avoid viewport jumps.
         return Math.max(baseHeight, positions.length * (rowHeight + ROW_GAP) + 96)
     }, [positions.length])
+
+    // Sync ref so the pan-responder (stale closure) can read the latest height.
+    useEffect(() => {
+        surfaceHeightRef.current = estimatedSurfaceHeight
+    }, [estimatedSurfaceHeight])
 
     const defaultPanX = useMemo(
         // Compensate for initial zoom so the left column stays visible on first render.
@@ -185,9 +333,36 @@ const YourRoadmap = () => {
         setSelectedPos(position)
     }, [])
 
+    const onEmptyPositionPress = useCallback((position: any) => {
+        if (!position?.id) return
+
+        // Pass the position context so Library can preselect it on entry.
+        router.push({
+            pathname: '/library',
+            params: {
+                positionId: String(position.id),
+                positionName: String(position.name || position.title || 'Position'),
+            },
+        })
+    }, [])
+
     const onVideoPress = useCallback((position: any, index: number, video: any) => {
         setSelectedVideo({ pos: position, index, video })
     }, [])
+
+    useEffect(() => {
+        // If the user has no roadmap videos, default to showing empty positions
+        // so the screen is still informative instead of appearing blank.
+        if (!isSubscribed) return
+        if (isFavouritesLoading || isFavouriteVideosLoading || isFreeTierVideosLoading) return
+        // No auto-toggle behavior: roadmap only renders positions with saved videos.
+    }, [
+        isSubscribed,
+        isFavouritesLoading,
+        isFavouriteVideosLoading,
+        isFreeTierVideosLoading,
+        roadmapSourceVideos.length,
+    ])
 
     useEffect(() => {
         pan.setValue({ x: defaultPanX, y: defaultPanY })
@@ -197,12 +372,28 @@ const YourRoadmap = () => {
     }, [defaultPanX, defaultPanY, pan, scale])
 
     const PositionVideoStack: React.FC<{ pos: any; videos: any[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
-        if (videos.length === 0 && !showEmptyState) return null
+        const hasVisibleFreeVideos = (freeTierVideosByPosition.get(pos?.id)?.length ?? 0) > 0
+        const hasRoadmapVideos = videos.length > 0
+        const hasVisibleVideos = (availableVideosByPosition.get(pos?.id)?.length ?? 0) > 0
+
+        // Trial/free-tier behavior:
+        // 1) Free videos exist + nothing on roadmap -> show "No favourites added yet" tile only.
+        // 2) No free videos + some roadmap videos -> show roadmap videos only.
+        // 3) No free videos + nothing on roadmap -> show "Subscribe to unlock" tile only.
+        const shouldShowNoFavouritesTile = !isSubscribed && !hasRoadmapVideos && hasVisibleFreeVideos
+        const shouldShowSubscribeTile = !isSubscribed && !hasVisibleFreeVideos && !hasRoadmapVideos
+
+        // Paid behavior keeps existing empty-tile toggle behavior.
+        const shouldShowAddTile = isSubscribed && !hasRoadmapVideos && (showEmptyState || hasVisibleVideos)
+
+        if (videos.length === 0 && !shouldShowAddTile && !shouldShowNoFavouritesTile && !shouldShowSubscribeTile) return null
 
         return (
             <View style={styles.videoRow}>
-                {videos.length === 0 && showEmptyState && (
-                    <View
+                {(shouldShowAddTile || shouldShowNoFavouritesTile) && (
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => onEmptyPositionPress(pos)}
                         style={[
                             styles.leafBox,
                             styles.emptyLeafBox,
@@ -210,30 +401,67 @@ const YourRoadmap = () => {
                                 width: VIDEO_W,
                                 height: VIDEO_H,
                                 marginVertical: VIDEO_MARGIN / 2,
+                                marginRight: VIDEO_GAP,
                                 paddingHorizontal: 8,
                             },
                         ]}
                     >
-                        <ThemedText variant="small" style={styles.emptyLeafText}>No favourites yet</ThemedText>
-                    </View>
+                        <View style={styles.emptyLeafActionWrap}>
+                            <Ionicons name="add-circle-outline" size={42} color="#64748b" />
+                            <ThemedText variant="small" style={styles.emptyLeafText}>
+                                {isSubscribed ? 'No favourites added yet' : 'No favourites added yet'}
+                            </ThemedText>
+                        </View>
+                    </TouchableOpacity>
+                )}
+                {shouldShowSubscribeTile && (
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => {
+                            void reportAppEvent({
+                                event: 'locked_content_tap',
+                                userId: user?.id,
+                                metadata: {
+                                    screen: 'your_roadmap',
+                                    positionId: pos?.id ?? null,
+                                    videoId: null,
+                                    reason: 'no_free_videos_for_position',
+                                },
+                            })
+                            router.push('/subscribe')
+                        }}
+                        style={[
+                            styles.leafBox,
+                            styles.lockedLeafBox,
+                            {
+                                width: VIDEO_W,
+                                height: VIDEO_H,
+                                marginVertical: VIDEO_MARGIN / 2,
+                                marginRight: VIDEO_GAP,
+                                paddingHorizontal: 8,
+                            },
+                        ]}
+                    >
+                        <View style={styles.emptyLeafActionWrap}>
+                            <Ionicons name="lock-closed-outline" size={40} color="#6b7280" />
+                            <ThemedText variant="small" style={styles.emptyLeafText}>Subscribe to unlock</ThemedText>
+                        </View>
+                    </TouchableOpacity>
                 )}
                 {videos.map((video: any, index: number) => {
                     const key = video?.id ?? `${pos?.id}-fav-${index}`
                     const title = video?.title ?? `Video ${index + 1}`
-                    const isComplete = Array.isArray(pos?.completedVideoIds)
-                        ? pos.completedVideoIds.includes(video?.id)
-                        : index % 2 === 0
+                    // Completion is now driven by per-user DB rows instead of placeholder tile order.
+                    const isComplete = !!video?.id && completedVideoIdSet.has(video.id)
                     const bgColor = isComplete ? '#16a34a' : '#94a3b8'
+                    const tileImageSource = {
+                        uri: video?.roadmap_preview_url ?? SAMPLE_PLACEHOLDER_URL,
+                    }
 
                     return (
                         <TouchableOpacity
                             key={key}
                             onPress={() => {
-                                if (video?.id) {
-                                    router.push(`/video/${video.id}`)
-                                    return
-                                }
-
                                 onVideoPress(pos, index, video)
                             }}
                             activeOpacity={0.85}
@@ -247,25 +475,41 @@ const YourRoadmap = () => {
                                         marginVertical: VIDEO_MARGIN / 2,
                                         marginRight: VIDEO_GAP,
                                         paddingHorizontal: 8,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
+                                        paddingVertical: 8,
+                                        backgroundColor: '#f2f7e7',
                                     },
                                 ]}
                             >
-                                <ThemedText variant="subheader" style={styles.nodeText} numberOfLines={1}>{title}</ThemedText>
-                                <View
-                                    style={{
-                                        width: ICON_SIZE,
-                                        height: ICON_SIZE,
-                                        borderRadius: ICON_SIZE / 2,
-                                        backgroundColor: bgColor,
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                <View style={styles.videoTileHeaderRow}>
+                                    <ThemedText variant="small" style={{ ...styles.nodeText, ...styles.videoTitleText }} numberOfLines={1}>{title}</ThemedText>
+                                    <Pressable
+                                        onPress={(event) => {
+                                            event.stopPropagation()
+                                            if (!video?.id) return
+
+                                            toggleCompletionWithFeedback(video.id, isComplete)
+                                        }}
+                                        disabled={!video?.id}
+                                        hitSlop={8}
+                                        style={{
+                                            width: ICON_SIZE,
+                                            height: ICON_SIZE,
+                                            borderRadius: ICON_SIZE / 2,
+                                            backgroundColor: bgColor,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginLeft: 6,
+                                        }}
+                                    >
+                                        <ThemedText style={{ color: '#fff', fontSize: 12, lineHeight: 12 }}>✓</ThemedText>
+                                    </Pressable>
                                 </View>
+                                <ExpoImage
+                                    source={tileImageSource}
+                                    style={styles.videoGif}
+                                    contentFit="cover"
+                                />
+                                <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>
                         </TouchableOpacity>
                     )
@@ -276,6 +520,9 @@ const YourRoadmap = () => {
 
     const closeModal = useCallback(() => setSelectedPos(null), [])
     const closeVideoModal = useCallback(() => setSelectedVideo(null), [])
+    const selectedVideoIsFavourite = !!selectedVideo?.video?.id && favouriteIdSet.has(selectedVideo.video.id)
+    const selectedVideoIsComplete = !!selectedVideo?.video?.id && completedVideoIdSet.has(selectedVideo.video.id)
+    const videoNavColor = mode === 'dark' ? colors.primary : '#111827'
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -290,8 +537,17 @@ const YourRoadmap = () => {
                         thumbColor="#ffffff"
                     />
                 </View>
+                <View style={styles.toggleRow}>
+                    <ThemedText variant="small" style={styles.toggleText}>Hide completed</ThemedText>
+                    <Switch
+                        value={hideCompleted}
+                        onValueChange={setHideCompleted}
+                        trackColor={{ false: '#cbd5e1', true: colors.primary }}
+                        thumbColor="#ffffff"
+                    />
+                </View>
             </View>
-            <View style={styles.canvasOuter} {...panResponder.panHandlers}>
+            <View ref={canvasRef} onLayout={onCanvasLayout} style={styles.canvasOuter} {...panResponder.panHandlers}>
                 <Animated.View
                     style={[
                         styles.canvasInner,
@@ -316,7 +572,7 @@ const YourRoadmap = () => {
                         </View>
 
                         {roadmapPositions.map((position: any) => {
-                            const positionFavouriteVideos = videosByPosition.get(position.id) ?? []
+                            const positionFavouriteVideos = roadmapVideosByPosition.get(position.id) ?? []
 
                             return (
                                 <View key={position.id} style={styles.roadmapRow}>
@@ -332,11 +588,17 @@ const YourRoadmap = () => {
                                                 ]}
                                             >
                                                 <ThemedText
-                                                    variant="subheader"
-                                                    style={{ ...styles.nodeText, fontSize: 16, textAlign: 'center', width: POSITION_COLUMN_WIDTH - 16 }}
+                                                    variant="small"
+                                                    style={{ ...styles.nodeText, ...styles.positionTitleText }}
+                                                    numberOfLines={1}
                                                 >
                                                     {position.name || position.title || 'Position'}
                                                 </ThemedText>
+                                                <ExpoImage
+                                                    source={{ uri: position?.roadmap_preview_url ?? SAMPLE_POSITION_PLACEHOLDER_URL }}
+                                                    style={styles.positionPlaceholderImage}
+                                                    contentFit="cover"
+                                                />
                                             </View>
                                         </TouchableOpacity>
                                     </View>
@@ -344,7 +606,11 @@ const YourRoadmap = () => {
                                     <View style={styles.connectorStub} />
 
                                     <View style={styles.videosColumn}>
-                                        <PositionVideoStack pos={position} videos={positionFavouriteVideos} showEmptyState={showEmptyPositions} />
+                                        <PositionVideoStack
+                                            pos={position}
+                                            videos={positionFavouriteVideos}
+                                            showEmptyState={showEmptyPositions}
+                                        />
                                     </View>
                                 </View>
                             )
@@ -386,6 +652,13 @@ const YourRoadmap = () => {
                     <Modal visible={selectedVideo != null} transparent animationType="fade" onRequestClose={closeVideoModal}>
                         <Pressable style={styles.modalBackdrop} onPress={closeVideoModal}>
                             <View style={[styles.modalContainer, { backgroundColor: mode === 'dark' ? colors.card : styles.modalContainer.backgroundColor }]}>
+                                <Pressable
+                                    onPress={closeVideoModal}
+                                    hitSlop={8}
+                                    style={styles.modalDismissIcon}
+                                >
+                                    <Ionicons name="close-circle" size={22} color={mode === 'dark' ? colors.text : '#111827'} />
+                                </Pressable>
                                 <ThemedText
                                     variant="title"
                                     style={{ ...(styles.modalTitleText as any), marginBottom: 8, color: mode === 'dark' ? colors.title : styles.modalTitleText.color }}
@@ -394,26 +667,66 @@ const YourRoadmap = () => {
                                 </ThemedText>
                                 <ThemedText
                                     variant="subheader"
-                                    style={{ ...(styles.modalBodyText as any), marginBottom: 16, color: mode === 'dark' ? colors.text : styles.modalBodyText.color }}
+                                    style={{
+                                        ...(styles.modalBodyText as any),
+                                        ...(styles.modalPositionText as any),
+                                        marginBottom: 16,
+                                        color: mode === 'dark' ? colors.text : styles.modalBodyText.color,
+                                    }}
                                 >
                                     {selectedVideo?.pos?.name || 'No position'}
                                 </ThemedText>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        if (selectedVideo?.video?.id) {
-                                            router.push(`/video/${selectedVideo.video.id}`)
-                                        }
-                                    }}
-                                    style={[styles.modalCloseBtn, { backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}
-                                >
-                                    <ThemedText style={{ color: '#fff' }}>Go to video</ThemedText>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={closeVideoModal}
-                                    style={[styles.modalCloseBtn, { marginTop: 8, backgroundColor: mode === 'dark' ? colors.primary : styles.modalCloseBtn.backgroundColor }]}
-                                >
-                                    <ThemedText style={{ color: '#fff' }}>Close</ThemedText>
-                                </TouchableOpacity>
+                                <ExpoImage
+                                    source={{ uri: selectedVideo?.video?.roadmap_gif_url ?? SAMPLE_GIF_URL }}
+                                    style={styles.modalGifPreview}
+                                    contentFit="cover"
+                                    autoplay
+                                />
+                                <View style={styles.modalActionRow}>
+                                    <View style={styles.modalActionGroup}>
+                                        <ThemedLike
+                                            liked={selectedVideoIsFavourite}
+                                            size={22}
+                                            onPress={() => {
+                                                if (!selectedVideo?.video?.id || isFavouritePending) return
+                                                toggleFavouriteWithFeedback(selectedVideo.video.id)
+                                            }}
+                                        />
+                                        <Pressable
+                                            onPress={() => {
+                                                if (!selectedVideo?.video?.id || isCompletionPending) return
+                                                toggleCompletionWithFeedback(selectedVideo.video.id, selectedVideoIsComplete)
+                                            }}
+                                            disabled={!selectedVideo?.video?.id || isCompletionPending}
+                                            hitSlop={8}
+                                            style={[
+                                                styles.modalCompletionIcon,
+                                                {
+                                                    backgroundColor: selectedVideoIsComplete ? '#16a34a' : '#94a3b8',
+                                                    opacity: (!selectedVideo?.video?.id || isCompletionPending) ? 0.6 : 1,
+                                                },
+                                            ]}
+                                        >
+                                            <ThemedText style={styles.modalCompletionText}>✓</ThemedText>
+                                        </Pressable>
+                                    </View>
+                                    <Pressable
+                                        onPress={() => {
+                                            if (selectedVideo?.video?.id) {
+                                                router.push(`/video/${selectedVideo.video.id}`)
+                                                closeVideoModal()
+                                            }
+                                        }}
+                                        disabled={!selectedVideo?.video?.id}
+                                        hitSlop={8}
+                                        style={[
+                                            styles.modalVideoLink,
+                                            { opacity: selectedVideo?.video?.id ? 1 : 0.6 },
+                                        ]}
+                                    >
+                                        <Ionicons name="videocam" size={22} color={videoNavColor} />
+                                    </Pressable>
+                                </View>
                             </View>
                         </Pressable>
                     </Modal>
@@ -513,22 +826,58 @@ const styles = StyleSheet.create({
     videoRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     leafBox: {
         backgroundColor: '#f2f7e7',
         borderRadius: 6,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
         elevation: 1,
+    },
+    videoTileHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    videoTitleText: {
+        flex: 1,
+        fontWeight: '700',
+    },
+    videoGif: {
+        width: '100%',
+        height: VIDEO_GIF_HEIGHT,
+        borderRadius: 6,
+        backgroundColor: '#dbe4ee',
+    },
+    zoomHintText: {
+        marginTop: 4,
+        textAlign: 'center',
+        color: '#64748b',
+        fontSize: 10,
     },
     emptyLeafBox: {
         backgroundColor: '#f8fafc',
         borderWidth: 1,
         borderStyle: 'dashed',
         borderColor: '#94a3b8',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    lockedLeafBox: {
+        backgroundColor: '#e5e7eb',
+        borderWidth: 1,
+        borderColor: '#9ca3af',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyLeafActionWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyLeafText: {
+        marginTop: 6,
         color: '#64748b',
         textAlign: 'center',
         fontWeight: '600',
@@ -536,8 +885,8 @@ const styles = StyleSheet.create({
     positionBox: {
         backgroundColor: '#fff7f9',
         borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
         elevation: 2,
         shadowColor: '#000',
         shadowOpacity: 0.06,
@@ -545,8 +894,20 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
     },
     positionBoxStatic: {
-        minHeight: VIDEO_H,
+        height: POSITION_BOX_MIN_HEIGHT,
         paddingHorizontal: 8,
+        paddingVertical: 8,
+    },
+    positionTitleText: {
+        fontWeight: '700',
+        marginBottom: 6,
+        textAlign: 'left',
+    },
+    positionPlaceholderImage: {
+        width: '100%',
+        height: VIDEO_GIF_HEIGHT,
+        borderRadius: 6,
+        backgroundColor: '#fde68a',
     },
     emptyRoadmapState: {
         marginTop: 24,
@@ -577,6 +938,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f7fafc',
         borderRadius: 12,
         alignItems: 'center',
+        position: 'relative',
     },
     modalCloseBtn: {
         marginTop: 8,
@@ -591,6 +953,53 @@ const styles = StyleSheet.create({
     },
     modalBodyText: {
         color: '#0f172a',
+    },
+    modalPositionText: {
+        width: '100%',
+        textAlign: 'left',
+    },
+    modalDismissIcon: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 1,
+    },
+    modalActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginTop: 4,
+    },
+    modalActionGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 20,
+    },
+    modalCompletionIcon: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalVideoLink: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 24,
+        minHeight: 24,
+    },
+    modalCompletionText: {
+        color: '#fff',
+        fontSize: 12,
+        lineHeight: 12,
+    },
+    modalGifPreview: {
+        width: '100%',
+        height: 160,
+        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: '#dbe4ee',
     },
 })
 

@@ -2,6 +2,9 @@ import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
 import React from 'react'
+import { ActivityIndicator, View } from 'react-native';
+import ThemedText from 'Components/ThemedText';
+import { useEntitlement } from 'lib/hooks/useEntitlement';
 
 /*
     Dashboard tab layout.
@@ -15,15 +18,29 @@ import React from 'react'
     - The toggle is a floating button (absolutely positioned) rather than a header button
         so it appears consistently regardless of which tab is active.
     - Tab icons use `useStyles()` theme tokens so their colors follow the active/inactive state.
+    - Free-tier users are admitted into the dashboard. The subscribe screen is reached
+        only via explicit upsell CTAs within the content screens.
 */
 
 export default function DashboardLayout() {
     const styles = useStyles();
+    const { isLoading } = useEntitlement();
 
+    // Show a brief loading state while the entitlement check resolves.
+    // Free and paid users both proceed past this point — no redirect.
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
+                <ActivityIndicator />
+                <ThemedText style={{ marginTop: 10 }}>Loading...</ThemedText>
+            </View>
+        );
+    }
 
     return (
         <>
             <Tabs
+                initialRouteName="your-roadmap"
                 screenOptions={{
                     headerShown: false,
                     tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
@@ -31,10 +48,19 @@ export default function DashboardLayout() {
                     tabBarInactiveTintColor: styles.inactiveIcon.color,
                 }}
             >
+                <Tabs.Screen
+                    name="index"
+                    options={{
+                        // Hide redirect-only route from tab bar.
+                        href: null,
+                    }}
+                />
                 {/* home moved into the burger menu */}
                 <Tabs.Screen
                     name="inprogress"
                     options={{
+                        // Keep route available but hide it from the dashboard tab bar while deprecating On Deck.
+                        href: null,
                         title: "On Deck", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}

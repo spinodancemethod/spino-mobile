@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { supabase } from '../supabase';
 import { useAuth } from 'lib/auth';
+import { computeNextToggledIds } from './toggleMutationUtils';
 
 /**
  * useToggleFavourite
@@ -62,8 +63,7 @@ export function useToggleFavourite(userId?: string | null) {
             await qc.cancelQueries({ queryKey: ['videosByIds'] });
 
             const previous = qc.getQueryData<string[]>(key) || [];
-            const exists = previous.includes(videoId);
-            const next = exists ? previous.filter((id) => id !== videoId) : [...previous, videoId];
+            const { next } = computeNextToggledIds(previous, videoId);
             qc.setQueryData(key, next);
 
             // Snapshot and update videosByIds caches

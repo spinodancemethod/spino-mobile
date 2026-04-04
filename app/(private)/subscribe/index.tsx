@@ -1,13 +1,21 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, View, StyleSheet } from 'react-native';
-import * as Linking from 'expo-linking';
+import { ScrollView, View, StyleSheet, Platform } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
-import { useCreateCheckoutSession } from 'lib/hooks/useCreateCheckoutSession';
+import { useAuth } from 'lib/auth';
+import {
+    finalizeGooglePlaySubscriptionPurchase,
+    useGooglePlaySubscriptionPurchase,
+} from 'lib/hooks/useGooglePlaySubscriptionPurchase';
+import { useVerifyGooglePlayPurchase } from 'lib/hooks/useVerifyGooglePlayPurchase';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
+import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
+import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
+import { reportAppError } from 'lib/observability';
 
 type Plan = {
     id: 'monthly' | 'yearly';
@@ -33,8 +41,11 @@ const plans: Plan[] = [
 
 export default function Subscribe() {
     const { colors } = useTheme();
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
     const [selectedPlan, setSelectedPlan] = useState<Plan['id']>('monthly');
-    const checkoutMutation = useCreateCheckoutSession();
+    const purchaseMutation = useGooglePlaySubscriptionPurchase();
+    const verifyMutation = useVerifyGooglePlayPurchase();
     const subscriptionStatus = useSubscriptionStatus();
 
     const selectedPlanData = useMemo(
@@ -43,21 +54,59 @@ export default function Subscribe() {
     );
 
     const onCheckout = async () => {
-        const priceId =
-            selectedPlan === 'monthly'
-                ? process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_MONTHLY
-                : process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_YEARLY ?? process.env.EXPO_PUBLIC_STRIPE_PRICE_ID_ANNUALLY;
+        if (Platform.OS !== 'android') {
+            showSnack('Google Play purchases are available on Android only.');
+            return;
+        }
 
-        if (!priceId) {
-            showSnack('Missing Stripe price ID configuration for this plan.');
+        const productId =
+            selectedPlan === 'monthly'
+                ? process.env.EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_MONTHLY
+                : process.env.EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_YEARLY;
+
+        if (!productId) {
+            showSnack('Missing Google Play product ID configuration for this plan.');
             return;
         }
 
         try {
-            const result = await checkoutMutation.mutateAsync({ priceId });
-            await Linking.openURL(result.url);
+            const purchaseResult = await purchaseMutation.mutateAsync({
+                productId,
+                obfuscatedAccountId: user?.id,
+            });
+
+            const verifyResult = await verifyMutation.mutateAsync({
+                purchaseToken: purchaseResult.purchaseToken,
+                productId: purchaseResult.productId,
+                basePlanId: purchaseResult.basePlanId ?? undefined,
+            });
+
+            // Acknowledge/finalize only after server verification has accepted this token.
+            await finalizeGooglePlaySubscriptionPurchase(purchaseResult.purchase);
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
+                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
+            ]);
+
+            if (!verifyResult.hasAccess) {
+                showSnack('Purchase verified but access is not active yet. Please refresh in a few moments.');
+                return;
+            }
+
+            showSnack('Subscription activated successfully.');
         } catch (error: any) {
-            showSnack(error?.message ?? 'Failed to start checkout.');
+            showSnack(error?.message ?? 'Failed to complete Google Play purchase.');
+            void reportAppError({
+                context: 'billing.checkout',
+                error,
+                userId: user?.id,
+                metadata: {
+                    selectedPlan,
+                    platform: Platform.OS,
+                    step: purchaseMutation.isPending ? 'purchase' : 'verify_or_finalize',
+                },
+            });
         }
     };
 
@@ -127,13 +176,13 @@ export default function Subscribe() {
                         <ThemedText>{selectedPlanData.price}</ThemedText>
                     </View>
                     <ThemedButton
-                        title={checkoutMutation.isPending ? 'Starting Checkout...' : 'Continue to Checkout'}
+                        title={purchaseMutation.isPending || verifyMutation.isPending ? 'Processing Purchase...' : 'Buy with Google Play'}
                         onPress={onCheckout}
                         style={{ width: '100%', marginTop: 12 }}
-                        disabled={checkoutMutation.isPending}
+                        disabled={purchaseMutation.isPending || verifyMutation.isPending}
                     />
                     <ThemedText variant="small" style={styles.disclaimer}>
-                        Secure checkout is powered by Stripe via Supabase Edge Functions.
+                        Purchases are processed by Google Play and verified by your secure Supabase backend.
                     </ThemedText>
                 </View>
             </ScrollView>

@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, View, Platform } from 'react-native';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { useAccountDetails } from 'lib/hooks/useAccountDetails';
-import { useCancelSubscription } from 'lib/hooks/useCancelSubscription';
+import { useRestoreGooglePlayPurchases } from 'lib/hooks/useRestoreGooglePlayPurchases';
+import { showSnack } from 'lib/snackbarService';
 
 function formatDate(value: string | null) {
     if (!value) {
@@ -32,23 +34,39 @@ function formatSubscriptionStatus(status: string | null) {
 export default function AccountPage() {
     const { colors } = useTheme();
     const accountQuery = useAccountDetails();
-    const cancelSubscription = useCancelSubscription();
-    const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+    const restorePurchases = useRestoreGooglePlayPurchases();
 
-    // Derived from query data — kept above early returns so hook call order is stable.
     const account = accountQuery.data ?? null;
-    const canCancelSubscription = useMemo(
-        () => Boolean(account?.hasActiveSubscription && !account?.cancelAtPeriodEnd),
-        [account?.cancelAtPeriodEnd, account?.hasActiveSubscription],
-    );
 
-    async function handleConfirmCancelSubscription() {
+    async function handleRestorePurchases() {
         try {
-            await cancelSubscription.mutateAsync();
-            setConfirmCancelOpen(false);
-        } catch {
-            // Keep modal open and render the server error so user can retry.
+            const result = await restorePurchases.mutateAsync();
+            if (result.restoredCount > 0) {
+                showSnack(`Restored ${result.restoredCount} purchase(s).`);
+            } else {
+                showSnack('No active Google Play purchases were found to restore.');
+            }
+        } catch (error: any) {
+            showSnack(error?.message ?? 'Failed to restore purchases.');
         }
+    }
+
+    function handleManageInGooglePlay() {
+        if (Platform.OS !== 'android') {
+            showSnack('Google Play subscription management is available on Android only.');
+            return;
+        }
+
+        void Linking.openURL('https://play.google.com/store/account/subscriptions');
+    }
+
+    function openLegalUrl(url: string | undefined, label: 'Privacy Policy' | 'Terms of Service') {
+        if (!url) {
+            showSnack(`${label} URL is not configured yet.`);
+            return;
+        }
+
+        void Linking.openURL(url);
     }
 
     if (accountQuery.isLoading) {
@@ -115,68 +133,39 @@ export default function AccountPage() {
                         <ThemedText variant="small">Current period ends</ThemedText>
                         <ThemedText>{formatDate(account.currentPeriodEnd)}</ThemedText>
                     </View>
-
-                    {canCancelSubscription ? (
-                        <ThemedButton
-                            title="Cancel subscription"
-                            variant="warning"
-                            onPress={() => setConfirmCancelOpen(true)}
-                            style={{ width: '100%', marginTop: 8 }}
-                        />
-                    ) : null}
-
-                    {account.cancelAtPeriodEnd ? (
-                        <ThemedText variant="small" style={styles.scheduledText}>
-                            Cancellation is already scheduled for the end of your current billing period.
-                        </ThemedText>
-                    ) : null}
                 </View>
 
                 <ThemedButton title="Manage subscription" onPress={() => router.push('/subscribe')} style={{ width: '100%' }} />
+                <ThemedButton
+                    title={restorePurchases.isPending ? 'Restoring purchases...' : 'Restore Google Play purchases'}
+                    variant="ghost"
+                    onPress={handleRestorePurchases}
+                    style={{ width: '100%', marginTop: 8 }}
+                    disabled={restorePurchases.isPending}
+                />
+                <ThemedButton
+                    title="Manage in Google Play"
+                    variant="ghost"
+                    onPress={handleManageInGooglePlay}
+                    style={{ width: '100%', marginTop: 8 }}
+                />
+
+                {/* Legal and support links for Play Store compliance */}
+                <View style={{ marginTop: 32, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 12 }}>
+                    <ThemedButton
+                        title="Privacy Policy"
+                        variant="ghost"
+                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL, 'Privacy Policy')}
+                        style={{ width: '100%' }}
+                    />
+                    <ThemedButton
+                        title="Terms of Service"
+                        variant="ghost"
+                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_TERMS_URL, 'Terms of Service')}
+                        style={{ width: '100%' }}
+                    />
+                </View>
             </ScrollView>
-
-            <Modal
-                visible={confirmCancelOpen}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setConfirmCancelOpen(false)}
-            >
-                <Pressable style={styles.modalBackdrop} onPress={() => setConfirmCancelOpen(false)}>
-                    <Pressable
-                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={(event) => event.stopPropagation()}
-                    >
-                        <ThemedText variant="subheader" style={styles.modalTitle}>Confirm cancellation</ThemedText>
-                        <ThemedText style={styles.modalBody}>
-                            Your subscription will be canceled at the end of the current billing period.
-                        </ThemedText>
-
-                        {cancelSubscription.error ? (
-                            <ThemedText style={styles.modalError}>
-                                {cancelSubscription.error instanceof Error
-                                    ? cancelSubscription.error.message
-                                    : 'Could not cancel subscription. Please try again.'}
-                            </ThemedText>
-                        ) : null}
-
-                        <View style={styles.modalActions}>
-                            <ThemedButton
-                                title="Keep subscription"
-                                variant="ghost"
-                                onPress={() => setConfirmCancelOpen(false)}
-                                style={styles.modalButton}
-                            />
-                            <ThemedButton
-                                title="Confirm cancel"
-                                variant="warning"
-                                loading={cancelSubscription.isPending}
-                                onPress={handleConfirmCancelSubscription}
-                                style={styles.modalButton}
-                            />
-                        </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
         </ThemedView>
     );
 }
@@ -237,38 +226,5 @@ const styles = StyleSheet.create({
     errorText: {
         marginTop: 10,
         lineHeight: 22,
-    },
-    scheduledText: {
-        marginTop: 6,
-        lineHeight: 20,
-    },
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'center',
-        padding: 18,
-    },
-    modalCard: {
-        borderWidth: 1,
-        borderRadius: 12,
-        padding: 14,
-        gap: 8,
-    },
-    modalTitle: {
-        fontWeight: '700',
-    },
-    modalBody: {
-        lineHeight: 22,
-    },
-    modalError: {
-        lineHeight: 20,
-    },
-    modalActions: {
-        flexDirection: 'row',
-        gap: 8,
-        marginTop: 6,
-    },
-    modalButton: {
-        flex: 1,
     },
 });
