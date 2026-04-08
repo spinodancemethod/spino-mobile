@@ -23,7 +23,6 @@ async function fetchSubscriptionStatus(userId: string): Promise<SubscriptionStat
         .from('subscriptions')
         .select('provider,status,current_period_end')
         .eq('user_id', userId)
-        .eq('provider', 'google_play')
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle();

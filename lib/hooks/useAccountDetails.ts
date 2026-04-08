@@ -34,7 +34,6 @@ async function fetchAccountDetails(userId: string, email: string | null, created
         .from('subscriptions')
         .select('provider,status,current_period_end,product_id,base_plan_id,cancel_at_period_end')
         .eq('user_id', userId)
-        .eq('provider', 'google_play')
         .order('current_period_end', { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle<SubscriptionRow>();

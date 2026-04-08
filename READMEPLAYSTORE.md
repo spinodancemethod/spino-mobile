@@ -4,7 +4,7 @@ This document combines Play Store preparation and subscription rollout into one 
 
 ## Scope
 
-Use this guide when preparing an Android release that includes paid digital access via Google Play Billing and Supabase entitlement checks.
+Use this guide when preparing a mobile release that includes paid digital access via RevenueCat-managed subscriptions and Supabase entitlement checks.
 
 ## Current baseline in this repo
 
@@ -12,12 +12,12 @@ Use this guide when preparing an Android release that includes paid digital acce
 - Expo slug: `spino-mobile`
 - Android package: `com.spino.mobile`
 - Deep-link scheme: `spino`
-- Billing path: Google Play purchase token verification via Supabase
+- Billing path: RevenueCat SDK purchases + RevenueCat webhook ingestion into Supabase
 
 Primary files involved:
 
 - `app.json`
-- `supabase/functions/verify-google-play-purchase/index.ts`
+- `supabase/functions/ingest-revenuecat-webhook/index.ts`
 - `sql/bootstrap/`
 
 `android/` can be generated locally when needed (for example with `npx expo prebuild --platform android`) and does not need to be tracked in git.
@@ -81,40 +81,48 @@ Do not commit:
 - passwords
 - secret env files
 
-## Phase 3: Google Play subscription setup
+## Phase 3: RevenueCat subscription setup
 
 ### 3.1 Product setup
 
-- [ ] Create monthly and yearly subscriptions in Play Console.
-- [ ] Record product IDs and validate they match app config.
+- [ ] Create products in App Store Connect and Google Play Console.
+- [ ] Add both store products to RevenueCat and map them to the same entitlement.
+- [ ] Create an offering in RevenueCat that contains the monthly and yearly packages used by the app.
 
 Required app env:
 
-- `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_MONTHLY`
-- `EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_YEARLY`
-- `EXPO_PUBLIC_GOOGLE_PLAY_ANDROID_PACKAGE_NAME`
+- `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`
+- `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`
 - `EXPO_PUBLIC_PRIVACY_POLICY_URL`
 - `EXPO_PUBLIC_TERMS_URL`
 - `EXPO_PUBLIC_EAS_PROJECT_ID` (used by `app.config.ts` to inject `updates.url`)
 
 Required function secrets:
 
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_EMAIL` — Service account email for Google Play API authentication.
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_PRIVATE_KEY` — Service account private key (PEM format). Supabase stores as literal `\n` separators; the function normalizes them.
-- `GOOGLE_PLAY_ANDROID_PACKAGE_NAME` — Default package name for verification (e.g., `com.spino.mobile`). Falls back to this if not provided by client.
-- `GOOGLE_PLAY_ALLOWED_PACKAGE_NAMES` (optional) — Comma-separated list of allowed package names. Example: `com.spino.mobile,com.spino.mobile.beta`. If both this and the default are empty, verification fails. Use this to allowlist production, beta, and staging builds independently.
+- `REVENUECAT_WEBHOOK_AUTHORIZATION` — Shared authorization header value configured in the RevenueCat webhook dashboard and validated by the Supabase function.
+- `SUPABASE_SERVICE_ROLE_KEY` — Used by the webhook function to upsert subscriptions and billing events.
+
+RevenueCat dashboard setup:
+
+- [ ] Connect the Google Play app in RevenueCat.
+- [ ] Connect the App Store app in RevenueCat.
+- [ ] Create the shared entitlement used to unlock paid content.
+- [ ] Create the current offering and confirm both packages appear in it.
+- [ ] Configure a webhook pointing to `supabase/functions/ingest-revenuecat-webhook`.
+- [ ] Set the webhook `Authorization` header to the same value stored in `REVENUECAT_WEBHOOK_AUTHORIZATION`.
 
 ### 3.2 Purchase and verification path
 
-- [ ] App starts purchase through Google Play Billing.
-- [ ] Purchase token is sent to `verify-google-play-purchase`.
-- [ ] Backend upserts `subscriptions` with `provider = 'google_play'`.
-- [ ] Access unlocks immediately after successful verification.
+- [ ] App fetches subscription offerings from RevenueCat.
+- [ ] App starts purchase through the RevenueCat SDK.
+- [ ] RevenueCat webhook sends lifecycle events to `ingest-revenuecat-webhook`.
+- [ ] Backend upserts `subscriptions` with `provider = 'revenuecat'`.
+- [ ] Access unlocks immediately after purchase and remains aligned via webhook updates.
 
 ### 3.3 Entitlement and restore behavior
 
 - [ ] Paid screens gate on active subscription and non-expired `current_period_end`.
-- [ ] Restore purchases flow re-verifies available purchase tokens.
+- [ ] Restore purchases flow calls RevenueCat restore and refreshes local entitlement state.
 - [ ] Expired/canceled subscriptions lose access correctly.
 
 ## Phase 4: Content rating, builds, and release
@@ -168,9 +176,9 @@ AAB output: `android/app/build/outputs/bundle/release/app-release.aab`
   - Auth: sign up, email confirmation, sign in, sign out.
   - Free content: browse library, add to favorites and deck, view notes.
   - Paid content: attempt access to restricted videos → redirected to subscribe.
-  - Subscription: purchase, verify completion, check entitlement state.
-  - Restore: uninstall app, re-install, tap "Restore Google Play purchases".
-  - Cancel/expiry: cancel subscription in Play Store, check app reflects loss of access.
+  - Subscription: purchase through RevenueCat, verify completion, check entitlement state.
+  - Restore: uninstall app, re-install, tap "Restore purchases".
+  - Cancel/expiry: cancel subscription in the relevant store, check app reflects loss of access after webhook sync.
 - [ ] Collect feedback and fix critical issues.
 
 ### 4.4 Promotion to production
@@ -188,8 +196,8 @@ Release readiness is achieved when all are true:
 
 - [ ] Android identity/version settings are consistent and intentional.
 - [ ] Native Android strategy is explicit and reproducible (generated mode).
-- [ ] Google Play subscriptions are purchasable from the app.
-- [ ] Verification writes authoritative entitlement state in Supabase.
+- [ ] RevenueCat subscriptions are purchasable from the app on both iOS and Android.
+- [ ] RevenueCat webhook ingestion writes authoritative entitlement state in Supabase.
 - [ ] Access behavior is correct on purchase, restore, expiry, and cancel.
 - [ ] Internal testing build passes end-to-end validation.
 - [ ] Content rating questionnaire is complete in Play Console.
@@ -203,7 +211,9 @@ Release readiness is achieved when all are true:
 Copy and complete before tagging `v1.0.0` and submitting to Play Store:
 
 **Environment & Configuration:**
-- [ ] All Supabase Edge Function secrets are set (Google Play service account, allowed package names, private key in PEM format).
+- [ ] RevenueCat app keys are set in `.env` (`EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`).
+- [ ] Supabase Edge Function secrets are set (`REVENUECAT_WEBHOOK_AUTHORIZATION`, `SUPABASE_SERVICE_ROLE_KEY`).
+- [ ] RevenueCat webhook is configured to call `ingest-revenuecat-webhook` with the expected `Authorization` header.
 - [ ] Fresh database: run `sql/bootstrap/*.sql` in order on a test Supabase project without errors.
 - [ ] `app.json`: `version = "1.0.0"`, `versionCode = 1`.
 - [ ] `.env` NOT committed; `.env.example` is current; `git ls-files | grep -E '\\.env|secrets'` returns only `.env.example`.
@@ -232,6 +242,7 @@ Copy and complete before tagging `v1.0.0` and submitting to Play Store:
   npx expo prebuild --platform android && cd android && ./gradlew bundleRelease
   ```
 - [ ] AAB successfully uploaded to Play Console internal testing track.
+- [ ] iOS build path is configured in RevenueCat and App Store Connect before TestFlight rollout.
 - [ ] Internal testing on a real device or emulator passed:
   - Auth, free content, paid content purchase, restore, expiry.
   - All snackbar messages display correctly.
@@ -254,7 +265,9 @@ Copy and complete before tagging `v1.0.0` and submitting to Play Store:
 ## Immediate next actions for this repo
 
 1. Set `EXPO_PUBLIC_EAS_PROJECT_ID` so `app.config.ts` can inject the correct `updates.url` during builds.
-2. Set `EXPO_PUBLIC_PRIVACY_POLICY_URL` and `EXPO_PUBLIC_TERMS_URL` so legal links resolve in-app.
-3. Configure `SPINO_UPLOAD_*` locally in `~/.gradle/gradle.properties` (never commit).
-4. Keep `/android` ignored in git; regenerate locally only when needed.
-5. Use this checklist before first Play Store submission.
+2. Set `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` and `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` in local env files and CI secrets.
+3. Configure the RevenueCat offering, entitlement, and webhook authorization header before first subscription test.
+4. Set `EXPO_PUBLIC_PRIVACY_POLICY_URL` and `EXPO_PUBLIC_TERMS_URL` so legal links resolve in-app.
+5. Configure `SPINO_UPLOAD_*` locally in `~/.gradle/gradle.properties` (never commit).
+6. Keep `/android` ignored in git; regenerate locally only when needed.
+7. Use this checklist before first mobile store submission.

@@ -6,18 +6,35 @@ import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ErrorBoundary from 'Components/ErrorBoundary';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { queryClient } from 'lib/queryClient';
 import { ThemeProvider } from 'constants/ThemeProvider';
-import { AuthProvider } from 'lib/auth';
+import { AuthProvider, useAuth } from 'lib/auth';
+import {
+    addRevenueCatCustomerInfoUpdateListener,
+    getRevenueCatCustomerInfo,
+    initializeRevenueCat,
+} from 'lib/billing/revenuecat';
 import Snackbar from 'Components/Snackbar';
 import { showSnack } from 'lib/snackbarService';
+import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
+import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
+import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 
 function validateStartupEnv() {
-    const critical = {
+    // Supabase backend for user auth and entitlements
+    const supabaseVars = {
         EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
         EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     };
+
+    // RevenueCat SDKs for iOS and Android in-app purchases (both keys needed for cross-platform support)
+    const revenuecat = {
+        EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
+        EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+    };
+
+    const critical = { ...supabaseVars, ...revenuecat };
 
     const warnings = Object.entries(critical)
         .filter(([, value]) => !value)
@@ -29,6 +46,58 @@ function validateStartupEnv() {
         console.warn('[startup] ' + msg);
         showSnack(msg);
     }
+}
+
+function RevenueCatBootstrap() {
+    const { user, loading } = useAuth();
+    const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (loading) {
+            return;
+        }
+
+        void initializeRevenueCat(user?.id ?? null);
+    }, [loading, user?.id]);
+
+    useEffect(() => {
+        if (loading || !user?.id) {
+            return;
+        }
+
+        const userId = user.id;
+        let isMounted = true;
+        let unsubscribeCustomerInfoListener: (() => void) | null = null;
+
+        async function bootstrapCustomerInfoSync() {
+            try {
+                // Pull latest customer info once and then keep React Query state hot via listener callbacks.
+                await getRevenueCatCustomerInfo();
+                if (!isMounted) {
+                    return;
+                }
+
+                unsubscribeCustomerInfoListener = await addRevenueCatCustomerInfoUpdateListener(() => {
+                    void Promise.all([
+                        queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(userId) }),
+                        queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(userId) }),
+                        queryClient.invalidateQueries({ queryKey: entitlementQueryKey(userId) }),
+                    ]);
+                });
+            } catch {
+                // Ignore sync bootstrap errors; manual refresh paths still work.
+            }
+        }
+
+        void bootstrapCustomerInfoSync();
+
+        return () => {
+            isMounted = false;
+            unsubscribeCustomerInfoListener?.();
+        };
+    }, [loading, queryClient, user?.id]);
+
+    return null;
 }
 
 export default function RootLayout() {
@@ -72,6 +141,7 @@ export default function RootLayout() {
             <QueryClientProvider client={queryClient}>
                 <ThemeProvider>
                     <AuthProvider>
+                        <RevenueCatBootstrap />
                         <Slot />
                         <Snackbar />
                     </AuthProvider>
