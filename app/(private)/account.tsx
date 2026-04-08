@@ -2,12 +2,20 @@ import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { useAccountDetails } from 'lib/hooks/useAccountDetails';
-import { useRestoreGooglePlayPurchases } from 'lib/hooks/useRestoreGooglePlayPurchases';
+import {
+    hasRevenueCatEntitlement,
+    presentRevenueCatCustomerCenter,
+    restoreRevenueCatPurchases,
+} from 'lib/billing/revenuecat';
+import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
+import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
+import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { showSnack } from 'lib/snackbarService';
 
 function formatDate(value: string | null) {
@@ -33,31 +41,55 @@ function formatSubscriptionStatus(status: string | null) {
 
 export default function AccountPage() {
     const { colors } = useTheme();
+    const queryClient = useQueryClient();
     const accountQuery = useAccountDetails();
-    const restorePurchases = useRestoreGooglePlayPurchases();
+    const [isRestoringPurchases, setIsRestoringPurchases] = React.useState(false);
 
     const account = accountQuery.data ?? null;
 
     async function handleRestorePurchases() {
         try {
-            const result = await restorePurchases.mutateAsync();
-            if (result.restoredCount > 0) {
-                showSnack(`Restored ${result.restoredCount} purchase(s).`);
+            setIsRestoringPurchases(true);
+            const customerInfo = await restoreRevenueCatPurchases();
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(account?.userId) }),
+                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(account?.userId) }),
+                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(account?.userId) }),
+            ]);
+
+            if (hasRevenueCatEntitlement(customerInfo)) {
+                showSnack('Purchases restored successfully.');
             } else {
-                showSnack('No active Google Play purchases were found to restore.');
+                showSnack('No active purchases were found to restore.');
             }
         } catch (error: any) {
             showSnack(error?.message ?? 'Failed to restore purchases.');
+        } finally {
+            setIsRestoringPurchases(false);
         }
     }
 
-    function handleManageInGooglePlay() {
-        if (Platform.OS !== 'android') {
-            showSnack('Google Play subscription management is available on Android only.');
+    function handleManageInStore() {
+        if (Platform.OS === 'android') {
+            void Linking.openURL('https://play.google.com/store/account/subscriptions');
             return;
         }
 
-        void Linking.openURL('https://play.google.com/store/account/subscriptions');
+        if (Platform.OS === 'ios') {
+            void Linking.openURL('https://apps.apple.com/account/subscriptions');
+            return;
+        }
+
+        showSnack('Subscription management is available on iOS and Android only.');
+    }
+
+    async function handleOpenCustomerCenter() {
+        try {
+            await presentRevenueCatCustomerCenter();
+        } catch (error: any) {
+            showSnack(error?.message ?? 'Customer Center is not available right now.');
+        }
     }
 
     function openLegalUrl(url: string | undefined, label: 'Privacy Policy' | 'Terms of Service') {
@@ -137,16 +169,22 @@ export default function AccountPage() {
 
                 <ThemedButton title="Manage subscription" onPress={() => router.push('/subscribe')} style={{ width: '100%' }} />
                 <ThemedButton
-                    title={restorePurchases.isPending ? 'Restoring purchases...' : 'Restore Google Play purchases'}
+                    title={isRestoringPurchases ? 'Restoring purchases...' : 'Restore purchases'}
                     variant="ghost"
                     onPress={handleRestorePurchases}
                     style={{ width: '100%', marginTop: 8 }}
-                    disabled={restorePurchases.isPending}
+                    disabled={isRestoringPurchases}
                 />
                 <ThemedButton
-                    title="Manage in Google Play"
+                    title="Manage in your app store"
                     variant="ghost"
-                    onPress={handleManageInGooglePlay}
+                    onPress={handleManageInStore}
+                    style={{ width: '100%', marginTop: 8 }}
+                />
+                <ThemedButton
+                    title="Open Customer Center"
+                    variant="ghost"
+                    onPress={handleOpenCustomerCenter}
                     style={{ width: '100%', marginTop: 8 }}
                 />
 

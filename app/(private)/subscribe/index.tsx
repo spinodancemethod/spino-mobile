@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Platform } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
@@ -8,95 +9,142 @@ import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
 import {
-    finalizeGooglePlaySubscriptionPurchase,
-    useGooglePlaySubscriptionPurchase,
-} from 'lib/hooks/useGooglePlaySubscriptionPurchase';
-import { useVerifyGooglePlayPurchase } from 'lib/hooks/useVerifyGooglePlayPurchase';
+    getRevenueCatCurrentOffering,
+    hasRevenueCatEntitlement,
+    presentRevenueCatPaywall,
+    purchaseRevenueCatPackage,
+    getRevenueCatCustomerInfo,
+} from 'lib/billing/revenuecat';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
+import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
 import { reportAppError } from 'lib/observability';
 
 type Plan = {
-    id: 'monthly' | 'yearly';
+    id: string;
     title: string;
     price: string;
     description: string;
+    packageData: PurchasesPackage;
 };
 
-const plans: Plan[] = [
-    {
-        id: 'monthly',
-        title: 'Monthly Plan',
-        price: '$19 / month',
-        description: 'Perfect if you want flexibility while building your roadmap habits.',
-    },
-    {
-        id: 'yearly',
-        title: 'Yearly Plan',
-        price: '$149 / year',
-        description: 'Best value for committed dancers focused on long-term progression.',
-    },
-];
+const PLAN_DESCRIPTIONS: Record<string, string> = {
+    monthly: 'Perfect if you want flexibility while building your roadmap habits.',
+    annual: 'Best value for committed dancers focused on long-term progression.',
+};
+
+function getPlanId(packageData: PurchasesPackage) {
+    switch (packageData.packageType) {
+        case Purchases.PACKAGE_TYPE.MONTHLY:
+            return 'monthly';
+        case Purchases.PACKAGE_TYPE.ANNUAL:
+            return 'annual';
+        default:
+            return packageData.identifier;
+    }
+}
+
+function getPlanTitle(packageData: PurchasesPackage) {
+    switch (packageData.packageType) {
+        case Purchases.PACKAGE_TYPE.MONTHLY:
+            return 'Monthly Plan';
+        case Purchases.PACKAGE_TYPE.ANNUAL:
+            return 'Yearly Plan';
+        default:
+            return packageData.product.title || 'Subscription Plan';
+    }
+}
+
+function getPlanDescription(packageData: PurchasesPackage) {
+    return PLAN_DESCRIPTIONS[getPlanId(packageData)] ?? 'Unlock your full roadmap workspace and personalized progression tools.';
+}
 
 export default function Subscribe() {
     const { colors } = useTheme();
     const { user } = useAuth();
     const queryClient = useQueryClient();
-    const [selectedPlan, setSelectedPlan] = useState<Plan['id']>('monthly');
-    const purchaseMutation = useGooglePlaySubscriptionPurchase();
-    const verifyMutation = useVerifyGooglePlayPurchase();
+    const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const subscriptionStatus = useSubscriptionStatus();
 
+    const offeringsQuery = useQuery({
+        queryKey: ['revenuecatOffering', 'subscribe'],
+        queryFn: getRevenueCatCurrentOffering,
+        staleTime: 1000 * 60,
+    });
+
+    const plans = useMemo<Plan[]>(() => {
+        const packages = offeringsQuery.data?.availablePackages ?? [];
+
+        return packages.map((packageData) => ({
+            id: getPlanId(packageData),
+            title: getPlanTitle(packageData),
+            price: packageData.product.priceString,
+            description: getPlanDescription(packageData),
+            packageData,
+        }));
+    }, [offeringsQuery.data]);
+
+    useEffect(() => {
+        if (!plans.length) {
+            return;
+        }
+
+        setSelectedPlan((currentValue) => {
+            if (currentValue && plans.some((plan) => plan.id === currentValue)) {
+                return currentValue;
+            }
+
+            return plans[0].id;
+        });
+    }, [plans]);
+
+    const purchaseMutation = useMutation({
+        mutationFn: purchaseRevenueCatPackage,
+    });
+
+    const paywallMutation = useMutation({
+        mutationFn: () => presentRevenueCatPaywall(offeringsQuery.data ?? null),
+    });
+
     const selectedPlanData = useMemo(
-        () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0],
+        () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0] ?? null,
         [selectedPlan]
     );
 
     const onCheckout = async () => {
-        if (Platform.OS !== 'android') {
-            showSnack('Google Play purchases are available on Android only.');
+        if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
+            showSnack('Subscriptions are available on iOS and Android only.');
             return;
         }
 
-        const productId =
-            selectedPlan === 'monthly'
-                ? process.env.EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_MONTHLY
-                : process.env.EXPO_PUBLIC_GOOGLE_PLAY_PRODUCT_ID_YEARLY;
-
-        if (!productId) {
-            showSnack('Missing Google Play product ID configuration for this plan.');
+        if (!selectedPlanData) {
+            showSnack('No subscription options are available right now.');
             return;
         }
 
         try {
-            const purchaseResult = await purchaseMutation.mutateAsync({
-                productId,
-                obfuscatedAccountId: user?.id,
-            });
-
-            const verifyResult = await verifyMutation.mutateAsync({
-                purchaseToken: purchaseResult.purchaseToken,
-                productId: purchaseResult.productId,
-                basePlanId: purchaseResult.basePlanId ?? undefined,
-            });
-
-            // Acknowledge/finalize only after server verification has accepted this token.
-            await finalizeGooglePlaySubscriptionPurchase(purchaseResult.purchase);
+            const customerInfo = await purchaseMutation.mutateAsync(selectedPlanData.packageData);
 
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
                 queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
+                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user?.id) }),
             ]);
 
-            if (!verifyResult.hasAccess) {
-                showSnack('Purchase verified but access is not active yet. Please refresh in a few moments.');
+            if (!hasRevenueCatEntitlement(customerInfo)) {
+                showSnack('Purchase completed but access is not active yet. Please refresh in a few moments.');
                 return;
             }
 
             showSnack('Subscription activated successfully.');
         } catch (error: any) {
-            showSnack(error?.message ?? 'Failed to complete Google Play purchase.');
+            if (error?.userCancelled) {
+                showSnack('Purchase cancelled.');
+                return;
+            }
+
+            showSnack(error?.message ?? 'Failed to complete subscription purchase.');
             void reportAppError({
                 context: 'billing.checkout',
                 error,
@@ -104,7 +152,57 @@ export default function Subscribe() {
                 metadata: {
                     selectedPlan,
                     platform: Platform.OS,
-                    step: purchaseMutation.isPending ? 'purchase' : 'verify_or_finalize',
+                    offeringIdentifier: offeringsQuery.data?.identifier ?? null,
+                    packageIdentifier: selectedPlanData.packageData.identifier,
+                    step: 'purchase',
+                },
+            });
+        }
+    };
+
+    const onOpenPaywall = async () => {
+        if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
+            showSnack('Subscriptions are available on iOS and Android only.');
+            return;
+        }
+
+        try {
+            const result = await paywallMutation.mutateAsync();
+
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
+                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
+                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user?.id) }),
+            ]);
+
+            if (result === 'PURCHASED' || result === 'RESTORED') {
+                showSnack('Subscription access updated successfully.');
+                return;
+            }
+
+            if (result === 'NOT_PRESENTED') {
+                // RC skipped the paywall because it sees the entitlement as active.
+                // Verify server-side so we show an accurate message.
+                try {
+                    const customerInfo = await getRevenueCatCustomerInfo();
+                    if (hasRevenueCatEntitlement(customerInfo)) {
+                        showSnack('Your Pro subscription is already active.');
+                    }
+                    // If no entitlement found despite NOT_PRESENTED (edge case), stay silent —
+                    // the queries above were already invalidated so the UI will update.
+                } catch {
+                    // Silently ignore — queries already invalidated above.
+                }
+            }
+        } catch (error: any) {
+            showSnack(error?.message ?? 'Failed to open subscription options.');
+            void reportAppError({
+                context: 'billing.paywall',
+                error,
+                userId: user?.id,
+                metadata: {
+                    platform: Platform.OS,
+                    offeringIdentifier: offeringsQuery.data?.identifier ?? null,
                 },
             });
         }
@@ -143,6 +241,16 @@ export default function Subscribe() {
                 </View>
 
                 <ThemedText variant="subheader" style={styles.sectionLabel}>Choose your plan</ThemedText>
+                {offeringsQuery.isLoading ? (
+                    <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <ThemedText>Loading subscription options...</ThemedText>
+                    </View>
+                ) : null}
+                {!offeringsQuery.isLoading && plans.length === 0 ? (
+                    <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <ThemedText>No subscription options are available right now.</ThemedText>
+                    </View>
+                ) : null}
                 {plans.map((plan) => {
                     const isSelected = plan.id === selectedPlan;
                     return (
@@ -172,17 +280,24 @@ export default function Subscribe() {
                 <View style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <ThemedText variant="subheader" style={styles.cartTitle}>Cart Summary</ThemedText>
                     <View style={styles.cartRow}>
-                        <ThemedText>{selectedPlanData.title}</ThemedText>
-                        <ThemedText>{selectedPlanData.price}</ThemedText>
+                        <ThemedText>{selectedPlanData?.title ?? 'Select a plan'}</ThemedText>
+                        <ThemedText>{selectedPlanData?.price ?? '--'}</ThemedText>
                     </View>
                     <ThemedButton
-                        title={purchaseMutation.isPending || verifyMutation.isPending ? 'Processing Purchase...' : 'Buy with Google Play'}
+                        title={purchaseMutation.isPending ? 'Processing Purchase...' : 'Subscribe'}
                         onPress={onCheckout}
                         style={{ width: '100%', marginTop: 12 }}
-                        disabled={purchaseMutation.isPending || verifyMutation.isPending}
+                        disabled={purchaseMutation.isPending || paywallMutation.isPending || offeringsQuery.isLoading || !selectedPlanData}
+                    />
+                    <ThemedButton
+                        title={paywallMutation.isPending ? 'Opening subscription options...' : 'See subscription options'}
+                        variant="ghost"
+                        onPress={onOpenPaywall}
+                        style={{ width: '100%', marginTop: 8 }}
+                        disabled={purchaseMutation.isPending || paywallMutation.isPending}
                     />
                     <ThemedText variant="small" style={styles.disclaimer}>
-                        Purchases are processed by Google Play and verified by your secure Supabase backend.
+                        Purchases are processed securely through RevenueCat and your device's app store.
                     </ThemedText>
                 </View>
             </ScrollView>

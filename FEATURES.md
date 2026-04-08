@@ -2,6 +2,13 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added RevenueCat paywall presentation on the subscribe screen and Customer Center entry in account management, with explicit Pro entitlement-id validation instead of generic entitlement checks.
+- Replaced the subscribe screen's hardcoded Google Play purchase path with RevenueCat offerings and purchase APIs, while keeping existing subscription/account refresh behavior.
+- Switched the account screen restore flow to RevenueCat and replaced Google Play-specific subscription management copy with app-store-neutral wording.
+- Added a RevenueCat cutover SQL migration that widens billing provider checks and removes the Google Play-only purchase-token index.
+- Added a RevenueCat webhook ingestion edge function that validates authorization, stores idempotent billing events, and maps RevenueCat lifecycle events into subscription rows.
+- Replaced the obsolete Google verification test helper with shared RevenueCat webhook mapping tests that cover lifecycle status decisions and user-id resolution.
+- Rewrote the Play Store release guide's billing section and pre-release checklist to document RevenueCat app keys, offerings, and webhook setup instead of the deleted Google verification function.
 - Trimmed this file into a release-focused artifact and moved legacy detail into a compact archive section.
 - Removed Stripe-only bootstrap schema artifacts (`billing_customers`, `stripe_webhook_events`, Stripe-specific indexes/rls checks) so fresh bootstrap scripts match the Google Play-only runtime.
 - Replaced remaining weak typing in `Components/ThemedPill.tsx` with typed theme-token narrowing and removed dynamic `any` casts.

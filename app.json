@@ -38,7 +38,6 @@
       "expo-font",
       "expo-sqlite",
       "expo-router",
-      "react-native-iap",
       [
         "expo-build-properties",
         {

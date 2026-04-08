@@ -6,6 +6,7 @@ import { Linking, AppState, Modal, View, Text, ActivityIndicator, StyleSheet } f
 import { showSnack } from 'lib/snackbarService';
 import { shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
+import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
 
 type LegacyAuthLinkResult = {
     error?: { message?: string | null } | null;
@@ -45,8 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
             setSession(session ?? null);
             setUser(session?.user ?? null);
+
+            // Keep RevenueCat identity aligned with Supabase auth so purchases
+            // resolve to the same customer id across app restarts and devices.
+            if (session?.user?.id) {
+                void syncRevenueCatAppUser(session.user.id);
+            }
+
             // navigate on important transitions
             if (event === 'SIGNED_OUT') {
+                void clearRevenueCatAppUser();
                 router.replace('/login');
             }
             if (event === 'SIGNED_IN') {
