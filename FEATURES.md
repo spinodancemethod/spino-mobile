@@ -24,6 +24,7 @@
 - Increased spacing between the Reset password heading and helper text on the forgot-password screen.
 - Added a service-role-only RLS policy on billing events to remove no-policy exposure while keeping client access blocked.
 - Aligned test tooling with Expo 54 by pinning `jest` to `~29.7.0` and `@types/jest` to `29.5.14`.
+- Fixed Android EAS build Kotlin metadata mismatches by upgrading `expo-dev-client` to the Expo SDK 54-compatible line and aligning the Android Kotlin override to `2.1.20`.
 - Resolved Expo doctor compatibility checks by explicitly merging `app.json` values inside `app.config.ts` and adding the `expo-font` plugin/dependency.
 - Prevented NitroModules startup crashes by lazily importing `react-native-iap` inside Android purchase/restore/finalize flows instead of module-level imports.
 - Improved roadmap pinch-to-zoom behavior by anchoring zoom around the pinch midpoint for more natural gesture tracking.
