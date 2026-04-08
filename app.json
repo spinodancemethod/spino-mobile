@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spino",
     "scheme": "spino",
-    "slug": "spino-mobile",
+    "slug": "spinodancemethod",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -46,6 +46,13 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b35e90fe-4990-4c3c-9eef-d1edb26e6255"
+      }
+    },
+    "owner": "spinodancemethod"
   }
 }
