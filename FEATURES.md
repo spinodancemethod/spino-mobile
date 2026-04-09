@@ -2,6 +2,10 @@
 
 ## Current Product (Google Play Runtime)
 
+- Reclassified expected RevenueCat Test Store purchase-failure scenarios from `billing.checkout` errors to a dedicated analytics event so failure-path testing no longer pollutes error telemetry.
+- Improved app error telemetry normalization so object-shaped native/RevenueCat errors now preserve meaningful messages and attach diagnostic fields (for example error codes) instead of collapsing to "Unknown error".
+- Added explicit RevenueCat UI runtime guards so Expo Go now surfaces a clear "use a development build" message instead of throwing Preview API/browser-document errors when opening paywalls or Customer Center.
+- Added Expo Go-safe RevenueCat bootstrap behavior: the app now prefers `EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY` in Expo Go and gracefully disables native purchases setup when unavailable instead of throwing startup errors.
 - Fixed reset-password deep links to use path-based scheme URIs (`spino:///reset-password`) so Expo Router resolves the route instead of throwing unmatched `//reset-password`.
 - Added environment-aware reset-password redirect generation with optional `EXPO_PUBLIC_AUTH_RESET_REDIRECT_TO` override so password reset links can be tested in Expo Go and still use app-scheme deep links in builds.
 - Added password recovery funnel analytics by tracking `reset_start` when users enter the in-app reset screen and `reset_success` after a successful password update.

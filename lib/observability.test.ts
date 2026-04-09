@@ -1,5 +1,5 @@
 import { supabase } from 'lib/supabase';
-import { reportAppEvent } from './observability';
+import { reportAppError, reportAppEvent } from './observability';
 
 jest.mock('lib/supabase', () => ({
     supabase: {
@@ -51,5 +51,62 @@ describe('reportAppEvent', () => {
                 metadata: { screen: 'video_locked_screen' },
             })
         ).resolves.toBeUndefined();
+    });
+});
+
+describe('reportAppError', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('extracts object-shaped SDK error messages and includes diagnostics in metadata', async () => {
+        const insert = jest.fn().mockResolvedValue({ error: null });
+        (supabase.from as jest.Mock).mockReturnValue({ insert });
+
+        await reportAppError({
+            context: 'billing.checkout',
+            userId: 'user-123',
+            error: {
+                message: 'Google Play authentication failed',
+                code: 'SERVICE_UNAVAILABLE',
+                readableErrorCode: 'NetworkError',
+            },
+            metadata: {
+                platform: 'android',
+                step: 'purchase',
+            },
+        });
+
+        expect(insert).toHaveBeenCalledWith({
+            user_id: 'user-123',
+            context: 'billing.checkout',
+            message: 'Google Play authentication failed',
+            metadata: {
+                platform: 'android',
+                step: 'purchase',
+                errorDetails: {
+                    code: 'SERVICE_UNAVAILABLE',
+                    readableErrorCode: 'NetworkError',
+                },
+            },
+        });
+    });
+
+    it('falls back to Unknown error when shape is not supported', async () => {
+        const insert = jest.fn().mockResolvedValue({ error: null });
+        (supabase.from as jest.Mock).mockReturnValue({ insert });
+
+        await reportAppError({
+            context: 'billing.checkout',
+            userId: 'user-123',
+            error: { foo: 'bar' },
+        });
+
+        expect(insert).toHaveBeenCalledWith({
+            user_id: 'user-123',
+            context: 'billing.checkout',
+            message: 'Unknown error',
+            metadata: {},
+        });
     });
 });

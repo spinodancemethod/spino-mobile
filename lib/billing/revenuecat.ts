@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 type RevenueCatModule = typeof import('react-native-purchases');
@@ -14,7 +15,23 @@ function isSupportedPlatform() {
     return Platform.OS === 'ios' || Platform.OS === 'android';
 }
 
+function isExpoGo() {
+    return Constants.appOwnership === 'expo';
+}
+
+function isRevenueCatUiUnavailableRuntime() {
+    // In Expo Go, Purchases UI runs in preview mode and cannot present native paywalls.
+    return isExpoGo();
+}
+
 function getApiKey() {
+    const testStoreApiKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY?.trim() ?? '';
+
+    // Expo Go cannot access native stores. Use RevenueCat Test Store key when present.
+    if (isExpoGo()) {
+        return testStoreApiKey;
+    }
+
     if (Platform.OS === 'ios') {
         return process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? '';
     }
@@ -67,6 +84,12 @@ export async function initializeRevenueCat(appUserId?: string | null) {
 
     const apiKey = getApiKey();
     if (!apiKey) {
+        if (isExpoGo()) {
+            // eslint-disable-next-line no-console
+            console.warn('[billing] RevenueCat is disabled in Expo Go until EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY is set.');
+            return;
+        }
+
         // eslint-disable-next-line no-console
         console.warn('[billing] RevenueCat API key is missing for platform:', Platform.OS);
         return;
@@ -75,12 +98,20 @@ export async function initializeRevenueCat(appUserId?: string | null) {
     const purchases = await getPurchasesModule();
 
     if (!isConfigured) {
-        // Use the Supabase user id as the RevenueCat appUserID so both systems
-        // refer to the same customer identity across Android and iOS.
-        purchases.default.configure({
-            apiKey,
-            appUserID: appUserId ?? undefined,
-        });
+        try {
+            // Use the Supabase user id as the RevenueCat appUserID so both systems
+            // refer to the same customer identity across Android and iOS.
+            purchases.default.configure({
+                apiKey,
+                appUserID: appUserId ?? undefined,
+            });
+        } catch (error: any) {
+            // Expo Go with a non-Test-Store key throws at configure time.
+            // Keep app startup resilient by treating this as non-fatal.
+            // eslint-disable-next-line no-console
+            console.warn('[billing] RevenueCat configure skipped:', error?.message ?? error);
+            return;
+        }
 
         isConfigured = true;
         currentAppUserId = appUserId ?? null;
@@ -165,7 +196,15 @@ export async function presentRevenueCatPaywall(offering?: PurchasesOffering | nu
         throw new Error('RevenueCat paywall is available on iOS and Android only.');
     }
 
-    await ensureRevenueCatConfigured();
+    if (isRevenueCatUiUnavailableRuntime()) {
+        throw new Error('RevenueCat paywall is unavailable in Expo Go. Use a development build to test purchases UI.');
+    }
+
+    const purchases = await ensureRevenueCatConfigured();
+    if (!purchases) {
+        throw new Error('RevenueCat is not configured for this platform.');
+    }
+
     const revenueCatUI = await getRevenueCatPaywallModule();
 
     // Present the dashboard-managed paywall only when the Pro entitlement is missing.
@@ -183,7 +222,15 @@ export async function presentRevenueCatCustomerCenter() {
         throw new Error('Customer Center is available on iOS and Android only.');
     }
 
-    await ensureRevenueCatConfigured();
+    if (isRevenueCatUiUnavailableRuntime()) {
+        throw new Error('RevenueCat Customer Center is unavailable in Expo Go. Use a development build to test it.');
+    }
+
+    const purchases = await ensureRevenueCatConfigured();
+    if (!purchases) {
+        throw new Error('RevenueCat is not configured for this platform.');
+    }
+
     const revenueCatUI = await getRevenueCatPaywallModule();
     return revenueCatUI.default.presentCustomerCenter();
 }

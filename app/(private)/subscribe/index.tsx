@@ -19,7 +19,7 @@ import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
 import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
-import { reportAppError } from 'lib/observability';
+import { reportAppError, reportAppEvent } from 'lib/observability';
 
 type Plan = {
     id: string;
@@ -58,6 +58,18 @@ function getPlanTitle(packageData: PurchasesPackage) {
 
 function getPlanDescription(packageData: PurchasesPackage) {
     return PLAN_DESCRIPTIONS[getPlanId(packageData)] ?? 'Unlock your full roadmap workspace and personalized progression tools.';
+}
+
+function isExpectedTestStorePurchaseFailure(error: unknown) {
+    if (!error || typeof error !== 'object') {
+        return false;
+    }
+
+    const message = typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : '';
+
+    return message.toLowerCase().includes('test purchase failure: no real transaction occurred');
 }
 
 export default function Subscribe() {
@@ -141,6 +153,24 @@ export default function Subscribe() {
         } catch (error: any) {
             if (error?.userCancelled) {
                 showSnack('Purchase cancelled.');
+                return;
+            }
+
+            if (isExpectedTestStorePurchaseFailure(error)) {
+                // Test Store failures are intentional while validating unhappy-path UX,
+                // so we track them as events instead of surfacing as app errors.
+                showSnack('Test purchase failed as expected. No real transaction was created.');
+                void reportAppEvent({
+                    event: 'billing_test_purchase_failure',
+                    userId: user?.id,
+                    metadata: {
+                        selectedPlan,
+                        platform: Platform.OS,
+                        offeringIdentifier: offeringsQuery.data?.identifier ?? null,
+                        packageIdentifier: selectedPlanData.packageData.identifier,
+                        step: 'purchase',
+                    },
+                });
                 return;
             }
 
