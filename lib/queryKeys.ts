@@ -20,6 +20,7 @@ export const queryKeys = {
     deck: (userId?: string | null) => ['deck', userId ?? null] as const,
     video: (id?: string | null) => ['video', id ?? null] as const,
     completedVideoIds: (userId?: string | null) => ['completedVideoIds', userId ?? 'current'] as const,
+    note: (userId?: string | null, videoId?: string | null) => ['note', userId ?? null, videoId ?? null] as const,
 };
 
 export function isQueryKeyEqual(a: QueryKey, b: QueryKey) {

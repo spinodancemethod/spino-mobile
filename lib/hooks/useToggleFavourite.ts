@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useAuth } from 'lib/auth';
 import { queryKeys } from 'lib/queryKeys';
 import { createToggleMutationLifecycle, ToggleMutationContext } from './toggleMutationUtils';
+import { requireUserId, resolveUserId } from './userId';
 
 /**
  * useToggleFavourite
@@ -14,7 +15,7 @@ import { createToggleMutationLifecycle, ToggleMutationContext } from './toggleMu
 export function useToggleFavourite(userId?: string | null) {
     const qc = useQueryClient();
     const { user } = useAuth();
-    const resolvedUserId = userId ?? user?.id ?? null;
+    const resolvedUserId = resolveUserId(userId, user?.id);
     const key = queryKeys.favourites(resolvedUserId);
     const toggleLifecycle = createToggleMutationLifecycle({
         queryClient: qc,
@@ -23,17 +24,7 @@ export function useToggleFavourite(userId?: string | null) {
 
     return useMutation({
         mutationFn: async (videoId: string) => {
-            // Resolve user id: use provided userId param if present; otherwise
-            // fall back to currently authenticated Supabase user.
-            let actualUserId: string | null = null;
-            if (userId) actualUserId = userId;
-            if (!actualUserId) {
-                const { data: ud, error: ue } = await supabase.auth.getUser();
-                if (ue) throw ue;
-                actualUserId = ud?.user?.id;
-            }
-
-            if (!actualUserId) throw new Error('No authenticated user available');
+            const actualUserId = requireUserId(userId, user?.id);
 
             // Check existing favourite
             const { data: existing, error: fetchErr } = await supabase

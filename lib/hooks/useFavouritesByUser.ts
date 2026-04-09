@@ -3,11 +3,12 @@ import { supabase } from '../supabase';
 import { useAuth } from 'lib/auth';
 import { VideoIdRow } from 'lib/models';
 import { queryKeys } from 'lib/queryKeys';
+import { resolveUserId } from './userId';
 
 /**
  * useFavouritesByUser
  * - Returns the current user's favourites as an array of video IDs (or full rows when needed).
- * - Accepts an optional userId (useful for dev/testing). When not provided, reads from supabase.auth.getUser().
+ * - Accepts an optional userId (useful for dev/testing). When not provided, uses auth context user id.
  */
 type FavouritesQueryKey = ReturnType<typeof queryKeys.favourites>;
 
@@ -15,14 +16,7 @@ async function fetchFavourites({ queryKey }: QueryFunctionContext<FavouritesQuer
     // queryKey shape: ['favourites', userIdOrCurrent]
     const [_key, userId] = queryKey;
 
-    // Prefer explicit userId (useful for testing); otherwise resolve the
-    // currently authenticated user via Supabase.
-    let actualUserId: string | null = userId ?? null;
-    if (!actualUserId) {
-        const { data: ud, error: ue } = await supabase.auth.getUser();
-        if (ue) throw ue;
-        actualUserId = ud?.user?.id ?? null;
-    }
+    const actualUserId = userId ?? null;
 
     if (!actualUserId) return [];
 
@@ -37,7 +31,7 @@ async function fetchFavourites({ queryKey }: QueryFunctionContext<FavouritesQuer
 
 export function useFavouritesByUser(userId?: string | null) {
     const { user, loading } = useAuth();
-    const resolvedUserId = userId ?? user?.id ?? null;
+    const resolvedUserId = resolveUserId(userId, user?.id);
     const enabled = !loading && !!resolvedUserId;
 
     return useQuery({

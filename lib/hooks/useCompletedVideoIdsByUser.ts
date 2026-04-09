@@ -3,6 +3,7 @@ import { useAuth } from 'lib/auth'
 import { VideoIdRow } from 'lib/models'
 import { queryKeys } from 'lib/queryKeys'
 import { supabase } from '../supabase'
+import { resolveUserId } from './userId'
 
 export function completedVideoIdsQueryKey(userId?: string | null) {
     return queryKeys.completedVideoIds(userId)
@@ -13,12 +14,7 @@ type CompletedVideoIdsQueryKey = ReturnType<typeof completedVideoIdsQueryKey>
 async function fetchCompletedVideoIds({ queryKey }: QueryFunctionContext<CompletedVideoIdsQueryKey>): Promise<string[]> {
     const [_key, userId] = queryKey
 
-    let actualUserId: string | null = userId ?? null
-    if (!actualUserId) {
-        const { data: userData, error: userError } = await supabase.auth.getUser()
-        if (userError) throw userError
-        actualUserId = userData?.user?.id ?? null
-    }
+    const actualUserId = userId ?? null
 
     if (!actualUserId) return []
 
@@ -35,7 +31,7 @@ async function fetchCompletedVideoIds({ queryKey }: QueryFunctionContext<Complet
 
 export function useCompletedVideoIdsByUser(userId?: string | null) {
     const { user, loading } = useAuth()
-    const resolvedUserId = userId ?? user?.id ?? null
+    const resolvedUserId = resolveUserId(userId, user?.id)
     const enabled = !loading && !!resolvedUserId
 
     return useQuery({

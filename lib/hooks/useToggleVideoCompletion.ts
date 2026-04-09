@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'lib/auth'
 import { supabase } from '../supabase'
 import { createIdsOnlyToggleMutationLifecycle, IdsOnlyToggleMutationContext } from './toggleMutationUtils'
+import { requireUserId, resolveUserId } from './userId'
 import { completedVideoIdsQueryKey } from './useCompletedVideoIdsByUser'
 
 type ToggleVideoCompletionPayload = {
@@ -12,7 +13,7 @@ type ToggleVideoCompletionPayload = {
 export function useToggleVideoCompletion(userId?: string | null) {
     const queryClient = useQueryClient()
     const { user } = useAuth()
-    const resolvedUserId = userId ?? user?.id ?? null
+    const resolvedUserId = resolveUserId(userId, user?.id)
     const queryKey = completedVideoIdsQueryKey(resolvedUserId)
     const toggleLifecycle = createIdsOnlyToggleMutationLifecycle<ToggleVideoCompletionPayload>({
         queryClient,
@@ -26,14 +27,7 @@ export function useToggleVideoCompletion(userId?: string | null) {
 
     return useMutation({
         mutationFn: async ({ videoId, isComplete }: ToggleVideoCompletionPayload) => {
-            let actualUserId = userId ?? user?.id ?? null
-            if (!actualUserId) {
-                const { data: userData, error: userError } = await supabase.auth.getUser()
-                if (userError) throw userError
-                actualUserId = userData?.user?.id ?? null
-            }
-
-            if (!actualUserId) throw new Error('No authenticated user available')
+            const actualUserId = requireUserId(userId, user?.id)
 
             if (isComplete) {
                 // The unchecked state is represented by the absence of a row.

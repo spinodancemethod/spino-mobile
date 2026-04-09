@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Centralized hook-level user-id resolution with shared helpers that prefer auth-context ids, removing repeated `supabase.auth.getUser()` calls and aligning note/favourites/deck/completion query keys.
 - Replaced high-traffic hook `any` usage with shared typed video/position models and centralized query-key factories, then migrated core video/position/favourites/deck/completion hooks to those shared types.
 - Added explicit `@jest/globals` imports in toggle-mutation tests to avoid editor-only missing-global diagnostics for `describe`/`it`/`expect`.
 - Migrated `useToggleVideoCompletion` to a shared ids-only toggle lifecycle helper so optimistic cache updates, rollback, and invalidation now follow the same reusable pattern as other toggle hooks.

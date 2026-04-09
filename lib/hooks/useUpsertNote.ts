@@ -1,6 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
+import { useAuth } from 'lib/auth'
+import { queryKeys } from 'lib/queryKeys'
 import { supabase } from '../supabase'
 import { queryClient } from '../queryClient'
+import { requireUserId } from './userId'
 
 /**
  * useUpsertNote
@@ -8,17 +11,12 @@ import { queryClient } from '../queryClient'
  * - Expects payload: { user_id, video_id, note_text }
  */
 export function useUpsertNote() {
+    const { user } = useAuth()
+
     return useMutation({
-        mutationFn: async (payload: any) => {
+        mutationFn: async (payload: { user_id?: string | null; video_id: string; note_text?: string | null }) => {
             const { user_id, video_id, note_text } = payload || {}
-            // If user_id not provided, resolve via supabase.auth.getUser()
-            let actualUserId = user_id ?? null
-            if (!actualUserId) {
-                const { data: ud, error: ue } = await supabase.auth.getUser()
-                if (ue) throw ue
-                actualUserId = ud?.user?.id ?? null
-            }
-            if (!actualUserId) throw new Error('No authenticated user')
+            const actualUserId = requireUserId(user_id, user?.id, 'No authenticated user')
 
             const row = {
                 user_id: actualUserId,
@@ -32,7 +30,7 @@ export function useUpsertNote() {
             if (error) throw error
 
             // Invalidate the note query for this user+video (react-query v4 filter form)
-            queryClient.invalidateQueries({ queryKey: ['note', actualUserId, video_id] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.note(actualUserId, video_id) })
             return data
         }
     })

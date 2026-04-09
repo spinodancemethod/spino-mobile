@@ -8,6 +8,7 @@ import {
     isVideosByIdsQueryForIds,
     ToggleMutationContext,
 } from './toggleMutationUtils';
+import { requireUserId, resolveUserId } from './userId';
 
 /**
  * useToggleDeck
@@ -17,7 +18,7 @@ import {
 export function useToggleDeck(userId?: string | null) {
     const qc = useQueryClient();
     const { user } = useAuth();
-    const resolvedUserId = userId ?? user?.id ?? null;
+    const resolvedUserId = resolveUserId(userId, user?.id);
     const key = queryKeys.deck(resolvedUserId);
     const toggleLifecycle = createToggleMutationLifecycle({
         queryClient: qc,
@@ -27,16 +28,7 @@ export function useToggleDeck(userId?: string | null) {
 
     return useMutation({
         mutationFn: async (videoId: string) => {
-            // Resolve user id from the provided param or the authenticated user
-            let actualUserId: string | null = null;
-            if (userId) actualUserId = userId;
-            if (!actualUserId) {
-                const { data: ud, error: ue } = await supabase.auth.getUser();
-                if (ue) throw ue;
-                actualUserId = ud?.user?.id;
-            }
-
-            if (!actualUserId) throw new Error('No authenticated user available');
+            const actualUserId = requireUserId(userId, user?.id);
 
             // Use RPC with advisory lock + server-side limit logic to avoid race conditions.
             const { data, error } = await supabase.rpc('toggle_deck_with_subscription_limit', {
