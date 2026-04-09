@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
+import { queryKeys } from 'lib/queryKeys';
 import {
     createToggleMutationLifecycle,
     isVideosByIdsQueryForIds,
@@ -17,7 +18,7 @@ export function useToggleDeck(userId?: string | null) {
     const qc = useQueryClient();
     const { user } = useAuth();
     const resolvedUserId = userId ?? user?.id ?? null;
-    const key = ['deck', resolvedUserId];
+    const key = queryKeys.deck(resolvedUserId);
     const toggleLifecycle = createToggleMutationLifecycle({
         queryClient: qc,
         primaryKey: key,
@@ -27,7 +28,7 @@ export function useToggleDeck(userId?: string | null) {
     return useMutation({
         mutationFn: async (videoId: string) => {
             // Resolve user id from the provided param or the authenticated user
-            let actualUserId: any = null;
+            let actualUserId: string | null = null;
             if (userId) actualUserId = userId;
             if (!actualUserId) {
                 const { data: ud, error: ue } = await supabase.auth.getUser();
@@ -48,7 +49,7 @@ export function useToggleDeck(userId?: string | null) {
                 if (message.toLowerCase().includes('deck limit reached')) {
                     // Server enforces tier-aware limits (free vs subscribed).
                     showSnack('Deck limit reached for your current plan.', { duration: 3000 });
-                    const err: any = new Error('deck limit reached');
+                    const err = new Error('deck limit reached') as Error & { code?: string };
                     err.code = 'DECK_LIMIT';
                     throw err;
                 }

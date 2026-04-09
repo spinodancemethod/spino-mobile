@@ -1,4 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { QueryFunctionContext, useQuery } from '@tanstack/react-query';
+import { PositionRecord } from 'lib/models';
+import { queryKeys, PositionsParams } from 'lib/queryKeys';
 import { supabase } from '../supabase';
 
 /*
@@ -8,18 +10,28 @@ import { supabase } from '../supabase';
     - Supports optional filtering by `position` (category) and `search` term.
     - Uses React Query to cache results and avoid unnecessary network requests.
 */
-async function fetchPositions({ queryKey }: any) {
-    const [_key, params] = queryKey;
-    const { position, search } = params || {};
-    let builder: any = supabase.from('positions').select('*');
+type PositionsQueryKey = ReturnType<typeof queryKeys.positions>;
+
+async function fetchPositions({ queryKey }: QueryFunctionContext): Promise<PositionRecord[]> {
+    const [_key, params] = queryKey as PositionsQueryKey;
+    const { position, search } = (params || {}) as PositionsParams;
+    let builder = supabase.from('positions').select('*');
     if (position) builder = builder.eq('category', position);
     if (search) builder = builder.ilike('name', `%${search}%`);
     const { data, error } = await builder;
     if (error) throw error;
-    return data;
+
+    return ((data || []) as Array<PositionRecord & { name?: string | null }>).map((row) => ({
+        ...row,
+        // Keep `name` non-null for shared filter/dropdown consumers.
+        name: row.name ?? row.title ?? 'Unknown position',
+    }));
 }
 
-export function usePositions(params: { position?: string | null; search?: string } | undefined) {
-    return useQuery({ queryKey: ['positions', params], queryFn: fetchPositions });
+export function usePositions(params: PositionsParams | undefined) {
+    return useQuery<PositionRecord[], Error>({
+        queryKey: queryKeys.positions(params),
+        queryFn: fetchPositions,
+    });
 }
 

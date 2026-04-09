@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { useAuth } from 'lib/auth';
+import { queryKeys } from 'lib/queryKeys';
 import { createToggleMutationLifecycle, ToggleMutationContext } from './toggleMutationUtils';
 
 /**
@@ -14,7 +15,7 @@ export function useToggleFavourite(userId?: string | null) {
     const qc = useQueryClient();
     const { user } = useAuth();
     const resolvedUserId = userId ?? user?.id ?? null;
-    const key = ['favourites', resolvedUserId];
+    const key = queryKeys.favourites(resolvedUserId);
     const toggleLifecycle = createToggleMutationLifecycle({
         queryClient: qc,
         primaryKey: key,
@@ -24,7 +25,7 @@ export function useToggleFavourite(userId?: string | null) {
         mutationFn: async (videoId: string) => {
             // Resolve user id: use provided userId param if present; otherwise
             // fall back to currently authenticated Supabase user.
-            let actualUserId: any = null;
+            let actualUserId: string | null = null;
             if (userId) actualUserId = userId;
             if (!actualUserId) {
                 const { data: ud, error: ue } = await supabase.auth.getUser();
@@ -43,7 +44,7 @@ export function useToggleFavourite(userId?: string | null) {
                 .maybeSingle();
             if (fetchErr) throw fetchErr;
 
-            if (existing && (existing as any).id) {
+            if (existing?.id) {
                 // delete
                 const { error: delErr } = await supabase
                     .from('favourites')

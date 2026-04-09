@@ -1,4 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { QueryFunctionContext, useQuery } from '@tanstack/react-query';
+import { VideoRecord } from 'lib/models';
+import { queryKeys, VideosParams } from 'lib/queryKeys';
 import { supabase } from '../supabase';
 
 /*
@@ -11,24 +13,26 @@ import { supabase } from '../supabase';
         unnecessary refetches are avoided.
 */
 
-async function fetchVideos({ queryKey }: any) {
-    const [_key, params] = queryKey;
-    const { positionId } = params || {};
+type VideosQueryKey = ReturnType<typeof queryKeys.videos>;
 
-    let builder: any = supabase.from('videos').select('*');
+async function fetchVideos({ queryKey }: QueryFunctionContext): Promise<VideoRecord[]> {
+    const [_key, params] = queryKey as VideosQueryKey;
+    const { positionId } = (params || {}) as VideosParams;
+
+    let builder = supabase.from('videos').select('*');
     if (positionId) builder = builder.eq('position_id', positionId);
     // optional: order by created_at desc
     builder = builder.order('created_at', { ascending: false });
 
     const { data, error } = await builder;
     if (error) throw error;
-    return data;
+    return (data || []) as VideoRecord[];
 }
 
-export function useVideos(params: { positionId?: string | null } | undefined) {
+export function useVideos(params: VideosParams | undefined) {
     const enabled = !!(params && params.positionId);
-    return useQuery({
-        queryKey: ['videos', params],
+    return useQuery<VideoRecord[], Error>({
+        queryKey: queryKeys.videos(params),
         queryFn: fetchVideos,
         enabled,
         staleTime: 1000 * 60 * 5, // 5 minutes

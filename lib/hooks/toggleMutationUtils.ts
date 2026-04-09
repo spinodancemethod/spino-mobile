@@ -1,4 +1,6 @@
 import { QueryClient, QueryKey } from '@tanstack/react-query';
+import { VideoRecord } from 'lib/models';
+import { queryKeys } from 'lib/queryKeys';
 
 export function computeNextToggledIds(previous: string[], itemId: string) {
     const exists = previous.includes(itemId);
@@ -51,14 +53,14 @@ export function createToggleMutationLifecycle({
             // Shared optimistic lifecycle used by deck/favourite toggles.
             // It updates the ids cache immediately and snapshots related videosByIds caches.
             await queryClient.cancelQueries({ queryKey: primaryKey });
-            await queryClient.cancelQueries({ queryKey: ['videosByIds'] });
+            await queryClient.cancelQueries({ queryKey: queryKeys.videosByIdsRoot() });
 
             const previous = queryClient.getQueryData<string[]>(primaryKey) || [];
             const { next } = computeNextToggledIds(previous, videoId);
             queryClient.setQueryData(primaryKey, next);
 
             const previousVideos: Record<string, { queryKey: QueryKey; data: unknown }> = {};
-            const videosQueries = queryClient.getQueriesData({ queryKey: ['videosByIds'] }) || [];
+            const videosQueries = queryClient.getQueriesData({ queryKey: queryKeys.videosByIdsRoot() }) || [];
 
             for (const [qk] of videosQueries) {
                 try {
@@ -69,7 +71,7 @@ export function createToggleMutationLifecycle({
                     previousVideos[JSON.stringify(queryKey)] = { queryKey, data: old };
 
                     if (Array.isArray(old)) {
-                        const filtered = old.filter((item: any) => item?.id !== videoId);
+                        const filtered = (old as VideoRecord[]).filter((item) => item?.id !== videoId);
                         queryClient.setQueryData(queryKey, filtered);
                     }
                 } catch (_error) {
@@ -93,7 +95,7 @@ export function createToggleMutationLifecycle({
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: primaryKey });
-            queryClient.invalidateQueries({ queryKey: ['videosByIds'] });
+            queryClient.invalidateQueries({ queryKey: queryKeys.videosByIdsRoot() });
         },
     };
 }

@@ -1,12 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
+import { QueryFunctionContext, useQuery } from '@tanstack/react-query'
 import { useAuth } from 'lib/auth'
+import { VideoIdRow } from 'lib/models'
+import { queryKeys } from 'lib/queryKeys'
 import { supabase } from '../supabase'
 
 export function completedVideoIdsQueryKey(userId?: string | null) {
-    return ['completedVideoIds', userId ?? 'current']
+    return queryKeys.completedVideoIds(userId)
 }
 
-async function fetchCompletedVideoIds({ queryKey }: any) {
+type CompletedVideoIdsQueryKey = ReturnType<typeof completedVideoIdsQueryKey>
+
+async function fetchCompletedVideoIds({ queryKey }: QueryFunctionContext<CompletedVideoIdsQueryKey>): Promise<string[]> {
     const [_key, userId] = queryKey
 
     let actualUserId: string | null = userId ?? null
@@ -26,7 +30,7 @@ async function fetchCompletedVideoIds({ queryKey }: any) {
         .eq('status', 'completed')
 
     if (error) throw error
-    return (data || []).map((row: any) => row.video_id)
+    return ((data || []) as VideoIdRow[]).map((row) => row.video_id)
 }
 
 export function useCompletedVideoIdsByUser(userId?: string | null) {

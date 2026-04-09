@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { VideoRecord } from 'lib/models';
+import { queryKeys } from 'lib/queryKeys';
 import { supabase } from '../supabase';
 
 /*
@@ -7,7 +9,7 @@ import { supabase } from '../supabase';
     - Fetches all videos marked with access_tier = 'free'.
     - Used to populate the roadmap for non-subscribed users without requiring favourites.
 */
-async function fetchFreeTierVideos() {
+async function fetchFreeTierVideos(): Promise<VideoRecord[]> {
     const { data, error } = await supabase
         .from('videos')
         .select('*')
@@ -15,12 +17,12 @@ async function fetchFreeTierVideos() {
         .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as VideoRecord[];
 }
 
 export function useFreeTierVideos() {
-    return useQuery({
-        queryKey: ['videos', 'free-tier'],
+    return useQuery<VideoRecord[], Error>({
+        queryKey: queryKeys.freeTierVideos(),
         queryFn: fetchFreeTierVideos,
         staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false,

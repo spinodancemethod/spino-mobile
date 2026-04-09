@@ -1,13 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { QueryFunctionContext, useQuery } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { useAuth } from 'lib/auth';
+import { VideoIdRow } from 'lib/models';
+import { queryKeys } from 'lib/queryKeys';
 
 /**
  * useFavouritesByUser
  * - Returns the current user's favourites as an array of video IDs (or full rows when needed).
  * - Accepts an optional userId (useful for dev/testing). When not provided, reads from supabase.auth.getUser().
  */
-async function fetchFavourites({ queryKey }: any) {
+type FavouritesQueryKey = ReturnType<typeof queryKeys.favourites>;
+
+async function fetchFavourites({ queryKey }: QueryFunctionContext<FavouritesQueryKey>): Promise<string[]> {
     // queryKey shape: ['favourites', userIdOrCurrent]
     const [_key, userId] = queryKey;
 
@@ -28,7 +32,7 @@ async function fetchFavourites({ queryKey }: any) {
         .select('video_id')
         .eq('user_id', actualUserId);
     if (error) throw error;
-    return (data || []).map((r: any) => r.video_id);
+    return ((data || []) as VideoIdRow[]).map((r) => r.video_id);
 }
 
 export function useFavouritesByUser(userId?: string | null) {
@@ -37,7 +41,7 @@ export function useFavouritesByUser(userId?: string | null) {
     const enabled = !loading && !!resolvedUserId;
 
     return useQuery({
-        queryKey: ['favourites', resolvedUserId],
+        queryKey: queryKeys.favourites(resolvedUserId),
         queryFn: fetchFavourites,
         enabled,
         staleTime: 1000 * 60 * 2,
