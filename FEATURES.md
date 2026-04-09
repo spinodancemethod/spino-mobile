@@ -2,6 +2,10 @@
 
 ## Current Product (Google Play Runtime)
 
+- Fixed reset-password deep links to use path-based scheme URIs (`spino:///reset-password`) so Expo Router resolves the route instead of throwing unmatched `//reset-password`.
+- Added environment-aware reset-password redirect generation with optional `EXPO_PUBLIC_AUTH_RESET_REDIRECT_TO` override so password reset links can be tested in Expo Go and still use app-scheme deep links in builds.
+- Added password recovery funnel analytics by tracking `reset_start` when users enter the in-app reset screen and `reset_success` after a successful password update.
+- Implemented a fully in-app password recovery flow: reset emails now deep-link to a new reset-password screen, recovery sessions route there automatically, and users can set a new password without using a browser.
 - Added a reusable show/hide password eye toggle in shared text inputs so login and signup password fields can be revealed securely on demand.
 - Hardened auth/session persistence by storing Supabase tokens in secure OS storage and added entitlement downgrade cache-guards so paid-only video data is immediately cleared for free users.
 - Added RevenueCat paywall presentation on the subscribe screen and Customer Center entry in account management, with explicit Pro entitlement-id validation instead of generic entitlement checks.

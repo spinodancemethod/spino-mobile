@@ -1,7 +1,16 @@
-export function shouldHandleAuthUrl(url: string) {
+export function getAuthUrlParams(url: string) {
     const hashIdx = url.indexOf('#');
     const rawParams = hashIdx >= 0 ? url.slice(hashIdx + 1) : (url.split('?')[1] ?? '');
-    const params = new URLSearchParams(rawParams);
+    return new URLSearchParams(rawParams);
+}
+
+export function isRecoveryAuthUrl(url: string) {
+    const params = getAuthUrlParams(url);
+    return params.get('type') === 'recovery' || url.toLowerCase().includes('type=recovery');
+}
+
+export function shouldHandleAuthUrl(url: string) {
+    const params = getAuthUrlParams(url);
     const normalizedUrl = url.toLowerCase();
 
     return (
@@ -10,6 +19,7 @@ export function shouldHandleAuthUrl(url: string) {
         params.has('access_token') ||
         params.has('refresh_token') ||
         params.has('type') ||
-        normalizedUrl.includes('://login')
+        normalizedUrl.includes('://login') ||
+        normalizedUrl.includes('://reset-password')
     );
 }

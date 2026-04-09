@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
 import { Linking, AppState, Modal, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { showSnack } from 'lib/snackbarService';
-import { shouldHandleAuthUrl } from 'lib/authUrl';
+import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
 
@@ -26,6 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [processingLink, setProcessingLink] = useState(false);
+    const pendingRecoveryRef = useRef(false);
 
     useEffect(() => {
         let mounted = true;
@@ -72,7 +73,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 void clearRevenueCatAppUser();
                 router.replace('/login');
             }
+            if (event === 'PASSWORD_RECOVERY') {
+                pendingRecoveryRef.current = false;
+                router.replace('/reset-password');
+                return;
+            }
             if (event === 'SIGNED_IN') {
+                if (pendingRecoveryRef.current) {
+                    pendingRecoveryRef.current = false;
+                    router.replace('/reset-password');
+                    return;
+                }
                 router.replace('/home');
             }
         });
@@ -81,6 +92,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         async function handleUrl(url?: string | null) {
             if (!url) return;
             if (!shouldHandleAuthUrl(url)) return;
+            // Keep recovery routing sticky until auth state event fires.
+            if (isRecoveryAuthUrl(url)) {
+                pendingRecoveryRef.current = true;
+            }
             setProcessingLink(true);
             // small delay to ensure overlay is visible for very fast responses
             const start = Date.now();
@@ -310,6 +325,29 @@ export async function signInWithOAuth(provider: 'google' | 'apple') {
             context: 'auth.signInWithOAuth',
             error: e,
             metadata: { provider },
+        });
+        return { error: e };
+    }
+}
+
+export async function updatePassword(password: string) {
+    try {
+        const { data, error } = await supabase.auth.updateUser({ password });
+        if (error) {
+            showSnack(error.message || 'Failed to update password');
+            void reportAppError({
+                context: 'auth.updatePassword',
+                error,
+            });
+            return { error };
+        }
+        showSnack('Password updated successfully');
+        return { error: null, data };
+    } catch (e: any) {
+        showSnack(e?.message ?? 'Failed to update password');
+        void reportAppError({
+            context: 'auth.updatePassword',
+            error: e,
         });
         return { error: e };
     }

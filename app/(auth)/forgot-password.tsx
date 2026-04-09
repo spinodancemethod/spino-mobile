@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { router } from 'expo-router';
+import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
@@ -15,14 +17,31 @@ export default function ForgotPassword() {
     const [emailError, setEmailError] = useState<string | null>(null);
     const { colors } = useTheme();
 
+    function getResetRedirectTo() {
+        const override = process.env.EXPO_PUBLIC_AUTH_RESET_REDIRECT_TO?.trim();
+        if (override) {
+            return override;
+        }
+
+        // Expo Go cannot claim custom schemes like "spino://" reliably, so use
+        // an Expo URL during local testing and the app scheme for dev/prod builds.
+        if (Constants.appOwnership === 'expo') {
+            return Linking.createURL('reset-password');
+        }
+
+        const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
+        // Use a path-based deep link so Expo Router resolves `/reset-password`
+        // instead of treating `reset-password` as a URL host segment.
+        return `${scheme}:///reset-password`;
+    }
+
     const onReset = async () => {
         setEmailError(null);
         const emailRegex = /\S+@\S+\.\S+/;
         if (!email || !emailRegex.test(email)) { setEmailError('Please enter a valid email'); return; }
         setLoading(true);
         try {
-            const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
-            const redirectTo = `${scheme}://login`;
+            const redirectTo = getResetRedirectTo();
             const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo,
             });
