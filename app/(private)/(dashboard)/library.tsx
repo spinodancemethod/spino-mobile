@@ -34,7 +34,11 @@ const Library = () => {
     const { data: favouriteIds = [] } = useFavouritesByUser();
     const { data: deckIds = [] } = useDeckByUser();
 
-    const videos = videosData;
+    // Defense in depth: even if stale client cache still contains premium rows,
+    // free users only render free-tier videos.
+    const videos = isSubscribed
+        ? videosData
+        : videosData.filter((video: any) => video?.access_tier === 'free');
 
     // Level filter (client-side). 5 levels
     // using shared LEVELS constant

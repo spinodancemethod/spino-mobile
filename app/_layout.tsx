@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { Slot } from 'expo-router';
 import * as Font from 'expo-font';
@@ -20,6 +20,7 @@ import { showSnack } from 'lib/snackbarService';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
 import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
+import { useEntitlement } from 'lib/hooks/useEntitlement';
 
 function validateStartupEnv() {
     // Supabase backend for user auth and entitlements
@@ -100,6 +101,45 @@ function RevenueCatBootstrap() {
     return null;
 }
 
+function EntitlementCacheGuard() {
+    const { user, loading } = useAuth();
+    const { isSubscribed, isLoading: entitlementLoading } = useEntitlement();
+    const queryClient = useQueryClient();
+    const previousSubscriptionRef = useRef<boolean | null>(null);
+
+    useEffect(() => {
+        if (loading || entitlementLoading || !user?.id) {
+            return;
+        }
+
+        const previous = previousSubscriptionRef.current;
+
+        // On paid -> free transitions, drop cached paid payloads immediately
+        // and refetch user-visible collections under current RLS.
+        if (previous === true && isSubscribed === false) {
+            queryClient.removeQueries({ queryKey: ['video'] });
+            queryClient.removeQueries({ queryKey: ['videos'] });
+            queryClient.removeQueries({ queryKey: ['videosByIds'] });
+
+            void Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['favourites', user.id] }),
+                queryClient.invalidateQueries({ queryKey: ['deck', user.id] }),
+                queryClient.invalidateQueries({ queryKey: ['positions'] }),
+            ]);
+        }
+
+        previousSubscriptionRef.current = isSubscribed;
+    }, [entitlementLoading, isSubscribed, loading, queryClient, user?.id]);
+
+    useEffect(() => {
+        if (!user?.id) {
+            previousSubscriptionRef.current = null;
+        }
+    }, [user?.id]);
+
+    return null;
+}
+
 export default function RootLayout() {
     const [ready, setReady] = useState(false);
 
@@ -142,6 +182,7 @@ export default function RootLayout() {
                 <ThemeProvider>
                     <AuthProvider>
                         <RevenueCatBootstrap />
+                        <EntitlementCacheGuard />
                         <Slot />
                         <Snackbar />
                     </AuthProvider>

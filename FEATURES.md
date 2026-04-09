@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Hardened auth/session persistence by storing Supabase tokens in secure OS storage and added entitlement downgrade cache-guards so paid-only video data is immediately cleared for free users.
 - Added RevenueCat paywall presentation on the subscribe screen and Customer Center entry in account management, with explicit Pro entitlement-id validation instead of generic entitlement checks.
 - Replaced the subscribe screen's hardcoded Google Play purchase path with RevenueCat offerings and purchase APIs, while keeping existing subscription/account refresh behavior.
 - Switched the account screen restore flow to RevenueCat and replaced Google Play-specific subscription management copy with app-store-neutral wording.

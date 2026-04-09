@@ -30,12 +30,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         let mounted = true;
 
+        async function readSessionWithRefreshFallback() {
+            const { data } = await supabase.auth.getSession();
+            let nextSession = data?.session ?? null;
+
+            // If an access token expired while the app was backgrounded, attempt one
+            // refresh pass before treating the user as signed out.
+            if (!nextSession) {
+                const { data: refreshed } = await supabase.auth.refreshSession();
+                nextSession = refreshed?.session ?? null;
+            }
+
+            return nextSession;
+        }
+
         async function init() {
             try {
-                const { data } = await supabase.auth.getSession();
+                const nextSession = await readSessionWithRefreshFallback();
                 if (!mounted) return;
-                setSession(data?.session ?? null);
-                setUser(data?.session?.user ?? null);
+                setSession(nextSession);
+                setUser(nextSession?.user ?? null);
             } finally {
                 if (mounted) setLoading(false);
             }
@@ -124,11 +138,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const appStateHandler = (next: string) => {
             if (next === 'active') {
                 // revalidate session
-                supabase.auth.getSession().then(({ data }) => {
-                    setSession(data?.session ?? null);
-                    setUser(data?.session?.user ?? null);
-                    if (!data?.session) {
-                        // if session went away, snack and let onAuthStateChange/router flow handle redirect
+                readSessionWithRefreshFallback().then((nextSession) => {
+                    setSession(nextSession);
+                    setUser(nextSession?.user ?? null);
+                    if (!nextSession) {
+                        // if session is still unavailable after refresh, notify user.
                         showSnack('Session expired, please sign in again');
                     }
                 }).catch(() => { /* ignore */ });

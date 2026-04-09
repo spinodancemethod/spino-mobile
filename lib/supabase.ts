@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import 'expo-sqlite/localStorage/install';
+import * as SecureStore from 'expo-secure-store';
 
 /*
     Supabase client wrapper for React Native / Expo.
@@ -14,6 +14,14 @@ import 'expo-sqlite/localStorage/install';
 */
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
+const authStorageKey = 'spino-mobile.supabase.auth-token';
+
+const secureStoreStorage = {
+    // Supabase calls these methods to persist/restore the auth session.
+    getItem: (key: string) => SecureStore.getItemAsync(key),
+    setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+    removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+};
 
 if (!supabaseUrl || !supabaseAnonKey) {
     // helpful dev-time warning; harmless in production if you set envs properly
@@ -23,7 +31,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        storage: localStorage,
+        storage: secureStoreStorage,
+        storageKey: authStorageKey,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
