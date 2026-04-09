@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'lib/auth'
 import { supabase } from '../supabase'
+import { createIdsOnlyToggleMutationLifecycle, IdsOnlyToggleMutationContext } from './toggleMutationUtils'
 import { completedVideoIdsQueryKey } from './useCompletedVideoIdsByUser'
 
 type ToggleVideoCompletionPayload = {
@@ -13,6 +14,15 @@ export function useToggleVideoCompletion(userId?: string | null) {
     const { user } = useAuth()
     const resolvedUserId = userId ?? user?.id ?? null
     const queryKey = completedVideoIdsQueryKey(resolvedUserId)
+    const toggleLifecycle = createIdsOnlyToggleMutationLifecycle<ToggleVideoCompletionPayload>({
+        queryClient,
+        primaryKey: queryKey,
+        getNextIds: (previous, { videoId, isComplete }) => {
+            return isComplete
+                ? previous.filter((currentVideoId) => currentVideoId !== videoId)
+                : Array.from(new Set([...previous, videoId]))
+        },
+    })
 
     return useMutation({
         mutationFn: async ({ videoId, isComplete }: ToggleVideoCompletionPayload) => {
@@ -54,24 +64,10 @@ export function useToggleVideoCompletion(userId?: string | null) {
             if (error) throw error
             return { action: 'upserted' as const, videoId }
         },
-        onMutate: async ({ videoId, isComplete }: ToggleVideoCompletionPayload) => {
-            await queryClient.cancelQueries({ queryKey })
-
-            const previous = queryClient.getQueryData<string[]>(queryKey) || []
-            const next = isComplete
-                ? previous.filter((currentVideoId) => currentVideoId !== videoId)
-                : Array.from(new Set([...previous, videoId]))
-
-            queryClient.setQueryData(queryKey, next)
-            return { previous }
+        onMutate: toggleLifecycle.onMutate,
+        onError: (error, variables, context) => {
+            toggleLifecycle.onError(error, variables, context as IdsOnlyToggleMutationContext | undefined)
         },
-        onError: (_error, _variables, context) => {
-            if (context?.previous) {
-                queryClient.setQueryData(queryKey, context.previous)
-            }
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey })
-        },
+        onSettled: toggleLifecycle.onSettled,
     })
 }

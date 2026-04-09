@@ -2,7 +2,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../supabase';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
-import { computeNextToggledIds } from './toggleMutationUtils';
+import {
+    createToggleMutationLifecycle,
+    isVideosByIdsQueryForIds,
+    ToggleMutationContext,
+} from './toggleMutationUtils';
 
 /**
  * useToggleDeck
@@ -11,9 +15,14 @@ import { computeNextToggledIds } from './toggleMutationUtils';
  */
 export function useToggleDeck(userId?: string | null) {
     const qc = useQueryClient();
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
     const resolvedUserId = userId ?? user?.id ?? null;
     const key = ['deck', resolvedUserId];
+    const toggleLifecycle = createToggleMutationLifecycle({
+        queryClient: qc,
+        primaryKey: key,
+        shouldUpdateVideosQuery: (queryKey, previousIds) => isVideosByIdsQueryForIds(queryKey, previousIds),
+    });
 
     return useMutation({
         mutationFn: async (videoId: string) => {
@@ -50,60 +59,11 @@ export function useToggleDeck(userId?: string | null) {
             const action = data === 'deleted' ? 'deleted' : 'inserted';
             return { action: action as 'deleted' | 'inserted' };
         },
-        onMutate: async (videoId: string) => {
-            // Optimistic update: update deck cache and remove video from any
-            // cached videosByIds entries so UI updates immediately.
-            await qc.cancelQueries({ queryKey: key });
-            await qc.cancelQueries({ queryKey: ['videosByIds'] });
-
-            const previous = qc.getQueryData<string[]>(key) || [];
-            const { next } = computeNextToggledIds(previous, videoId);
-            qc.setQueryData(key, next);
-
-            // Snapshot and update videosByIds caches, but only those that match
-            // the current deck ids (previous). This prevents removing the video
-            // from unrelated lists such as favourites.
-            const videosQueries = qc.getQueriesData({ queryKey: ['videosByIds'] }) || [];
-            const previousVideos: Record<string, any> = {};
-            const prevKeyJson = JSON.stringify(previous);
-            for (const [qk] of videosQueries) {
-                try {
-                    const cacheKey = qk as any;
-                    const ids = Array.isArray(cacheKey) ? cacheKey[1] : undefined;
-                    // Only modify cached videos lists that have the same ids as the previous deck
-                    if (!ids || JSON.stringify(ids) !== prevKeyJson) continue;
-
-                    const old = qc.getQueryData(cacheKey as any);
-                    previousVideos[JSON.stringify(cacheKey)] = old;
-                    if (Array.isArray(old)) {
-                        const filtered = (old as any[]).filter(v => v.id !== videoId);
-                        qc.setQueryData(cacheKey as any, filtered);
-                    }
-                } catch (e) {
-                    // ignore
-                }
-            }
-
-            return { previous, previousVideos };
-        },
-        onError: (err, _videoId, context: any) => {
-            // Rollback
-            if (context?.previous) qc.setQueryData(key, context.previous);
-            if (context?.previousVideos) {
-                for (const k of Object.keys(context.previousVideos)) {
-                    try {
-                        const parsed = JSON.parse(k);
-                        qc.setQueryData(parsed as any, context.previousVideos[k]);
-                    } catch (e) {
-                        // ignore
-                    }
-                }
-            }
+        onMutate: toggleLifecycle.onMutate,
+        onError: (err, videoId, context) => {
+            toggleLifecycle.onError(err, videoId, context as ToggleMutationContext | undefined);
             console.warn('[useToggleDeck] error', err);
         },
-        onSettled: () => {
-            qc.invalidateQueries({ queryKey: key });
-            qc.invalidateQueries({ queryKey: ['videosByIds'] });
-        }
+        onSettled: toggleLifecycle.onSettled,
     });
 }

@@ -2,6 +2,9 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added explicit `@jest/globals` imports in toggle-mutation tests to avoid editor-only missing-global diagnostics for `describe`/`it`/`expect`.
+- Migrated `useToggleVideoCompletion` to a shared ids-only toggle lifecycle helper so optimistic cache updates, rollback, and invalidation now follow the same reusable pattern as other toggle hooks.
+- Added a shared optimistic toggle mutation lifecycle helper for favourites/deck updates so cache mutation, rollback, and invalidation behavior is centralized and consistent.
 - Added shared typed roadmap models (position/video/modal payloads) and applied them across the extracted roadmap hook/components to reduce any-based data handling without changing runtime behavior.
 - Split the Your Roadmap screen into modular units by extracting gesture handling into a dedicated hook and moving canvas rendering plus modal/actions UI into focused roadmap components.
 - Reclassified expected RevenueCat Test Store purchase-failure scenarios from `billing.checkout` errors to a dedicated analytics event so failure-path testing no longer pollutes error telemetry.
