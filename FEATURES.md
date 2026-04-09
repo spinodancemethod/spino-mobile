@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added shared typed roadmap models (position/video/modal payloads) and applied them across the extracted roadmap hook/components to reduce any-based data handling without changing runtime behavior.
+- Split the Your Roadmap screen into modular units by extracting gesture handling into a dedicated hook and moving canvas rendering plus modal/actions UI into focused roadmap components.
 - Reclassified expected RevenueCat Test Store purchase-failure scenarios from `billing.checkout` errors to a dedicated analytics event so failure-path testing no longer pollutes error telemetry.
 - Improved app error telemetry normalization so object-shaped native/RevenueCat errors now preserve meaningful messages and attach diagnostic fields (for example error codes) instead of collapsing to "Unknown error".
 - Added explicit RevenueCat UI runtime guards so Expo Go now surfaces a clear "use a development build" message instead of throwing Preview API/browser-document errors when opening paywalls or Customer Center.
