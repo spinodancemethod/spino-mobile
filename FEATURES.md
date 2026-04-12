@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Updated snackbar dismissal UI to a left-aligned Ionicons close control for a cleaner look consistent with the app icon style.
+- Added a global snackbar dismiss `X` action so all snackbars can be closed immediately without waiting for auto-timeout.
 - Added a post-purchase success redirect from Subscribe to Home so users land in the app workspace immediately after activation.
 - Wired account legal actions to open external browser links at `spinodancemethod.com/privacy-policy` and `spinodancemethod.com/terms-of-services`.
 - Conditioned account-store subscription management visibility so `Manage in your app store` appears only for active subscribers.
