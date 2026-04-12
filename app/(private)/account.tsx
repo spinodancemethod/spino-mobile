@@ -1,7 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
-import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
@@ -10,13 +9,15 @@ import { useTheme } from 'constants/useTheme';
 import { useAccountDetails } from 'lib/hooks/useAccountDetails';
 import {
     hasRevenueCatEntitlement,
-    presentRevenueCatCustomerCenter,
     restoreRevenueCatPurchases,
 } from 'lib/billing/revenuecat';
 import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
 import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { showSnack } from 'lib/snackbarService';
+
+const PRIVACY_POLICY_URL = 'https://spinodancemethod.com/privacy-policy';
+const TERMS_OF_SERVICE_URL = 'https://spinodancemethod.com/terms-of-services';
 
 function formatDate(value: string | null) {
     if (!value) {
@@ -82,14 +83,6 @@ export default function AccountPage() {
         }
 
         showSnack('Subscription management is available on iOS and Android only.');
-    }
-
-    async function handleOpenCustomerCenter() {
-        try {
-            await presentRevenueCatCustomerCenter();
-        } catch (error: any) {
-            showSnack(error?.message ?? 'Customer Center is not available right now.');
-        }
     }
 
     function openLegalUrl(url: string | undefined, label: 'Privacy Policy' | 'Terms of Service') {
@@ -167,7 +160,6 @@ export default function AccountPage() {
                     </View>
                 </View>
 
-                <ThemedButton title="Manage subscription" onPress={() => router.push('/subscribe')} style={{ width: '100%' }} />
                 <ThemedButton
                     title={isRestoringPurchases ? 'Restoring purchases...' : 'Restore purchases'}
                     variant="ghost"
@@ -175,31 +167,27 @@ export default function AccountPage() {
                     style={{ width: '100%', marginTop: 8 }}
                     disabled={isRestoringPurchases}
                 />
-                <ThemedButton
-                    title="Manage in your app store"
-                    variant="ghost"
-                    onPress={handleManageInStore}
-                    style={{ width: '100%', marginTop: 8 }}
-                />
-                <ThemedButton
-                    title="Open Customer Center"
-                    variant="ghost"
-                    onPress={handleOpenCustomerCenter}
-                    style={{ width: '100%', marginTop: 8 }}
-                />
+                {account.hasActiveSubscription ? (
+                    <ThemedButton
+                        title="Manage in your app store"
+                        variant="ghost"
+                        onPress={handleManageInStore}
+                        style={{ width: '100%', marginTop: 8 }}
+                    />
+                ) : null}
 
                 {/* Legal and support links for Play Store compliance */}
                 <View style={{ marginTop: 32, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 12 }}>
                     <ThemedButton
                         title="Privacy Policy"
                         variant="ghost"
-                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL, 'Privacy Policy')}
+                        onPress={() => openLegalUrl(PRIVACY_POLICY_URL, 'Privacy Policy')}
                         style={{ width: '100%' }}
                     />
                     <ThemedButton
                         title="Terms of Service"
                         variant="ghost"
-                        onPress={() => openLegalUrl(process.env.EXPO_PUBLIC_TERMS_URL, 'Terms of Service')}
+                        onPress={() => openLegalUrl(TERMS_OF_SERVICE_URL, 'Terms of Service')}
                         style={{ width: '100%' }}
                     />
                 </View>

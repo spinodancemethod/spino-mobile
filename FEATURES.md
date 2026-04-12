@@ -2,6 +2,9 @@
 
 ## Current Product (Google Play Runtime)
 
+- Wired account legal actions to open external browser links at `spinodancemethod.com/privacy-policy` and `spinodancemethod.com/terms-of-services`.
+- Conditioned account-store subscription management visibility so `Manage in your app store` appears only for active subscribers.
+- Simplified account subscription controls by removing `Manage subscription` and `Open Customer Center`, keeping store cancellation/management via the app-store link only.
 - Removed noisy free-tier availability tracking (free_content_impression events) that only logged static counts instead of meaningful engagement signals.
 - Simplified subscribe screen to direct purchase only by removing RevenueCat's optional managed paywall UI, keeping plan selection and checkout as the single UX path.
 - Prevented mobile SecureStore auth persistence overflows by chunking large Supabase session payloads across secure-store keys and reassembling them on read.
