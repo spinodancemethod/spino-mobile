@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Platform } from 'react-native';
+import { router } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import ThemedView from 'Components/ThemedView';
@@ -144,6 +145,7 @@ export default function Subscribe() {
             }
 
             showSnack('Subscription activated successfully.');
+            router.replace('/home');
         } catch (error: any) {
             if (error?.userCancelled) {
                 showSnack('Purchase cancelled.');
