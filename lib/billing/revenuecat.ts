@@ -9,7 +9,22 @@ let purchasesModule: RevenueCatModule | null = null;
 let revenueCatPaywallModule: RevenueCatPaywallModule | null = null;
 let isConfigured = false;
 let currentAppUserId: string | null = null;
+let revenueCatIdentityQueue: Promise<void> = Promise.resolve();
 const DEFAULT_PRO_ENTITLEMENT_IDENTIFIER = 'Spinodancemethod ltd Pro';
+
+function runRevenueCatIdentityOperation<T>(operation: () => Promise<T>) {
+    // RevenueCat identify/logIn/logOut operations must be serialized to avoid
+    // 429 "another request in flight" responses when startup and auth events overlap.
+    const run = revenueCatIdentityQueue
+        .catch(() => undefined)
+        .then(operation);
+
+    revenueCatIdentityQueue = run
+        .then(() => undefined)
+        .catch(() => undefined);
+
+    return run;
+}
 
 function isSupportedPlatform() {
     return Platform.OS === 'ios' || Platform.OS === 'android';
@@ -82,48 +97,50 @@ export async function initializeRevenueCat(appUserId?: string | null) {
         return;
     }
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        if (isExpoGo()) {
+    await runRevenueCatIdentityOperation(async () => {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            if (isExpoGo()) {
+                // eslint-disable-next-line no-console
+                console.warn('[billing] RevenueCat is disabled in Expo Go until EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY is set.');
+                return;
+            }
+
             // eslint-disable-next-line no-console
-            console.warn('[billing] RevenueCat is disabled in Expo Go until EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY is set.');
+            console.warn('[billing] RevenueCat API key is missing for platform:', Platform.OS);
             return;
         }
 
-        // eslint-disable-next-line no-console
-        console.warn('[billing] RevenueCat API key is missing for platform:', Platform.OS);
-        return;
-    }
+        const purchases = await getPurchasesModule();
 
-    const purchases = await getPurchasesModule();
+        if (!isConfigured) {
+            try {
+                // Use the Supabase user id as the RevenueCat appUserID so both systems
+                // refer to the same customer identity across Android and iOS.
+                purchases.default.configure({
+                    apiKey,
+                    appUserID: appUserId ?? undefined,
+                });
+            } catch (error: any) {
+                // Expo Go with a non-Test-Store key throws at configure time.
+                // Keep app startup resilient by treating this as non-fatal.
+                // eslint-disable-next-line no-console
+                console.warn('[billing] RevenueCat configure skipped:', error?.message ?? error);
+                return;
+            }
 
-    if (!isConfigured) {
-        try {
-            // Use the Supabase user id as the RevenueCat appUserID so both systems
-            // refer to the same customer identity across Android and iOS.
-            purchases.default.configure({
-                apiKey,
-                appUserID: appUserId ?? undefined,
-            });
-        } catch (error: any) {
-            // Expo Go with a non-Test-Store key throws at configure time.
-            // Keep app startup resilient by treating this as non-fatal.
-            // eslint-disable-next-line no-console
-            console.warn('[billing] RevenueCat configure skipped:', error?.message ?? error);
+            isConfigured = true;
+            currentAppUserId = appUserId ?? null;
             return;
         }
 
-        isConfigured = true;
-        currentAppUserId = appUserId ?? null;
-        return;
-    }
+        if (!appUserId || appUserId === currentAppUserId) {
+            return;
+        }
 
-    if (!appUserId || appUserId === currentAppUserId) {
-        return;
-    }
-
-    await purchases.default.logIn(appUserId);
-    currentAppUserId = appUserId;
+        await purchases.default.logIn(appUserId);
+        currentAppUserId = appUserId;
+    });
 }
 
 export async function syncRevenueCatAppUser(appUserId: string | null | undefined) {
@@ -131,22 +148,35 @@ export async function syncRevenueCatAppUser(appUserId: string | null | undefined
         return;
     }
 
-    if (!appUserId) {
-        return;
-    }
+    await runRevenueCatIdentityOperation(async () => {
+        if (!appUserId) {
+            return;
+        }
 
-    if (!isConfigured) {
-        await initializeRevenueCat(appUserId);
-        return;
-    }
+        if (!isConfigured) {
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                return;
+            }
 
-    if (appUserId === currentAppUserId) {
-        return;
-    }
+            const purchases = await getPurchasesModule();
+            purchases.default.configure({
+                apiKey,
+                appUserID: appUserId,
+            });
+            isConfigured = true;
+            currentAppUserId = appUserId;
+            return;
+        }
 
-    const purchases = await getPurchasesModule();
-    await purchases.default.logIn(appUserId);
-    currentAppUserId = appUserId;
+        if (appUserId === currentAppUserId) {
+            return;
+        }
+
+        const purchases = await getPurchasesModule();
+        await purchases.default.logIn(appUserId);
+        currentAppUserId = appUserId;
+    });
 }
 
 export async function clearRevenueCatAppUser() {
@@ -154,9 +184,11 @@ export async function clearRevenueCatAppUser() {
         return;
     }
 
-    const purchases = await getPurchasesModule();
-    await purchases.default.logOut();
-    currentAppUserId = null;
+    await runRevenueCatIdentityOperation(async () => {
+        const purchases = await getPurchasesModule();
+        await purchases.default.logOut();
+        currentAppUserId = null;
+    });
 }
 
 export async function getRevenueCatCurrentOffering(): Promise<PurchasesOffering | null> {

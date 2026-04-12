@@ -2,6 +2,9 @@
 
 ## Current Product (Google Play Runtime)
 
+- Prevented mobile SecureStore auth persistence overflows by chunking large Supabase session payloads across secure-store keys and reassembling them on read.
+- Serialized RevenueCat identity operations (`configure`/`logIn`/`logOut`) to avoid overlapping identify requests that can return 429 "another request in flight" errors.
+- Fixed web auth-session persistence by using browser `localStorage` for Supabase on web, avoiding Expo SecureStore native-method runtime errors in web builds.
 - Centralized hook-level user-id resolution with shared helpers that prefer auth-context ids, removing repeated `supabase.auth.getUser()` calls and aligning note/favourites/deck/completion query keys.
 - Replaced high-traffic hook `any` usage with shared typed video/position models and centralized query-key factories, then migrated core video/position/favourites/deck/completion hooks to those shared types.
 - Added explicit `@jest/globals` imports in toggle-mutation tests to avoid editor-only missing-global diagnostics for `describe`/`it`/`expect`.
