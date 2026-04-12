@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Removed noisy free-tier availability tracking (free_content_impression events) that only logged static counts instead of meaningful engagement signals.
+- Simplified subscribe screen to direct purchase only by removing RevenueCat's optional managed paywall UI, keeping plan selection and checkout as the single UX path.
 - Prevented mobile SecureStore auth persistence overflows by chunking large Supabase session payloads across secure-store keys and reassembling them on read.
 - Serialized RevenueCat identity operations (`configure`/`logIn`/`logOut`) to avoid overlapping identify requests that can return 429 "another request in flight" errors.
 - Fixed web auth-session persistence by using browser `localStorage` for Supabase on web, avoiding Expo SecureStore native-method runtime errors in web builds.

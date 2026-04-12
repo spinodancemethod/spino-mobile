@@ -77,19 +77,6 @@ const YourRoadmap = () => {
         [favouriteVideos]
     )
 
-    useEffect(() => {
-        if (isSubscribed || freeTierVideos.length <= 0) return
-
-        void reportAppEvent({
-            event: 'free_content_impression',
-            userId: user?.id,
-            metadata: {
-                screen: 'your_roadmap',
-                freeVideoCount: freeTierVideos.length,
-            },
-        })
-    }, [isSubscribed, freeTierVideos.length, user?.id])
-
     const videosByPosition = useMemo(() => {
         const grouped = new Map<string, RoadmapVideo[]>()
 

@@ -45,23 +45,6 @@ const Library = () => {
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
 
     useEffect(() => {
-        if (isSubscribed || !selected?.id) return
-
-        const freeCount = videos.filter((video: any) => video?.access_tier === 'free').length
-        if (freeCount <= 0) return
-
-        void reportAppEvent({
-            event: 'free_content_impression',
-            userId: user?.id,
-            metadata: {
-                screen: 'library',
-                positionId: selected.id,
-                freeVideoCount: freeCount,
-            },
-        })
-    }, [isSubscribed, selected?.id, videos, user?.id])
-
-    useEffect(() => {
         if (!selectedPositionIdFromRoute) return
         if (!positions.length) return
 

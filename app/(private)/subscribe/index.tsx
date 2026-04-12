@@ -11,9 +11,7 @@ import { useAuth } from 'lib/auth';
 import {
     getRevenueCatCurrentOffering,
     hasRevenueCatEntitlement,
-    presentRevenueCatPaywall,
     purchaseRevenueCatPackage,
-    getRevenueCatCustomerInfo,
 } from 'lib/billing/revenuecat';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
@@ -115,10 +113,6 @@ export default function Subscribe() {
         mutationFn: purchaseRevenueCatPackage,
     });
 
-    const paywallMutation = useMutation({
-        mutationFn: () => presentRevenueCatPaywall(offeringsQuery.data ?? null),
-    });
-
     const selectedPlanData = useMemo(
         () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0] ?? null,
         [selectedPlan]
@@ -190,53 +184,7 @@ export default function Subscribe() {
         }
     };
 
-    const onOpenPaywall = async () => {
-        if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
-            showSnack('Subscriptions are available on iOS and Android only.');
-            return;
-        }
 
-        try {
-            const result = await paywallMutation.mutateAsync();
-
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
-                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
-                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user?.id) }),
-            ]);
-
-            if (result === 'PURCHASED' || result === 'RESTORED') {
-                showSnack('Subscription access updated successfully.');
-                return;
-            }
-
-            if (result === 'NOT_PRESENTED') {
-                // RC skipped the paywall because it sees the entitlement as active.
-                // Verify server-side so we show an accurate message.
-                try {
-                    const customerInfo = await getRevenueCatCustomerInfo();
-                    if (hasRevenueCatEntitlement(customerInfo)) {
-                        showSnack('Your Pro subscription is already active.');
-                    }
-                    // If no entitlement found despite NOT_PRESENTED (edge case), stay silent —
-                    // the queries above were already invalidated so the UI will update.
-                } catch {
-                    // Silently ignore — queries already invalidated above.
-                }
-            }
-        } catch (error: any) {
-            showSnack(error?.message ?? 'Failed to open subscription options.');
-            void reportAppError({
-                context: 'billing.paywall',
-                error,
-                userId: user?.id,
-                metadata: {
-                    platform: Platform.OS,
-                    offeringIdentifier: offeringsQuery.data?.identifier ?? null,
-                },
-            });
-        }
-    };
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -317,14 +265,7 @@ export default function Subscribe() {
                         title={purchaseMutation.isPending ? 'Processing Purchase...' : 'Subscribe'}
                         onPress={onCheckout}
                         style={{ width: '100%', marginTop: 12 }}
-                        disabled={purchaseMutation.isPending || paywallMutation.isPending || offeringsQuery.isLoading || !selectedPlanData}
-                    />
-                    <ThemedButton
-                        title={paywallMutation.isPending ? 'Opening subscription options...' : 'See subscription options'}
-                        variant="ghost"
-                        onPress={onOpenPaywall}
-                        style={{ width: '100%', marginTop: 8 }}
-                        disabled={purchaseMutation.isPending || paywallMutation.isPending}
+                        disabled={purchaseMutation.isPending || offeringsQuery.isLoading || !selectedPlanData}
                     />
                     <ThemedText variant="small" style={styles.disclaimer}>
                         Purchases are processed securely through RevenueCat and your device's app store.
