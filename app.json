@@ -18,7 +18,6 @@
     },
     "android": {
       "package": "com.spino.mobile",
-      "versionCode": 1,
       "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

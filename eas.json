@@ -6,13 +6,28 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
+        "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
+        "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
+        "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
+      }
     }
   },
   "submit": {

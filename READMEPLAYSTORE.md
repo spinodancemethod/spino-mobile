@@ -34,8 +34,8 @@ Primary files involved:
 ### 1.2 Versioning rule
 
 - [ ] `versionName` follows semantic labels (`1.0.0`, `1.0.1`, `1.1.0`).
-- [ ] `versionCode` increases by 1 on every Play upload.
-- [ ] No previously used `versionCode` is reused.
+- [ ] With `appVersionSource: "remote"`, EAS-managed Android version codes increase automatically per upload.
+- [ ] `android.versionCode` is not set in `app.json` to avoid stale config drift.
 
 ### 1.3 Permissions and assets
 
@@ -215,7 +215,7 @@ Copy and complete before tagging `v1.0.0` and submitting to Play Store:
 - [ ] Supabase Edge Function secrets are set (`REVENUECAT_WEBHOOK_AUTHORIZATION`, `SUPABASE_SERVICE_ROLE_KEY`).
 - [ ] RevenueCat webhook is configured to call `ingest-revenuecat-webhook` with the expected `Authorization` header.
 - [ ] Fresh database: run `sql/bootstrap/*.sql` in order on a test Supabase project without errors.
-- [ ] `app.json`: `version = "1.0.0"`, `versionCode = 1`.
+- [ ] `app.json`: `version = "1.0.0"` and no `android.versionCode` override is set.
 - [ ] `.env` NOT committed; `.env.example` is current; `git ls-files | grep -E '\\.env|secrets'` returns only `.env.example`.
 
 **App Assets & Branding:**

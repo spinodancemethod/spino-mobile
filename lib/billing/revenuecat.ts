@@ -12,6 +12,55 @@ let currentAppUserId: string | null = null;
 let revenueCatIdentityQueue: Promise<void> = Promise.resolve();
 const DEFAULT_PRO_ENTITLEMENT_IDENTIFIER = 'Spinodancemethod ltd Pro';
 
+export type RevenueCatOfferingsSnapshot = {
+    currentOffering: PurchasesOffering | null;
+    allOfferingIdentifiers: string[];
+    isConfigured: boolean;
+    platform: string;
+    apiKeyAvailable: boolean;
+};
+
+function getRevenueCatErrorDetails(error: unknown) {
+    if (!error || typeof error !== 'object') {
+        return null;
+    }
+
+    const typedError = error as {
+        message?: unknown;
+        code?: unknown;
+        userInfo?: {
+            readableErrorCode?: unknown;
+            underlyingErrorMessage?: unknown;
+            rc_code_name?: unknown;
+            [key: string]: unknown;
+        };
+    };
+
+    const details: string[] = [];
+
+    if (typeof typedError.message === 'string' && typedError.message.trim()) {
+        details.push(`message=${typedError.message}`);
+    }
+
+    if (typedError.code !== undefined && typedError.code !== null) {
+        details.push(`code=${String(typedError.code)}`);
+    }
+
+    if (typedError.userInfo?.readableErrorCode) {
+        details.push(`readableCode=${String(typedError.userInfo.readableErrorCode)}`);
+    }
+
+    if (typedError.userInfo?.rc_code_name) {
+        details.push(`rcCode=${String(typedError.userInfo.rc_code_name)}`);
+    }
+
+    if (typeof typedError.userInfo?.underlyingErrorMessage === 'string' && typedError.userInfo.underlyingErrorMessage.trim()) {
+        details.push(`underlying=${typedError.userInfo.underlyingErrorMessage}`);
+    }
+
+    return details.length ? details.join('; ') : null;
+}
+
 function runRevenueCatIdentityOperation<T>(operation: () => Promise<T>) {
     // RevenueCat identify/logIn/logOut operations must be serialized to avoid
     // 429 "another request in flight" responses when startup and auth events overlap.
@@ -199,6 +248,44 @@ export async function getRevenueCatCurrentOffering(): Promise<PurchasesOffering 
 
     const offerings = await purchases.default.getOfferings();
     return offerings.current ?? null;
+}
+
+export async function getRevenueCatOfferingsSnapshot(): Promise<RevenueCatOfferingsSnapshot> {
+    const purchases = await ensureRevenueCatConfigured();
+    if (!purchases) {
+        return {
+            currentOffering: null,
+            allOfferingIdentifiers: [],
+            isConfigured: false,
+            platform: Platform.OS,
+            apiKeyAvailable: Boolean(getApiKey().trim()),
+        };
+    }
+
+    let offerings;
+    try {
+        offerings = await purchases.default.getOfferings();
+    } catch (error) {
+        const details = getRevenueCatErrorDetails(error);
+        const message = details
+            ? `RevenueCat offerings request failed: ${details}`
+            : 'RevenueCat offerings request failed.';
+        throw new Error(message);
+    }
+
+    // Include all known offering ids so empty-state UI can point to dashboard setup drift.
+    const allOfferingIdentifiers = Object
+        .values(offerings.all ?? {})
+        .map((offering) => offering.identifier)
+        .filter(Boolean);
+
+    return {
+        currentOffering: offerings.current ?? null,
+        allOfferingIdentifiers,
+        isConfigured: true,
+        platform: Platform.OS,
+        apiKeyAvailable: true,
+    };
 }
 
 export async function getRevenueCatCustomerInfo(): Promise<CustomerInfo> {

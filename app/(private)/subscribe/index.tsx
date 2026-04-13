@@ -10,7 +10,7 @@ import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
 import {
-    getRevenueCatCurrentOffering,
+    getRevenueCatOfferingsSnapshot,
     hasRevenueCatEntitlement,
     purchaseRevenueCatPackage,
 } from 'lib/billing/revenuecat';
@@ -80,12 +80,12 @@ export default function Subscribe() {
 
     const offeringsQuery = useQuery({
         queryKey: ['revenuecatOffering', 'subscribe'],
-        queryFn: getRevenueCatCurrentOffering,
+        queryFn: getRevenueCatOfferingsSnapshot,
         staleTime: 1000 * 60,
     });
 
     const plans = useMemo<Plan[]>(() => {
-        const packages = offeringsQuery.data?.availablePackages ?? [];
+        const packages = offeringsQuery.data?.currentOffering?.availablePackages ?? [];
 
         return packages.map((packageData) => ({
             id: getPlanId(packageData),
@@ -118,6 +118,33 @@ export default function Subscribe() {
         () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0] ?? null,
         [selectedPlan]
     );
+
+    const offeringEmptyStateMessage = useMemo(() => {
+        if (offeringsQuery.isLoading) {
+            return null;
+        }
+
+        if (offeringsQuery.error) {
+            const message = offeringsQuery.error instanceof Error
+                ? offeringsQuery.error.message
+                : 'Failed to fetch subscription options.';
+            return `Failed to load subscription options: ${message}`;
+        }
+
+        if (!offeringsQuery.data?.isConfigured) {
+            return 'RevenueCat is not configured on this build. Check Android RevenueCat API key in the build environment.';
+        }
+
+        if (!offeringsQuery.data.currentOffering) {
+            return 'No current offering is configured in RevenueCat. Mark one offering as current/default.';
+        }
+
+        if ((offeringsQuery.data.currentOffering.availablePackages?.length ?? 0) === 0) {
+            return 'Current offering is set, but no packages are available for this tester/device yet.';
+        }
+
+        return null;
+    }, [offeringsQuery.data, offeringsQuery.error, offeringsQuery.isLoading]);
 
     const onCheckout = async () => {
         if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
@@ -162,7 +189,7 @@ export default function Subscribe() {
                     metadata: {
                         selectedPlan,
                         platform: Platform.OS,
-                        offeringIdentifier: offeringsQuery.data?.identifier ?? null,
+                        offeringIdentifier: offeringsQuery.data?.currentOffering?.identifier ?? null,
                         packageIdentifier: selectedPlanData.packageData.identifier,
                         step: 'purchase',
                     },
@@ -178,7 +205,7 @@ export default function Subscribe() {
                 metadata: {
                     selectedPlan,
                     platform: Platform.OS,
-                    offeringIdentifier: offeringsQuery.data?.identifier ?? null,
+                    offeringIdentifier: offeringsQuery.data?.currentOffering?.identifier ?? null,
                     packageIdentifier: selectedPlanData.packageData.identifier,
                     step: 'purchase',
                 },
@@ -228,7 +255,12 @@ export default function Subscribe() {
                 ) : null}
                 {!offeringsQuery.isLoading && plans.length === 0 ? (
                     <View style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <ThemedText>No subscription options are available right now.</ThemedText>
+                        <ThemedText>{offeringEmptyStateMessage ?? 'No subscription options are available right now.'}</ThemedText>
+                        {offeringsQuery.data ? (
+                            <ThemedText variant="small" style={styles.debugHint}>
+                                Current offering: {offeringsQuery.data.currentOffering?.identifier ?? 'none'} | Known offerings: {offeringsQuery.data.allOfferingIdentifiers.length > 0 ? offeringsQuery.data.allOfferingIdentifiers.join(', ') : 'none'}
+                            </ThemedText>
+                        ) : null}
                     </View>
                 ) : null}
                 {plans.map((plan) => {
@@ -359,5 +391,10 @@ const styles = StyleSheet.create({
     disclaimer: {
         marginTop: 10,
         opacity: 0.75,
+    },
+    debugHint: {
+        marginTop: 8,
+        opacity: 0.7,
+        lineHeight: 18,
     },
 });

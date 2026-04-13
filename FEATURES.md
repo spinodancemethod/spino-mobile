@@ -2,6 +2,9 @@
 
 ## Current Product (Google Play Runtime)
 
+- Expanded RevenueCat offerings error diagnostics to include SDK code/readable code/underlying message details, making credential and configuration failures directly visible from the subscribe screen.
+- Removed `android.versionCode` from Expo app config and aligned release docs for EAS `appVersionSource: \"remote\"`, avoiding ignored-version warnings and local/remote version drift.
+- Added RevenueCat subscribe diagnostics: when plans are empty, the screen now explains whether RevenueCat is unconfigured, no current offering exists, or the current offering has zero available packages, and it shows current/known offering ids for faster dashboard debugging.
 - Updated snackbar dismissal UI to a left-aligned Ionicons close control for a cleaner look consistent with the app icon style.
 - Added a global snackbar dismiss `X` action so all snackbars can be closed immediately without waiting for auto-timeout.
 - Added a post-purchase success redirect from Subscribe to Home so users land in the app workspace immediately after activation.
