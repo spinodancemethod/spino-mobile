@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   latest_purchase_at timestamptz,
   canceled_at timestamptz,
   entitlement_source text,
+  -- RevenueCat webhook upserts use ON CONFLICT(provider, provider_subscription_id).
+  -- Keep this as a table-level unique constraint (not a partial index) so
+  -- conflict resolution works for non-null provider subscription ids.
+  CONSTRAINT subscriptions_provider_provider_subscription_id_key UNIQUE (provider, provider_subscription_id),
   CONSTRAINT subscriptions_status_check CHECK (
     status IN (
       'trialing',
@@ -141,7 +145,7 @@ CREATE TABLE IF NOT EXISTS public.billing_provider_accounts (
   provider_account_id text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT billing_provider_accounts_provider_check CHECK (provider IN ('google_play')),
+  CONSTRAINT billing_provider_accounts_provider_check CHECK (provider IN ('google_play', 'revenuecat')),
   CONSTRAINT billing_provider_accounts_user_provider_unique UNIQUE (user_id, provider),
   CONSTRAINT billing_provider_accounts_provider_account_unique UNIQUE (provider, provider_account_id)
 );
@@ -153,7 +157,7 @@ CREATE TABLE IF NOT EXISTS public.billing_events (
   event_type text,
   payload jsonb NOT NULL,
   processed_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT billing_events_provider_check CHECK (provider IN ('google_play')),
+  CONSTRAINT billing_events_provider_check CHECK (provider IN ('google_play', 'revenuecat')),
   CONSTRAINT billing_events_provider_event_unique UNIQUE (provider, event_id)
 );
 

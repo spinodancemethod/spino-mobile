@@ -4,14 +4,6 @@
 CREATE INDEX IF NOT EXISTS subscriptions_user_id_idx
   ON public.subscriptions (user_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_provider_subscription_uidx
-  ON public.subscriptions (provider, provider_subscription_id)
-  WHERE provider_subscription_id IS NOT NULL;
-
-CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_google_play_purchase_token_uidx
-  ON public.subscriptions (purchase_token)
-  WHERE provider = 'google_play' AND purchase_token IS NOT NULL;
-
 CREATE INDEX IF NOT EXISTS subscriptions_provider_user_idx
   ON public.subscriptions (provider, user_id);
 

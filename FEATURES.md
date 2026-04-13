@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Aligned SQL bootstrap schema with RevenueCat runtime by adding a table-level `subscriptions (provider, provider_subscription_id)` unique constraint, broadening billing provider checks to include `revenuecat`, removing obsolete Google purchase-token/bootstrap unique indexes, and adding a migration for existing databases.
 - Expanded RevenueCat offerings error diagnostics to include SDK code/readable code/underlying message details, making credential and configuration failures directly visible from the subscribe screen.
 - Removed `android.versionCode` from Expo app config and aligned release docs for EAS `appVersionSource: \"remote\"`, avoiding ignored-version warnings and local/remote version drift.
 - Added RevenueCat subscribe diagnostics: when plans are empty, the screen now explains whether RevenueCat is unconfigured, no current offering exists, or the current offering has zero available packages, and it shows current/known offering ids for faster dashboard debugging.
