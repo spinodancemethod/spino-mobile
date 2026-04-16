@@ -2,18 +2,70 @@ import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
 import ThemedButton from 'Components/ThemedButton'
 import { ScrollView, View } from 'react-native'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from 'constants/useTheme'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
+import { useEffect, useMemo } from 'react'
+import { useAuth } from 'lib/auth'
+import { useQueryClient } from '@tanstack/react-query'
+import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus'
+import { entitlementQueryKey } from 'lib/hooks/useEntitlement'
+import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails'
 
 const Home = () => {
     const { colors } = useTheme()
     const insets = useSafeAreaInsets()
+    const { user } = useAuth()
+    const queryClient = useQueryClient()
+    const params = useLocalSearchParams<{ refreshSubscription?: string | string[] }>()
+    const shouldRefreshAfterPurchase = useMemo(() => {
+        const value = params.refreshSubscription
+        if (Array.isArray(value)) {
+            return value.includes('1')
+        }
+        return value === '1'
+    }, [params.refreshSubscription])
     const subscriptionStatus = useSubscriptionStatus()
     const hasActiveSubscription = subscriptionStatus.isActiveSubscription
     const isCheckingSubscription = subscriptionStatus.isLoading
+
+    useEffect(() => {
+        if (!shouldRefreshAfterPurchase || !user?.id) {
+            return
+        }
+
+        const refreshQueries = () => {
+            void Promise.all([
+                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user.id) }),
+                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user.id) }),
+                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user.id) }),
+            ])
+        }
+
+        // Kick once immediately, then briefly poll while webhook-driven DB updates settle.
+        refreshQueries()
+        const interval = setInterval(refreshQueries, 2500)
+        const timeout = setTimeout(() => {
+            clearInterval(interval)
+            router.replace('/home')
+        }, 30000)
+
+        return () => {
+            clearInterval(interval)
+            clearTimeout(timeout)
+        }
+    }, [queryClient, shouldRefreshAfterPurchase, user?.id])
+
+    useEffect(() => {
+        if (!shouldRefreshAfterPurchase || !hasActiveSubscription) {
+            return
+        }
+
+        // Drop the query flag once access flips to active.
+        router.replace('/home')
+    }, [hasActiveSubscription, shouldRefreshAfterPurchase])
 
     return (
         <ThemedView style={{ flex: 1 }}>
@@ -62,7 +114,7 @@ const Home = () => {
                         </ThemedText>
                         <ThemedButton
                             title="Go to your Workspace"
-                            onPress={() => router.push('/your-roadmap')}
+                            onPress={() => router.push('/(private)/(dashboard)/your-roadmap')}
                             style={{ width: '100%', marginTop: 4 }}
                         />
                     </View>
@@ -95,7 +147,7 @@ const Home = () => {
                         <ThemedButton
                             title="Trial the Workspace"
                             leftIcon={<Ionicons name="compass" size={16} color={colors.onPrimary} style={{ marginRight: 8 }} />}
-                            onPress={() => router.push('/your-roadmap')}
+                            onPress={() => router.push('/(private)/(dashboard)/your-roadmap')}
                             style={{ width: '86%', alignSelf: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}
                         />
                     </>

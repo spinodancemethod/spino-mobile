@@ -172,7 +172,9 @@ export default function Subscribe() {
             }
 
             showSnack('Subscription activated successfully.');
-            router.replace('/home');
+            // Tell Home to run a short refresh cycle so DB-backed status catches up
+            // when webhook processing completes shortly after checkout.
+            router.replace('/home?refreshSubscription=1');
         } catch (error: any) {
             if (error?.userCancelled) {
                 showSnack('Purchase cancelled.');

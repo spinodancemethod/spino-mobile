@@ -197,7 +197,7 @@ const YourRoadmap = () => {
 
         // Pass the position context so Library can preselect it on entry.
         router.push({
-            pathname: '/library',
+            pathname: '/(private)/(dashboard)/library',
             params: {
                 positionId: String(position.id),
                 positionName: String(position.name || position.title || 'Position'),

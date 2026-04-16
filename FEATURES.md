@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Fixed dashboard navigation to use explicit nested Expo Router group paths for Home and roadmap redirects, preventing release-only tab duplication and invalid-element crashes when opening the workspace tabs.
+- Added a post-purchase Home refresh handshake: Subscribe now routes back with a refresh flag and Home temporarily re-invalidates entitlement/subscription/account queries until paid status appears, so the Trial CTA is replaced promptly after checkout.
 - Aligned SQL bootstrap schema with RevenueCat runtime by adding a table-level `subscriptions (provider, provider_subscription_id)` unique constraint, broadening billing provider checks to include `revenuecat`, removing obsolete Google purchase-token/bootstrap unique indexes, and adding a migration for existing databases.
 - Expanded RevenueCat offerings error diagnostics to include SDK code/readable code/underlying message details, making credential and configuration failures directly visible from the subscribe screen.
 - Removed `android.versionCode` from Expo app config and aligned release docs for EAS `appVersionSource: \"remote\"`, avoiding ignored-version warnings and local/remote version drift.
