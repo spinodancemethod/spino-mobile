@@ -1,7 +1,7 @@
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import ThemedButton from 'Components/ThemedButton'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { LEVELS } from 'constants/Levels'
@@ -26,6 +26,9 @@ const Library = () => {
     const [lockModalVisible, setLockModalVisible] = useState(false)
     const { data: positions = [], isLoading: positionsLoading } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
+    // Track the last route-param positionId we applied, so manual dropdown selections
+    // are never overridden when the effect re-runs for unrelated reasons.
+    const lastAppliedRouteParamId = useRef<string | undefined>(undefined);
 
     const selectedPositionIdFromRoute = Array.isArray(params.positionId) ? params.positionId[0] : params.positionId
     const selectedPositionNameFromRoute = Array.isArray(params.positionName) ? params.positionName[0] : params.positionName
@@ -50,21 +53,20 @@ const Library = () => {
     useEffect(() => {
         if (!selectedPositionIdFromRoute) return
         if (!positions.length) return
+        // Only apply the route param if it has actually changed — this prevents
+        // the effect from overriding a manual dropdown selection the user just made.
+        if (lastAppliedRouteParamId.current === selectedPositionIdFromRoute) return
 
         const matchedPosition = positions.find((position: any) => String(position.id) === String(selectedPositionIdFromRoute))
 
         if (matchedPosition) {
-            const nextSelected = {
+            setSelected({
                 id: String(matchedPosition.id),
                 name: matchedPosition.name || matchedPosition.title || selectedPositionNameFromRoute || 'Position',
-            }
-
-            // Tab screens stay mounted, so re-apply when route params change.
-            if (!selected || selected.id !== nextSelected.id) {
-                setSelected(nextSelected)
-            }
+            })
+            lastAppliedRouteParamId.current = selectedPositionIdFromRoute
         }
-    }, [positions, selectedPositionIdFromRoute, selectedPositionNameFromRoute, selected]);
+    }, [positions, selectedPositionIdFromRoute, selectedPositionNameFromRoute]);
 
 
     const getPosition = (id: string) => {

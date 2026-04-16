@@ -26,7 +26,7 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items, placehold
         <View style={styles.filterContainer}>
             <TouchableOpacity
                 onPress={() => setOpen(true)}
-                style={[styles.filterButton, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                style={[styles.filterButton, { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
             >
                 <Text style={[styles.filterButtonText, !selected && { opacity: 0.6 }]}>{selected?.name ?? placeholder}</Text>
             </TouchableOpacity>
