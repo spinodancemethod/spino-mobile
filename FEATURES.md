@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Duplicated the Library-style browser into a new `Positions` tab, renamed the old `Positions` list screen to `Position List`, and split video fetching by `is_position` (`Library=false`, `Positions=true`).
 - Replaced the roadmap empty-position `No favourites added yet` placeholder card with a small centered `+` button that keeps the same jump-to-Library behavior.
 - Extended the roadmap `+` affordance so it also appears at the end of rows that already contain selected videos, making add-more behavior consistent.
 - Added `videos.is_position` (boolean) via migration and bootstrap schema, defaulting all current and future rows to `false`.

@@ -7,6 +7,7 @@ export type PositionsParams = {
 
 export type VideosParams = {
     positionId?: string | null;
+    isPosition?: boolean;
 };
 
 export const queryKeys = {

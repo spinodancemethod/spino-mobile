@@ -3,6 +3,7 @@ export type AccessTier = 'free' | 'paid' | string;
 export type VideoRecord = {
     id: string;
     position_id?: string | null;
+    is_position?: boolean | null;
     title?: string | null;
     description?: string | null;
     thumbnail_url?: string | null;

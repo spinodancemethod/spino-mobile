@@ -84,6 +84,18 @@ export default function DashboardLayout() {
                         )
                     }}
                 />
+                <Tabs.Screen
+                    name="position-list"
+                    options={{
+                        title: "Position List", tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                size={24}
+                                name={focused ? 'list' : 'list-outline'}
+                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
+                            />
+                        )
+                    }}
+                />
             </Tabs>
         </>
     )

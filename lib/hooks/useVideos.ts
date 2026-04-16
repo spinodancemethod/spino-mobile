@@ -17,10 +17,11 @@ type VideosQueryKey = ReturnType<typeof queryKeys.videos>;
 
 async function fetchVideos({ queryKey }: QueryFunctionContext): Promise<VideoRecord[]> {
     const [_key, params] = queryKey as VideosQueryKey;
-    const { positionId } = (params || {}) as VideosParams;
+    const { positionId, isPosition } = (params || {}) as VideosParams;
 
     let builder = supabase.from('videos').select('*');
     if (positionId) builder = builder.eq('position_id', positionId);
+    if (typeof isPosition === 'boolean') builder = builder.eq('is_position', isPosition);
     // optional: order by created_at desc
     builder = builder.order('created_at', { ascending: false });
 

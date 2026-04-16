@@ -1,47 +1,229 @@
-import React from 'react';
-import ThemedView from 'Components/ThemedView';
-import ThemedText from 'Components/ThemedText';
-import VideoTile from 'Components/VideoTile';
-import { FlatList, ActivityIndicator } from 'react-native';
-import { usePositions } from 'lib/hooks/usePositions';
+import ThemedText from 'Components/ThemedText'
+import ThemedView from 'Components/ThemedView'
+import ThemedButton from 'Components/ThemedButton'
+import { useEffect, useState } from 'react'
+import ThemedFilter from 'Components/ThemedFilter'
+import { usePositions } from '@/lib/hooks/usePositions'
+import { LEVELS } from 'constants/Levels'
+import { View, FlatList, Modal, TouchableOpacity, StyleSheet } from 'react-native'
+import VideoTile from 'Components/VideoTile'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useVideos } from '@/lib/hooks/useVideos'
+import { useFavouritesByUser } from 'lib/hooks/useFavouritesByUser'
+import { useDeckByUser } from 'lib/hooks/useDeckByUser'
+import { useEntitlement } from 'lib/hooks/useEntitlement'
+import { useAuth } from 'lib/auth'
+import { useTheme } from 'constants/useTheme'
+import { Ionicons } from '@expo/vector-icons'
+import { reportAppEvent } from 'lib/observability'
 
 const Positions = () => {
-    const { data: positions = [], isLoading } = usePositions(undefined);
+    const params = useLocalSearchParams<{ positionId?: string | string[]; positionName?: string | string[] }>()
+    const { isSubscribed } = useEntitlement()
+    const { user } = useAuth()
+    const { colors } = useTheme()
+    // Controls the subscribe prompt shown when a free user taps a locked tile.
+    const [lockModalVisible, setLockModalVisible] = useState(false)
+    const { data: positions = [] } = usePositions(undefined);
+    const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
-    if (isLoading && positions.length === 0) {
+    const selectedPositionIdFromRoute = Array.isArray(params.positionId) ? params.positionId[0] : params.positionId
+    const selectedPositionNameFromRoute = Array.isArray(params.positionName) ? params.positionName[0] : params.positionName
+
+    // Positions tab shows position-specific videos only.
+    const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id, isPosition: true } : undefined);
+    const { data: favouriteIds = [] } = useFavouritesByUser();
+    const { data: deckIds = [] } = useDeckByUser();
+
+    // Defense in depth: even if stale client cache still contains premium rows,
+    // free users only render free-tier videos.
+    const videos = isSubscribed
+        ? videosData
+        : videosData.filter((video: any) => video?.access_tier === 'free');
+
+    // Level filter (client-side). 5 levels
+    // using shared LEVELS constant
+    const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
+
+    useEffect(() => {
+        if (!selectedPositionIdFromRoute) return
+        if (!positions.length) return
+
+        const matchedPosition = positions.find((position: any) => String(position.id) === String(selectedPositionIdFromRoute))
+
+        if (matchedPosition) {
+            const nextSelected = {
+                id: String(matchedPosition.id),
+                name: matchedPosition.name || matchedPosition.title || selectedPositionNameFromRoute || 'Position',
+            }
+
+            // Tab screens stay mounted, so re-apply when route params change.
+            if (!selected || selected.id !== nextSelected.id) {
+                setSelected(nextSelected)
+            }
+        }
+    }, [positions, selectedPositionIdFromRoute, selectedPositionNameFromRoute, selected]);
+
+
+    const getPosition = (id: string) => {
+        return positions.find((position: any) => position.id === id) || null;
+    };
+
+    const numColumns = 1;
+
+    const renderTile = ({ item }: { item: any }) => {
+        // Free-tier users cannot play paid videos — show a lock overlay instead.
+        const isLocked = !isSubscribed && item.access_tier === 'paid'
         return (
-            <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator />
-            </ThemedView>
-        );
-    }
+            <View style={{ position: 'relative' }}>
+                <VideoTile
+                    item={item}
+                    positionName={getPosition(item.position_id)?.name}
+                    liked={favouriteIds.includes(item.id)}
+                    decked={deckIds.includes(item.id)}
+                    // Tapping a locked tile is handled by the overlay below, not this handler.
+                    onPress={isLocked ? undefined : () => router.push(`/video/${item.id}`)}
+                />
+                {isLocked && (
+                    // Absolute overlay covers the entire tile and intercepts taps.
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => {
+                            void reportAppEvent({
+                                event: 'locked_content_tap',
+                                userId: user?.id,
+                                metadata: {
+                                    screen: 'positions',
+                                    videoId: item?.id ?? null,
+                                    positionId: item?.position_id ?? null,
+                                },
+                            })
+                            setLockModalVisible(true)
+                        }}
+                        style={tileStyles.lockOverlay}
+                    >
+                        <View style={tileStyles.lockBadge}>
+                            <Ionicons name="lock-closed" size={16} color="#fff" />
+                            <ThemedText style={tileStyles.lockLabel}>Premium</ThemedText>
+                        </View>
+                    </TouchableOpacity>
+                )}
+            </View>
+        )
+    };
 
     return (
         <ThemedView>
-            <ThemedText variant="title" style={{ padding: 12 }}>Positions</ThemedText>
+            {/* Fixed header area: Back, Title, spacer */}
+            <ThemedText variant="title" style={{ padding: 12 }}>
+                Positions
+            </ThemedText>
 
-            <FlatList
-                style={{ flex: 1, width: '100%' }}
-                data={positions}
-                keyExtractor={(p: any) => p.id}
-                renderItem={({ item }: { item: any }) => (
-                    // Maybe not render a video tile. 
-                    // Maybe render a positions list with pictures? 
-                    // Then a link that says click to learn creative ways to get into this positions. 
-                    // Then this page will be a FlatList of videos that explain. 
-                    // Question to think about is how to combine this with the deck?
-                    <VideoTile
-                        item={{ id: `pos-${item.id}`, title: item.name }}
-                        positionName={item.name}
-                        showFavouriteToggle={false}
-                        showDeckToggle={false}
-                    />
-                )}
-                contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
-                showsVerticalScrollIndicator={false}
-            />
+            {/* Filter row: Position selector + Level selector */}
+            <View style={{ paddingHorizontal: 8, paddingTop: 12, flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                    <ThemedFilter placeholder="Select a position" selected={selected} setSelected={setSelected} items={positions} />
+                </View>
+                <View style={{ width: 140 }}>
+                    <ThemedFilter placeholder="Filter by level" selected={selectedLevel as any} setSelected={setSelectedLevel as any} items={LEVELS as any} />
+                </View>
+            </View>
+
+            {/* Grid of videos from the DB. Placed after header so it scrolls independently. */}
+            {!selected ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+                    <ThemedText variant="large">Explore position-focused entries and choose what to add next.</ThemedText>
+                </View>
+            ) : (
+                <FlatList
+                    style={{ flex: 1, width: '100%' }}
+                    data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')}
+                    keyExtractor={(i) => i.id}
+                    renderItem={renderTile}
+                    // Add explicit vertical separation so each tile reads as its own card.
+                    ItemSeparatorComponent={() => <View style={{ height: 30 }} />}
+                    numColumns={numColumns}
+                    contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 32 }}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
+            {/* Upsell modal shown when a free user taps a locked video tile. */}
+            <Modal visible={lockModalVisible} transparent animationType="fade">
+                <View style={tileStyles.modalBackdrop}>
+                    <View style={[tileStyles.modalCard, { backgroundColor: colors.card }]}>
+                        <Ionicons name="lock-closed" size={40} color={colors.primary} style={{ marginBottom: 16 }} />
+                        <ThemedText variant="title" style={{ textAlign: 'center', marginBottom: 10 }}>
+                            Premium Content
+                        </ThemedText>
+                        <ThemedText style={{ textAlign: 'center', marginBottom: 24, opacity: 0.65 }}>
+                            Subscribe to unlock all videos and build your full roadmap.
+                        </ThemedText>
+                        <ThemedButton
+                            title="Subscribe to unlock"
+                            onPress={() => {
+                                void reportAppEvent({
+                                    event: 'locked_screen_subscribe_cta_press',
+                                    userId: user?.id,
+                                    metadata: {
+                                        screen: 'positions_locked_modal',
+                                    },
+                                })
+                                setLockModalVisible(false)
+                                router.push('/subscribe')
+                            }}
+                            style={{ width: '100%', marginBottom: 10 }}
+                        />
+                        <ThemedButton
+                            title="Maybe later"
+                            variant="ghost"
+                            onPress={() => setLockModalVisible(false)}
+                            style={{ width: '100%' }}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </ThemedView>
     );
 };
+
+const tileStyles = StyleSheet.create({
+    lockOverlay: {
+        // Covers the full tile so the entire area is tappable.
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        borderRadius: 8,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        alignItems: 'flex-end',
+        justifyContent: 'flex-start',
+        padding: 10,
+    },
+    lockBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 12,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    lockLabel: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+    },
+    modalCard: {
+        width: '100%',
+        borderRadius: 16,
+        padding: 24,
+        alignItems: 'center',
+    },
+})
 
 export default Positions;

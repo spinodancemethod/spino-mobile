@@ -30,7 +30,8 @@ const Library = () => {
     const selectedPositionIdFromRoute = Array.isArray(params.positionId) ? params.positionId[0] : params.positionId
     const selectedPositionNameFromRoute = Array.isArray(params.positionName) ? params.positionName[0] : params.positionName
 
-    const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id } : undefined);
+    // Library shows regular videos only; position videos live in the Positions tab.
+    const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id, isPosition: false } : undefined);
     const { data: favouriteIds = [] } = useFavouritesByUser();
     const { data: deckIds = [] } = useDeckByUser();
 
