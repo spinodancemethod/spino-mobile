@@ -2,6 +2,11 @@
 
 ## Current Product (Google Play Runtime)
 
+- Stopped roadmap lane tiles from wrapping to a second line, so adding many videos keeps each lane growing horizontally in a single row.
+- Moved the roadmap left-lane `+` action inline with position-video tiles so it renders directly before the first tile instead of in a detached far-left column.
+- Flipped the roadmap position lane layout so the `+` action is on the far left and position videos render immediately to the left of the position column.
+- Fixed roadmap left-lane `+` visibility by including `is_position` in the visible-videos query used for lane availability checks.
+- Split roadmap rows into two lanes around the position column: left lane now shows only favourited `is_position = true` videos (with a Positions-tab `+` action when empty), and right lane shows only `is_position = false` videos.
 - Duplicated the Library-style browser into a new `Positions` tab, renamed the old `Positions` list screen to `Position List`, and split video fetching by `is_position` (`Library=false`, `Positions=true`).
 - Replaced the roadmap empty-position `No favourites added yet` placeholder card with a small centered `+` button that keeps the same jump-to-Library behavior.
 - Extended the roadmap `+` affordance so it also appears at the end of rows that already contain selected videos, making add-more behavior consistent.

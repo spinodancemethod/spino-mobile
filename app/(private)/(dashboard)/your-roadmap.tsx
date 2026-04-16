@@ -83,6 +83,28 @@ const YourRoadmap = () => {
         for (const video of roadmapSourceVideos) {
             const positionId = video?.position_id
             if (!positionId) continue
+
+            // Right lane: regular videos only.
+            if (video?.is_position === true) continue
+
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [roadmapSourceVideos])
+
+    const positionVideosByPosition = useMemo(() => {
+        const grouped = new Map<string, RoadmapVideo[]>()
+
+        for (const video of roadmapSourceVideos) {
+            const positionId = video?.position_id
+            if (!positionId) continue
+
+            // Left lane: position videos only.
+            if (video?.is_position !== true) continue
+
             const current = grouped.get(positionId) ?? []
             current.push(video)
             grouped.set(positionId, current)
@@ -99,6 +121,8 @@ const YourRoadmap = () => {
             const positionId = video?.position_id
             if (!positionId) continue
 
+            if (video?.is_position === true) continue
+
             const current = grouped.get(positionId) ?? []
             current.push(video)
             grouped.set(positionId, current)
@@ -114,6 +138,26 @@ const YourRoadmap = () => {
         for (const video of visibleVideos) {
             const positionId = video?.position_id
             if (!positionId) continue
+
+            if (video?.is_position === true) continue
+
+            const current = grouped.get(positionId) ?? []
+            current.push(video)
+            grouped.set(positionId, current)
+        }
+
+        return grouped
+    }, [visibleVideos])
+
+    // Available position videos are used to decide whether left-lane plus buttons should render.
+    const availablePositionVideosByPosition = useMemo(() => {
+        const grouped = new Map<string, RoadmapVideo[]>()
+
+        for (const video of visibleVideos) {
+            const positionId = video?.position_id
+            if (!positionId) continue
+
+            if (video?.is_position !== true) continue
 
             const current = grouped.get(positionId) ?? []
             current.push(video)
@@ -139,13 +183,32 @@ const YourRoadmap = () => {
         return grouped
     }, [videosByPosition, hideCompleted, completedVideoIdSet])
 
+    const roadmapPositionVideosByPosition = useMemo(() => {
+        if (!hideCompleted) return positionVideosByPosition
+
+        const grouped = new Map<string, RoadmapVideo[]>()
+
+        for (const [positionId, videos] of positionVideosByPosition.entries()) {
+            grouped.set(
+                positionId,
+                videos.filter((video: RoadmapVideo) => !video?.id || !completedVideoIdSet.has(video.id))
+            )
+        }
+
+        return grouped
+    }, [positionVideosByPosition, hideCompleted, completedVideoIdSet])
+
     const roadmapPositions = useMemo(() => {
         // Toggle off: only positions with roadmap videos.
         // Toggle on: all currently available positions (RLS-filtered from backend).
         if (showEmptyPositions) return positions
 
-        return positions.filter((position: RoadmapPosition) => (roadmapVideosByPosition.get(position.id)?.length ?? 0) > 0)
-    }, [positions, roadmapVideosByPosition, showEmptyPositions])
+        return positions.filter((position: RoadmapPosition) => {
+            const regularCount = roadmapVideosByPosition.get(position.id)?.length ?? 0
+            const positionCount = roadmapPositionVideosByPosition.get(position.id)?.length ?? 0
+            return regularCount > 0 || positionCount > 0
+        })
+    }, [positions, roadmapVideosByPosition, roadmapPositionVideosByPosition, showEmptyPositions])
 
     const estimatedSurfaceHeight = useMemo(() => {
         const rowHeight = VIDEO_H + VIDEO_MARGIN * 2
@@ -198,6 +261,19 @@ const YourRoadmap = () => {
         // Pass the position context so Library can preselect it on entry.
         router.push({
             pathname: '/(private)/(dashboard)/library',
+            params: {
+                positionId: String(position.id),
+                positionName: String(position.name || position.title || 'Position'),
+            },
+        })
+    }, [])
+
+    const onEmptyPositionVideoPress = useCallback((position: RoadmapPosition) => {
+        if (!position?.id) return
+
+        // Position-lane plus buttons route to the Positions tab and keep the position preselected.
+        router.push({
+            pathname: '/(private)/(dashboard)/positions',
             params: {
                 positionId: String(position.id),
                 positionName: String(position.name || position.title || 'Position'),
@@ -277,8 +353,10 @@ const YourRoadmap = () => {
                 iconSize={ICON_SIZE}
                 roadmapPositions={roadmapPositions}
                 roadmapVideosByPosition={roadmapVideosByPosition}
+                roadmapPositionVideosByPosition={roadmapPositionVideosByPosition}
                 freeTierVideosByPosition={freeTierVideosByPosition}
                 availableVideosByPosition={availableVideosByPosition}
+                availablePositionVideosByPosition={availablePositionVideosByPosition}
                 completedVideoIdSet={completedVideoIdSet}
                 isSubscribed={isSubscribed}
                 showEmptyPositions={showEmptyPositions}
@@ -286,6 +364,7 @@ const YourRoadmap = () => {
                 sampleVideoPlaceholderUrl={SAMPLE_PLACEHOLDER_URL}
                 onNodePress={onNodePress}
                 onEmptyPositionPress={onEmptyPositionPress}
+                onEmptyPositionVideoPress={onEmptyPositionVideoPress}
                 onVideoPress={onVideoPress}
                 onLockedPositionPress={onLockedPositionPress}
                 onToggleCompletion={toggleCompletionWithFeedback}
@@ -379,10 +458,19 @@ const styles = StyleSheet.create({
         color: '#111827',
         fontWeight: '700',
     },
-    selectedVideosHeader: {
+    selectedVideosHeaderLeft: {
+        flex: 1,
+        marginRight: 34,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+    },
+    selectedVideosHeaderRight: {
+        flex: 1,
         marginLeft: 34,
         paddingVertical: 8,
         paddingHorizontal: 12,
+        alignItems: 'center',
     },
     selectedVideosHeaderText: {
         color: '#475569',
@@ -402,12 +490,19 @@ const styles = StyleSheet.create({
         marginHorizontal: 12,
         backgroundColor: '#cbd5e1',
     },
-    videosColumn: {
+    leftVideosColumn: {
+        flex: 1,
+        // Right-align content so position videos sit directly left of the position column,
+        // mirroring the symmetry of the right lane.
+        alignItems: 'flex-end',
+    },
+    rightVideosColumn: {
         flex: 1,
     },
     videoRow: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
+        // Keep roadmap lanes on a single horizontal line even with many videos.
+        flexWrap: 'nowrap',
         alignItems: 'flex-start',
     },
     leafBox: {

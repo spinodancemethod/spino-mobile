@@ -13,7 +13,7 @@ import { supabase } from '../supabase';
 async function fetchVisibleVideos(): Promise<VideoRecord[]> {
     const { data, error } = await supabase
         .from('videos')
-        .select('id,position_id,access_tier')
+        .select('id,position_id,access_tier,is_position')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
