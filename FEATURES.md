@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added centered loading spinners for pending network requests on Your Roadmap, Library, and Positions so users see clear loading feedback before content resolves.
 - Added selected-filter empty states in Library and Positions that show a centered icon plus "No videos under that category." when no videos match the chosen category/level.
 - Nudged the roadmap first-load viewport an extra 5% to the left for finer initial positioning of the positions lane.
 - Tuned first-load roadmap centering to retrace halfway toward the previous offset, reducing over-left panning while keeping the positions column near center.

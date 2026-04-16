@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Dimensions, StyleSheet, Switch, View } from 'react-native'
+import { ActivityIndicator, Dimensions, StyleSheet, Switch, View } from 'react-native'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { usePositions } from 'lib/hooks/usePositions'
@@ -47,12 +47,12 @@ const YourRoadmap = () => {
     const { mode, colors } = useTheme()
     const { user } = useAuth()
 
-    const { data: positionsData = [] } = usePositions(undefined)
+    const { data: positionsData = [], isLoading: positionsLoading } = usePositions(undefined)
     const { isSubscribed } = useEntitlement()
-    const { data: favouriteIds = [] } = useFavouritesByUser()
-    const { data: favouriteVideosData = [] } = useVideosByIds(favouriteIds)
-    const { data: freeTierVideosData = [] } = useFreeTierVideos()
-    const { data: visibleVideosData = [] } = useVisibleVideos()
+    const { data: favouriteIds = [], isLoading: favouriteIdsLoading } = useFavouritesByUser()
+    const { data: favouriteVideosData = [], isLoading: favouriteVideosLoading } = useVideosByIds(favouriteIds)
+    const { data: freeTierVideosData = [], isLoading: freeTierVideosLoading } = useFreeTierVideos()
+    const { data: visibleVideosData = [], isLoading: visibleVideosLoading } = useVisibleVideos()
 
     const positions = positionsData as RoadmapPosition[]
     const favouriteVideos = favouriteVideosData as RoadmapVideo[]
@@ -61,6 +61,7 @@ const YourRoadmap = () => {
 
     const [showEmptyPositions, setShowEmptyPositions] = useState(false)
     const [hideCompleted, setHideCompleted] = useState(false)
+    const isRoadmapLoading = positionsLoading || favouriteIdsLoading || favouriteVideosLoading || freeTierVideosLoading || visibleVideosLoading
 
     const {
         favouriteIdSet,
@@ -317,6 +318,15 @@ const YourRoadmap = () => {
     const selectedVideoIsFavourite = !!selectedVideo?.video?.id && favouriteIdSet.has(selectedVideo.video.id)
     const selectedVideoIsComplete = !!selectedVideo?.video?.id && completedVideoIdSet.has(selectedVideo.video.id)
     const videoNavColor = mode === 'dark' ? colors.primary : '#111827'
+
+    if (isRoadmapLoading) {
+        return (
+            <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator />
+                <ThemedText variant="small" style={{ marginTop: 10 }}>Loading roadmap...</ThemedText>
+            </ThemedView>
+        )
+    }
 
     return (
         <ThemedView style={{ flex: 1 }}>

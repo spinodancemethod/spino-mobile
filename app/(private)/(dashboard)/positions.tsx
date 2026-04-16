@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import ThemedFilter from 'Components/ThemedFilter'
 import { usePositions } from '@/lib/hooks/usePositions'
 import { LEVELS } from 'constants/Levels'
-import { View, FlatList, Modal, TouchableOpacity, StyleSheet } from 'react-native'
+import { View, FlatList, Modal, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import VideoTile from 'Components/VideoTile'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useVideos } from '@/lib/hooks/useVideos'
@@ -24,16 +24,16 @@ const Positions = () => {
     const { colors } = useTheme()
     // Controls the subscribe prompt shown when a free user taps a locked tile.
     const [lockModalVisible, setLockModalVisible] = useState(false)
-    const { data: positions = [] } = usePositions(undefined);
+    const { data: positions = [], isLoading: positionsLoading } = usePositions(undefined);
     const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
     const selectedPositionIdFromRoute = Array.isArray(params.positionId) ? params.positionId[0] : params.positionId
     const selectedPositionNameFromRoute = Array.isArray(params.positionName) ? params.positionName[0] : params.positionName
 
     // Positions tab shows position-specific videos only.
-    const { data: videosData = [] } = useVideos(selected ? { positionId: selected.id, isPosition: true } : undefined);
-    const { data: favouriteIds = [] } = useFavouritesByUser();
-    const { data: deckIds = [] } = useDeckByUser();
+    const { data: videosData = [], isLoading: videosLoading } = useVideos(selected ? { positionId: selected.id, isPosition: true } : undefined);
+    const { data: favouriteIds = [], isLoading: favouriteIdsLoading } = useFavouritesByUser();
+    const { data: deckIds = [], isLoading: deckIdsLoading } = useDeckByUser();
 
     // Defense in depth: even if stale client cache still contains premium rows,
     // free users only render free-tier videos.
@@ -45,6 +45,7 @@ const Positions = () => {
     // using shared LEVELS constant
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
     const filteredVideos = videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')
+    const isScreenLoading = positionsLoading || videosLoading || favouriteIdsLoading || deckIdsLoading
 
     useEffect(() => {
         if (!selectedPositionIdFromRoute) return
@@ -131,7 +132,12 @@ const Positions = () => {
             </View>
 
             {/* Grid of videos from the DB. Placed after header so it scrolls independently. */}
-            {!selected ? (
+            {isScreenLoading ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+                    <ActivityIndicator />
+                    <ThemedText variant="small" style={{ marginTop: 10 }}>Loading videos...</ThemedText>
+                </View>
+            ) : !selected ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
                     <ThemedText variant="large">Explore position-focused entries and choose what to add next.</ThemedText>
                 </View>
