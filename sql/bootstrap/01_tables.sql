@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS public.positions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   description text,
+  -- Controls whether this position currently has associated videos to show.
+  has_videos boolean NOT NULL DEFAULT true,
   -- Allows positions to be selectively available on the free tier or kept premium.
   access_tier text NOT NULL DEFAULT 'paid',
   CONSTRAINT positions_access_tier_check CHECK (access_tier IN ('free', 'paid'))
