@@ -1,6 +1,8 @@
 export type LevelItem = { id: string; name: string; value: number; color?: string };
 
 export const LEVELS: LevelItem[] = [
+    // "All levels" sentinel — value 0 is never stored on a video, so the filter treats it as "show all".
+    { id: 'all', name: 'All levels', value: 0 },
     // Numeric level labels are used across pills and filters.
     { id: '1', name: 'L1', value: 1, color: '#16A34A' },
     { id: '2', name: 'L2', value: 2, color: '#84CC16' },
