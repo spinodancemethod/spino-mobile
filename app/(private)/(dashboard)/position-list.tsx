@@ -3,6 +3,7 @@ import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import VideoTile from 'Components/VideoTile';
 import { FlatList, ActivityIndicator } from 'react-native';
+import { router } from 'expo-router';
 import { usePositions } from 'lib/hooks/usePositions';
 
 const PositionList = () => {
@@ -29,6 +30,7 @@ const PositionList = () => {
                     <VideoTile
                         item={{ id: `pos-${item.id}`, title: item.name }}
                         positionName={item.name}
+                        onPress={() => router.push(`/position/${item.id}`)}
                         showFavouriteToggle={false}
                         showDeckToggle={false}
                     />

@@ -14,6 +14,7 @@ export const queryKeys = {
     videosByIdsRoot: () => ['videosByIds'] as const,
     videosByIds: (ids?: string[] | null) => ['videosByIds', ids ?? []] as const,
     positions: (params?: PositionsParams) => ['positions', params ?? null] as const,
+    position: (id?: string | null) => ['position', id ?? null] as const,
     videos: (params?: VideosParams) => ['videos', params ?? null] as const,
     freeTierVideos: () => ['videos', 'free-tier'] as const,
     visibleVideos: () => ['videos', 'visible'] as const,
