@@ -65,12 +65,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Keep RevenueCat identity aligned with Supabase auth so purchases
             // resolve to the same customer id across app restarts and devices.
             if (session?.user?.id) {
-                void syncRevenueCatAppUser(session.user.id);
+                void syncRevenueCatAppUser(session.user.id).catch(() => {
+                    // Startup/auth transitions may briefly overlap; billing layer retries conflicts.
+                });
             }
 
             // navigate on important transitions
             if (event === 'SIGNED_OUT') {
-                void clearRevenueCatAppUser();
+                void clearRevenueCatAppUser().catch(() => {
+                    // Ignore sign-out cleanup failures; auth navigation should still proceed.
+                });
                 router.replace('/login');
             }
             if (event === 'PASSWORD_RECOVERY') {

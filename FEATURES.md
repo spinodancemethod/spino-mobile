@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Hardened RevenueCat identity sync by retrying transient identify conflict errors (`backendErrorCode 7638`) and catching startup/auth fire-and-forget sync promises to avoid uncaught warning noise.
 - Hardened Expo Go compatibility on Subscribe by switching RevenueCat usage to type-only imports and package-type string checks (no runtime `react-native-purchases` import in screen module scope).
 - Added a Position detail screen opened from Position List rows, showing a placeholder hero image plus `positions.name` and `positions.description` loaded by id.
 - Stopped roadmap lane tiles from wrapping to a second line, so adding many videos keeps each lane growing horizontally in a single row.

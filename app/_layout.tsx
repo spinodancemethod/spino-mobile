@@ -58,7 +58,9 @@ function RevenueCatBootstrap() {
             return;
         }
 
-        void initializeRevenueCat(user?.id ?? null);
+        void initializeRevenueCat(user?.id ?? null).catch(() => {
+            // Ignore transient identity startup failures; later sync hooks retry.
+        });
     }, [loading, user?.id]);
 
     useEffect(() => {

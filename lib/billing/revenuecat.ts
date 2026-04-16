@@ -11,6 +11,7 @@ let isConfigured = false;
 let currentAppUserId: string | null = null;
 let revenueCatIdentityQueue: Promise<void> = Promise.resolve();
 const DEFAULT_PRO_ENTITLEMENT_IDENTIFIER = 'Spinodancemethod ltd Pro';
+const REVENUECAT_IN_FLIGHT_BACKEND_CODE = 7638;
 
 export type RevenueCatOfferingsSnapshot = {
     currentOffering: PurchasesOffering | null;
@@ -66,13 +67,58 @@ function runRevenueCatIdentityOperation<T>(operation: () => Promise<T>) {
     // 429 "another request in flight" responses when startup and auth events overlap.
     const run = revenueCatIdentityQueue
         .catch(() => undefined)
-        .then(operation);
+        .then(async () => {
+            try {
+                return await operation();
+            } catch (error) {
+                if (!isInFlightIdentityConflict(error)) {
+                    throw error;
+                }
+
+                // RevenueCat occasionally returns a transient 429/7638 when two identify
+                // operations overlap at SDK/native boundary. Retry once after a short delay.
+                await wait(350);
+                return operation();
+            }
+        });
 
     revenueCatIdentityQueue = run
         .then(() => undefined)
         .catch(() => undefined);
 
     return run;
+}
+
+function wait(ms: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function isInFlightIdentityConflict(error: unknown) {
+    if (!error || typeof error !== 'object') {
+        return false;
+    }
+
+    const typedError = error as {
+        code?: unknown;
+        message?: unknown;
+        underlyingErrorMessage?: unknown;
+        info?: {
+            backendErrorCode?: unknown;
+            [key: string]: unknown;
+        };
+    };
+
+    const backendCode = Number(typedError.info?.backendErrorCode);
+    if (backendCode === REVENUECAT_IN_FLIGHT_BACKEND_CODE) {
+        return true;
+    }
+
+    const message = [typedError.message, typedError.underlyingErrorMessage]
+        .filter((value) => typeof value === 'string')
+        .join(' ')
+        .toLowerCase();
+
+    return message.includes('another request in flight') || message.includes('request: identify');
 }
 
 function isSupportedPlatform() {
