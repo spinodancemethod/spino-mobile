@@ -44,6 +44,7 @@ const Positions = () => {
     // Level filter (client-side). 5 levels
     // using shared LEVELS constant
     const [selectedLevel, setSelectedLevel] = useState<{ id: string; name: string; value: number } | null>(null);
+    const filteredVideos = videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')
 
     useEffect(() => {
         if (!selectedPositionIdFromRoute) return
@@ -134,10 +135,15 @@ const Positions = () => {
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
                     <ThemedText variant="large">Explore position-focused entries and choose what to add next.</ThemedText>
                 </View>
+            ) : filteredVideos.length === 0 ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
+                    <Ionicons name="videocam-off-outline" size={34} color={colors.primary} style={{ marginBottom: 10 }} />
+                    <ThemedText variant="subheader" style={{ textAlign: 'center' }}>No videos found for this selection.</ThemedText>
+                </View>
             ) : (
                 <FlatList
                     style={{ flex: 1, width: '100%' }}
-                    data={videos.filter((v: any) => !selectedLevel || v.level === selectedLevel.value || selectedLevel.id === 'all')}
+                    data={filteredVideos}
                     keyExtractor={(i) => i.id}
                     renderItem={renderTile}
                     // Add explicit vertical separation so each tile reads as its own card.
