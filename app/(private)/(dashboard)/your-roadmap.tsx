@@ -54,7 +54,15 @@ const YourRoadmap = () => {
     const { data: freeTierVideosData = [], isLoading: freeTierVideosLoading } = useFreeTierVideos()
     const { data: visibleVideosData = [], isLoading: visibleVideosLoading } = useVisibleVideos()
 
-    const positions = positionsData as RoadmapPosition[]
+    const positions = useMemo(() => {
+        // Keep roadmap row order aligned with positions."order" from the DB.
+        return [...(positionsData as RoadmapPosition[])].sort((a, b) => {
+            const ao = typeof a?.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER
+            const bo = typeof b?.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER
+            if (ao !== bo) return ao - bo
+            return String(a?.name ?? a?.title ?? '').localeCompare(String(b?.name ?? b?.title ?? ''))
+        })
+    }, [positionsData])
     const favouriteVideos = favouriteVideosData as RoadmapVideo[]
     const freeTierVideos = freeTierVideosData as RoadmapVideo[]
     const visibleVideos = visibleVideosData as RoadmapVideo[]

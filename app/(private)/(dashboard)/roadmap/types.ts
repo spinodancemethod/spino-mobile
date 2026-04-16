@@ -1,5 +1,6 @@
 export type RoadmapPosition = {
     id: string;
+    order?: number | null;
     name?: string | null;
     title?: string | null;
     description?: string | null;

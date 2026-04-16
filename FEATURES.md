@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Updated Your Roadmap vertical row ordering to follow `positions."order"`, so roadmap position rows render in the same sequence as the positions table.
 - Added `positions."order"` as a unique positive integer, backfilled existing rows from 1..N in table order, and wired position queries to sort by this column.
 - Updated Your Roadmap left-lane add behavior to suppress the position-video `+` icon when a position has `has_videos = false`.
 - Added `positions.has_videos` (boolean, default `true`) and set `basic on 1` / `basic on 5` to `false` via migration.
