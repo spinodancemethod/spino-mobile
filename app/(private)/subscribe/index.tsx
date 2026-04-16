@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Purchases, { type PurchasesPackage } from 'react-native-purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
@@ -34,10 +34,12 @@ const PLAN_DESCRIPTIONS: Record<string, string> = {
 };
 
 function getPlanId(packageData: PurchasesPackage) {
-    switch (packageData.packageType) {
-        case Purchases.PACKAGE_TYPE.MONTHLY:
+    const normalizedPackageType = String(packageData.packageType ?? '').toUpperCase();
+
+    switch (normalizedPackageType) {
+        case 'MONTHLY':
             return 'monthly';
-        case Purchases.PACKAGE_TYPE.ANNUAL:
+        case 'ANNUAL':
             return 'annual';
         default:
             return packageData.identifier;
@@ -45,10 +47,12 @@ function getPlanId(packageData: PurchasesPackage) {
 }
 
 function getPlanTitle(packageData: PurchasesPackage) {
-    switch (packageData.packageType) {
-        case Purchases.PACKAGE_TYPE.MONTHLY:
+    const normalizedPackageType = String(packageData.packageType ?? '').toUpperCase();
+
+    switch (normalizedPackageType) {
+        case 'MONTHLY':
             return 'Monthly Plan';
-        case Purchases.PACKAGE_TYPE.ANNUAL:
+        case 'ANNUAL':
             return 'Yearly Plan';
         default:
             return packageData.product.title || 'Subscription Plan';
