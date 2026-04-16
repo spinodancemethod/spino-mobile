@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Replaced the roadmap empty-position `No favourites added yet` placeholder card with a small centered `+` button that keeps the same jump-to-Library behavior.
+- Extended the roadmap `+` affordance so it also appears at the end of rows that already contain selected videos, making add-more behavior consistent.
 - Added `videos.is_position` (boolean) via migration and bootstrap schema, defaulting all current and future rows to `false`.
 - Removed unused dashboard route files (`index` and `inprogress`) so the route group only contains the three active tabs: roadmap, library, and positions.
 - Explicitly hid dashboard route-group utility screens (`index` redirect and legacy `inprogress`) from the Expo Router tab bar so only the intended three tabs are visible.

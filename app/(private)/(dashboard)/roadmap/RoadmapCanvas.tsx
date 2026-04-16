@@ -74,37 +74,36 @@ export function RoadmapCanvas({
         const shouldShowNoFavouritesTile = !isSubscribed && !hasRoadmapVideos && hasVisibleFreeVideos
         const shouldShowSubscribeTile = !isSubscribed && !hasVisibleFreeVideos && !hasRoadmapVideos
         const shouldShowAddTile = isSubscribed && !hasRoadmapVideos && (showEmptyState || hasVisibleVideos)
+        const shouldShowAddButton = hasRoadmapVideos || shouldShowAddTile || shouldShowNoFavouritesTile
 
-        if (videos.length === 0 && !shouldShowAddTile && !shouldShowNoFavouritesTile && !shouldShowSubscribeTile) {
+        if (videos.length === 0 && !shouldShowAddButton && !shouldShowSubscribeTile) {
             return null
         }
 
+        const addButton = (
+            <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => onEmptyPositionPress(pos)}
+                style={[
+                    styles.emptyLeafButtonSlot,
+                    {
+                        width: videoWidth,
+                        height: videoHeight,
+                        marginVertical: videoMargin / 2,
+                        marginRight: videoGap,
+                    },
+                ]}
+            >
+                {/* Keep the action centered in the row without rendering a full placeholder tile. */}
+                <View style={styles.emptyLeafButton}>
+                    <Ionicons name="add" size={26} color="#ffffff" />
+                </View>
+            </TouchableOpacity>
+        )
+
         return (
             <View style={styles.videoRow}>
-                {(shouldShowAddTile || shouldShowNoFavouritesTile) && (
-                    <TouchableOpacity
-                        activeOpacity={0.85}
-                        onPress={() => onEmptyPositionPress(pos)}
-                        style={[
-                            styles.leafBox,
-                            styles.emptyLeafBox,
-                            {
-                                width: videoWidth,
-                                height: videoHeight,
-                                marginVertical: videoMargin / 2,
-                                marginRight: videoGap,
-                                paddingHorizontal: 8,
-                            },
-                        ]}
-                    >
-                        <View style={styles.emptyLeafActionWrap}>
-                            <Ionicons name="add-circle-outline" size={42} color="#64748b" />
-                            <ThemedText variant="small" style={styles.emptyLeafText}>
-                                No favourites added yet
-                            </ThemedText>
-                        </View>
-                    </TouchableOpacity>
-                )}
+                {!hasRoadmapVideos && shouldShowAddButton && addButton}
 
                 {shouldShowSubscribeTile && (
                     <TouchableOpacity
@@ -188,6 +187,8 @@ export function RoadmapCanvas({
                         </TouchableOpacity>
                     )
                 })}
+
+                {hasRoadmapVideos && shouldShowAddButton && addButton}
             </View>
         )
     }

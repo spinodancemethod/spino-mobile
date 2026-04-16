@@ -447,6 +447,23 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    emptyLeafButtonSlot: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyLeafButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: '#64748b',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 1 },
+        elevation: 1,
+    },
     lockedLeafBox: {
         backgroundColor: '#e5e7eb',
         borderWidth: 1,
