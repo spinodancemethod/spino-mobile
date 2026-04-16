@@ -79,8 +79,10 @@ export function RoadmapCanvas({
 
         const shouldShowNoFavouritesTile = !isSubscribed && !hasRoadmapVideos && hasVisibleFreeVideos
         const shouldShowSubscribeTile = !isSubscribed && !hasVisibleFreeVideos && !hasRoadmapVideos
-        const shouldShowAddTile = isSubscribed && !hasRoadmapVideos && (showEmptyState || hasVisibleVideos)
-        const shouldShowAddButton = hasRoadmapVideos || shouldShowAddTile || shouldShowNoFavouritesTile
+        // Subscribed: always show the + so they can add any video to chosen moves.
+        // Not subscribed: keep existing logic (free-tier tiles, subscribe prompt, etc.)
+        const shouldShowAddTile = isSubscribed ? (!hasRoadmapVideos) : (!hasRoadmapVideos && (showEmptyState || hasVisibleVideos))
+        const shouldShowAddButton = !shouldShowSubscribeTile && (hasRoadmapVideos || shouldShowAddTile || shouldShowNoFavouritesTile)
 
         if (videos.length === 0 && !shouldShowAddButton && !shouldShowSubscribeTile) {
             return null
@@ -324,11 +326,9 @@ export function RoadmapCanvas({
                         const hasRoadmapPositionVideos = positionRoadmapVideos.length > 0
                         const hasAvailablePositionVideos = (availablePositionVideosByPosition.get(position.id)?.length ?? 0) > 0
                         const positionAllowsVideos = position?.has_videos !== false
-                        // Keep left-lane add affordance visible for free users even when there
-                        // are no currently available free position videos for that position.
-                        const shouldShowPositionAddButton = positionAllowsVideos && (
-                            !isSubscribed || hasRoadmapPositionVideos || hasAvailablePositionVideos || showEmptyPositions
-                        )
+                        // Left lane ("Getting to position"): show + for everyone as long as
+                        // the position record allows videos — subscription state is irrelevant here.
+                        const shouldShowPositionAddButton = positionAllowsVideos
 
                         return (
                             <View key={position.id} style={styles.roadmapRow}>
