@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS public.videos (
   description text,
   url text,
   file_path text,
+  -- Supports roadmap-level categorization (for example salsa vs bachata).
+  dance_type text,
+  dance_style text,
   position_id uuid NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -44,7 +47,8 @@ CREATE TABLE IF NOT EXISTS public.videos (
   access_tier text NOT NULL DEFAULT 'paid',
   CONSTRAINT videos_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions (id) ON DELETE RESTRICT,
   CONSTRAINT videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT videos_access_tier_check CHECK (access_tier IN ('free', 'paid'))
+  CONSTRAINT videos_access_tier_check CHECK (access_tier IN ('free', 'paid')),
+  CONSTRAINT videos_dance_type_check CHECK (dance_type IS NULL OR dance_type IN ('salsa', 'bachata'))
 );
 
 CREATE TABLE IF NOT EXISTS public.deck (
