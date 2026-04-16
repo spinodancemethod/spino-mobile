@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Removed unused dashboard route files (`index` and `inprogress`) so the route group only contains the three active tabs: roadmap, library, and positions.
+- Explicitly hid dashboard route-group utility screens (`index` redirect and legacy `inprogress`) from the Expo Router tab bar so only the intended three tabs are visible.
 - Added `videos` dance metadata schema support for roadmap categorization: migration + bootstrap now include `dance_type` and `dance_style`, and `dance_type` is constrained to `salsa` or `bachata`.
 - Added a follow-up data backfill migration that sets existing `videos` rows to `dance_type = 'bachata'` and `dance_style = 'fusion'`.
 - Fixed dashboard navigation to use explicit nested Expo Router group paths for Home and roadmap redirects, preventing release-only tab duplication and invalid-element crashes when opening the workspace tabs.
