@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { StyleSheet, Switch, View } from 'react-native'
+import { Dimensions, StyleSheet, Switch, View } from 'react-native'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { usePositions } from 'lib/hooks/usePositions'
@@ -22,10 +22,8 @@ import { RoadmapPosition, RoadmapVideo, SelectedRoadmapVideo } from './roadmap/t
 const MIN_SCALE = 0.2
 const MAX_SCALE = 3
 const DEFAULT_SCALE = 0.5
-const DEFAULT_VIEWPORT_MARGIN_LEFT = 16
 // Lift the roadmap further on initial render so the header row starts nearer the top.
 const DEFAULT_VIEWPORT_MARGIN_TOP = -700
-const DEFAULT_PAN_COMPENSATION_RATIO = 0.6
 
 // Node sizing for the roadmap row layout.
 const SURFACE_WIDTH = 1800
@@ -42,6 +40,8 @@ const VIDEO_GAP = 12
 const SAMPLE_GIF_URL = 'https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif'
 const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Video+Preview'
 const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Position+Preview'
+const INITIAL_VIEWPORT_WIDTH = Dimensions.get('window').width
+const INITIAL_LEFT_NUDGE_RATIO = 0.05
 
 const YourRoadmap = () => {
     const { mode, colors } = useTheme()
@@ -217,11 +217,17 @@ const YourRoadmap = () => {
         return Math.max(baseHeight, positions.length * (rowHeight + ROW_GAP) + 96)
     }, [positions.length])
 
-    const defaultPanX = useMemo(
-        // Compensate for initial zoom so the left column stays visible on first render.
-        () => ((SURFACE_WIDTH * (1 - DEFAULT_SCALE)) / 2) * DEFAULT_PAN_COMPENSATION_RATIO + DEFAULT_VIEWPORT_MARGIN_LEFT,
-        []
-    )
+    const defaultPanX = useMemo(() => {
+        // Blend strict centering with the legacy offset so first load is centered-ish
+        // without over-shifting the roadmap to the left.
+        const viewportCenterX = INITIAL_VIEWPORT_WIDTH / 2
+        const scaledSurfaceCenterX = (SURFACE_WIDTH / 2) * DEFAULT_SCALE
+        const centeredPanX = viewportCenterX - scaledSurfaceCenterX
+        const legacyPanX = ((SURFACE_WIDTH * (1 - DEFAULT_SCALE)) / 2) * 0.6 + 16
+        const blendedPanX = centeredPanX + ((legacyPanX - centeredPanX) * 0.5)
+        // Small follow-up nudge to shift the first load slightly left.
+        return blendedPanX - (INITIAL_VIEWPORT_WIDTH * INITIAL_LEFT_NUDGE_RATIO)
+    }, [])
     const defaultPanY = useMemo(
         () => DEFAULT_VIEWPORT_MARGIN_TOP,
         []

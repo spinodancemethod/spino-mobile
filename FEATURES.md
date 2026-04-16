@@ -2,6 +2,10 @@
 
 ## Current Product (Google Play Runtime)
 
+- Nudged the roadmap first-load viewport an extra 5% to the left for finer initial positioning of the positions lane.
+- Tuned first-load roadmap centering to retrace halfway toward the previous offset, reducing over-left panning while keeping the positions column near center.
+- Centered the roadmap positions column on first load so users land with the core position lane in the middle of the screen before any manual panning.
+- Kept the roadmap left-lane position-video `+` visible for free-tier users even when a position currently has no available free position videos.
 - Hardened RevenueCat identity sync by retrying transient identify conflict errors (`backendErrorCode 7638`) and catching startup/auth fire-and-forget sync promises to avoid uncaught warning noise.
 - Hardened Expo Go compatibility on Subscribe by switching RevenueCat usage to type-only imports and package-type string checks (no runtime `react-native-purchases` import in screen module scope).
 - Added a Position detail screen opened from Position List rows, showing a placeholder hero image plus `positions.name` and `positions.description` loaded by id.

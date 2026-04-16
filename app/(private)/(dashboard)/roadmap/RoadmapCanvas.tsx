@@ -323,7 +323,9 @@ export function RoadmapCanvas({
                         const positionFavouriteVideos = roadmapVideosByPosition.get(position.id) ?? []
                         const hasRoadmapPositionVideos = positionRoadmapVideos.length > 0
                         const hasAvailablePositionVideos = (availablePositionVideosByPosition.get(position.id)?.length ?? 0) > 0
-                        const shouldShowPositionAddButton = hasRoadmapPositionVideos || hasAvailablePositionVideos || showEmptyPositions
+                        // Keep left-lane add affordance visible for free users even when there
+                        // are no currently available free position videos for that position.
+                        const shouldShowPositionAddButton = !isSubscribed || hasRoadmapPositionVideos || hasAvailablePositionVideos || showEmptyPositions
 
                         return (
                             <View key={position.id} style={styles.roadmapRow}>
