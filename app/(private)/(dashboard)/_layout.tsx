@@ -49,28 +49,6 @@ export default function DashboardLayout() {
                 }}
             >
                 <Tabs.Screen
-                    name="index"
-                    options={{
-                        // Hide redirect-only route from tab bar.
-                        href: null,
-                    }}
-                />
-                {/* home moved into the burger menu */}
-                <Tabs.Screen
-                    name="inprogress"
-                    options={{
-                        // Keep route available but hide it from the dashboard tab bar while deprecating On Deck.
-                        href: null,
-                        title: "On Deck", tabBarIcon: ({ focused }) => (
-                            <Ionicons
-                                size={24}
-                                name={focused ? 'star' : 'star-outline'}
-                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
-                            />
-                        )
-                    }}
-                />
-                <Tabs.Screen
                     name="your-roadmap"
                     options={{
                         title: "Your Roadmap", tabBarIcon: ({ focused }) => (
