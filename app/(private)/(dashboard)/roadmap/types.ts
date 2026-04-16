@@ -3,6 +3,7 @@ export type RoadmapPosition = {
     name?: string | null;
     title?: string | null;
     description?: string | null;
+    has_videos?: boolean | null;
     roadmap_preview_url?: string | null;
 }
 

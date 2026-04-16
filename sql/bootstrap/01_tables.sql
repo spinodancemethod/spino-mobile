@@ -7,16 +7,20 @@ BEGIN;
 -- Legacy sequence names are preserved to match the current production schema.
 CREATE SEQUENCE IF NOT EXISTS public.deck_id_seq;
 CREATE SEQUENCE IF NOT EXISTS public.likes_id_seq;
+CREATE SEQUENCE IF NOT EXISTS public.positions_order_seq;
 
 CREATE TABLE IF NOT EXISTS public.positions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "order" integer NOT NULL DEFAULT nextval('public.positions_order_seq'),
   name text NOT NULL,
   description text,
   -- Controls whether this position currently has associated videos to show.
   has_videos boolean NOT NULL DEFAULT true,
   -- Allows positions to be selectively available on the free tier or kept premium.
   access_tier text NOT NULL DEFAULT 'paid',
-  CONSTRAINT positions_access_tier_check CHECK (access_tier IN ('free', 'paid'))
+  CONSTRAINT positions_access_tier_check CHECK (access_tier IN ('free', 'paid')),
+  CONSTRAINT positions_order_unique UNIQUE ("order"),
+  CONSTRAINT positions_order_positive CHECK ("order" > 0)
 );
 
 CREATE TABLE IF NOT EXISTS public.user_profiles (
@@ -181,5 +185,6 @@ CREATE TABLE IF NOT EXISTS public.client_error_logs (
 -- Ensure legacy sequences are owned by their columns.
 ALTER SEQUENCE IF EXISTS public.deck_id_seq OWNED BY public.deck.id;
 ALTER SEQUENCE IF EXISTS public.likes_id_seq OWNED BY public.favourites.id;
+ALTER SEQUENCE IF EXISTS public.positions_order_seq OWNED BY public.positions."order";
 
 COMMIT;

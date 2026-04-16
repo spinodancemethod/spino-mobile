@@ -2,6 +2,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added `positions."order"` as a unique positive integer, backfilled existing rows from 1..N in table order, and wired position queries to sort by this column.
+- Updated Your Roadmap left-lane add behavior to suppress the position-video `+` icon when a position has `has_videos = false`.
 - Added `positions.has_videos` (boolean, default `true`) and set `basic on 1` / `basic on 5` to `false` via migration.
 - Added centered loading spinners for pending network requests on Your Roadmap, Library, and Positions so users see clear loading feedback before content resolves.
 - Added selected-filter empty states in Library and Positions that show a centered icon plus "No videos under that category." when no videos match the chosen category/level.

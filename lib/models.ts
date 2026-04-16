@@ -16,9 +16,11 @@ export type VideoRecord = {
 
 export type PositionRecord = {
     id: string;
+    order?: number | null;
     name: string;
     title?: string | null;
     description?: string | null;
+    has_videos?: boolean | null;
     category?: string | null;
     access_tier?: AccessTier | null;
     roadmap_preview_url?: string | null;

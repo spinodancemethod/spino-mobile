@@ -15,7 +15,7 @@ type PositionsQueryKey = ReturnType<typeof queryKeys.positions>;
 async function fetchPositions({ queryKey }: QueryFunctionContext): Promise<PositionRecord[]> {
     const [_key, params] = queryKey as PositionsQueryKey;
     const { position, search } = (params || {}) as PositionsParams;
-    let builder = supabase.from('positions').select('*');
+    let builder = supabase.from('positions').select('*').order('order', { ascending: true });
     if (position) builder = builder.eq('category', position);
     if (search) builder = builder.ilike('name', `%${search}%`);
     const { data, error } = await builder;
