@@ -484,21 +484,20 @@ const styles = StyleSheet.create({
     },
     selectedVideosHeaderLeft: {
         flex: 1,
-        marginRight: 34,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     selectedVideosHeaderRight: {
         flex: 1,
-        marginLeft: 34,
         paddingVertical: 8,
         paddingHorizontal: 12,
-        alignItems: 'center',
+        alignItems: 'flex-start',
     },
     selectedVideosHeaderText: {
         color: '#475569',
         fontWeight: '700',
+        paddingHorizontal: 40,
     },
     roadmapRow: {
         flexDirection: 'row',

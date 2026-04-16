@@ -308,13 +308,13 @@ export function RoadmapCanvas({
                 <View style={[styles.surface, { minHeight: estimatedSurfaceHeight }]}>
                     <View style={styles.surfaceHeaderRow}>
                         <View style={styles.selectedVideosHeaderLeft}>
-                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Position videos</ThemedText>
+                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Getting to position</ThemedText>
                         </View>
                         <View style={[styles.rootBox, styles.rootBoxStatic]}>
                             <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
                         </View>
                         <View style={styles.selectedVideosHeaderRight}>
-                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Chosen videos</ThemedText>
+                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Chosen moves</ThemedText>
                         </View>
                     </View>
 
