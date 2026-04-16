@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.videos (
   -- Supports roadmap-level categorization (for example salsa vs bachata).
   dance_type text,
   dance_style text,
+  -- Flags records that represent position-style entries.
+  is_position boolean NOT NULL DEFAULT false,
   position_id uuid NOT NULL,
   user_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),

@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added `videos.is_position` (boolean) via migration and bootstrap schema, defaulting all current and future rows to `false`.
 - Removed unused dashboard route files (`index` and `inprogress`) so the route group only contains the three active tabs: roadmap, library, and positions.
 - Explicitly hid dashboard route-group utility screens (`index` redirect and legacy `inprogress`) from the Expo Router tab bar so only the intended three tabs are visible.
 - Added `videos` dance metadata schema support for roadmap categorization: migration + bootstrap now include `dance_type` and `dance_style`, and `dance_type` is constrained to `salsa` or `bachata`.
