@@ -32,31 +32,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         let mounted = true;
 
         async function readSessionWithRefreshFallback() {
-            const { data } = await supabase.auth.getSession();
-            let nextSession = data?.session ?? null;
+            try {
+                console.log('[auth-debug] getSession() starting');
+                const { data } = await supabase.auth.getSession();
+                let nextSession = data?.session ?? null;
+                console.log('[auth-debug] getSession() completed, session exists:', !!nextSession);
 
-            // Only attempt a refresh if there IS a stored session with an expired token.
-            // Calling refreshSession() with no session makes a pointless network request
-            // and can hang indefinitely if the Supabase URL is unreachable.
-            if (nextSession && !nextSession.access_token) {
-                const { data: refreshed } = await supabase.auth.refreshSession();
-                nextSession = refreshed?.session ?? null;
+                // Only attempt a refresh if there IS a stored session with an expired token.
+                // Calling refreshSession() with no session makes a pointless network request
+                // and can hang indefinitely if the Supabase URL is unreachable.
+                if (nextSession && !nextSession.access_token) {
+                    console.log('[auth-debug] calling refreshSession()');
+                    const { data: refreshed } = await supabase.auth.refreshSession();
+                    nextSession = refreshed?.session ?? null;
+                    console.log('[auth-debug] refreshSession() completed');
+                } else {
+                    console.log('[auth-debug] skipping refreshSession() (no stored session or has token)');
+                }
+
+                return nextSession;
+            } catch (e) {
+                console.error('[auth-debug] readSessionWithRefreshFallback error:', e);
+                throw e;
             }
-
-            return nextSession;
         }
 
         async function init() {
             try {
+                console.log('[auth-debug] init() starting');
                 const nextSession = await readSessionWithRefreshFallback();
-                if (!mounted) return;
+                if (!mounted) {
+                    console.log('[auth-debug] unmounted before setSession');
+                    return;
+                }
+                console.log('[auth-debug] setting session state');
                 setSession(nextSession);
                 setUser(nextSession?.user ?? null);
+            } catch (e) {
+                console.error('[auth-debug] init() error:', e);
             } finally {
-                if (mounted) setLoading(false);
+                if (mounted) {
+                    console.log('[auth-debug] setting loading=false');
+                    setLoading(false);
+                }
             }
         }
 
+        console.log('[auth-debug] AuthProvider effect mounted');
         init();
 
         const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -97,23 +119,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         async function handleUrl(url?: string | null) {
             if (!url) return;
             if (!shouldHandleAuthUrl(url)) return;
-
-            function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
-                return new Promise<T>((resolve, reject) => {
-                    const timer = setTimeout(() => {
-                        reject(new Error(message));
-                    }, timeoutMs);
-
-                    promise.then((value) => {
-                        clearTimeout(timer);
-                        resolve(value);
-                    }).catch((error) => {
-                        clearTimeout(timer);
-                        reject(error);
-                    });
-                });
-            }
-
             // Keep recovery routing sticky until auth state event fires.
             if (isRecoveryAuthUrl(url)) {
                 pendingRecoveryRef.current = true;
@@ -130,11 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (typeof authWithLegacy.getSessionFromUrl === 'function') {
                     // some implementations accept an object with url, others read from current location
                     // try both common signatures
-                    const res = await withTimeout(
-                        authWithLegacy.getSessionFromUrl({ url }),
-                        8000,
-                        'Auth link processing timed out. Please open the link again.',
-                    );
+                    const res = await authWithLegacy.getSessionFromUrl({ url });
                     // if no error, session will be stored and onAuthStateChange will fire
                     if (res?.error) {
                         showSnack(res.error.message || 'Failed to handle auth link');
@@ -149,11 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const access_token = params.get('access_token');
                 const refresh_token = params.get('refresh_token');
                 if (access_token && refresh_token) {
-                    const { error } = await withTimeout(
-                        supabase.auth.setSession({ access_token, refresh_token }),
-                        8000,
-                        'Auth session setup timed out. Please open the link again.',
-                    );
+                    const { error } = await supabase.auth.setSession({ access_token, refresh_token });
                     if (error) showSnack(error.message);
                 }
             } catch (e: any) {

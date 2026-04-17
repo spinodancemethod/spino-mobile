@@ -16,17 +16,22 @@ export default function RootIndex() {
         async function check() {
             // font preloading is handled in app/_layout.tsx
             try {
+                console.log('[auth-debug] RootIndex check() starting');
                 const { data } = await supabase.auth.getSession();
                 const session = data?.session;
+                console.log('[auth-debug] RootIndex getSession completed, has session:', !!session);
                 if (!mounted) return;
                 if (session?.user) {
                     // authenticated -> go to app home
+                    console.log('[auth-debug] RootIndex routing to /home');
                     router.replace('/home');
                 } else {
                     // not authenticated -> show login
+                    console.log('[auth-debug] RootIndex routing to /login');
                     router.replace('/login');
                 }
             } catch (e) {
+                console.error('[auth-debug] RootIndex check() error:', e);
                 // on error, fallback to login
                 router.replace('/login');
             } finally {
@@ -34,6 +39,7 @@ export default function RootIndex() {
             }
         }
 
+        console.log('[auth-debug] RootIndex mounted');
         check();
         return () => { mounted = false; };
     }, []);
