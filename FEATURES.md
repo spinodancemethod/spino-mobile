@@ -2,6 +2,7 @@
 
 ## Current Product (Google Play Runtime)
 
+- Fixed standalone/test-build login hang by tightening auth deep-link detection to only process links with auth params/tokens and adding an 8-second timeout guard around auth-link session handling so the "Signing you in..." overlay cannot persist indefinitely.
 - Updated Your Roadmap vertical row ordering to follow `positions."order"`, so roadmap position rows render in the same sequence as the positions table.
 - Added `positions."order"` as a unique positive integer, backfilled existing rows from 1..N in table order, and wired position queries to sort by this column.
 - Updated Your Roadmap left-lane add behavior to suppress the position-video `+` icon when a position has `has_videos = false`.

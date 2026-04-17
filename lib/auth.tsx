@@ -96,6 +96,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         async function handleUrl(url?: string | null) {
             if (!url) return;
             if (!shouldHandleAuthUrl(url)) return;
+
+            function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+                return new Promise<T>((resolve, reject) => {
+                    const timer = setTimeout(() => {
+                        reject(new Error(message));
+                    }, timeoutMs);
+
+                    promise.then((value) => {
+                        clearTimeout(timer);
+                        resolve(value);
+                    }).catch((error) => {
+                        clearTimeout(timer);
+                        reject(error);
+                    });
+                });
+            }
+
             // Keep recovery routing sticky until auth state event fires.
             if (isRecoveryAuthUrl(url)) {
                 pendingRecoveryRef.current = true;
@@ -112,7 +129,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (typeof authWithLegacy.getSessionFromUrl === 'function') {
                     // some implementations accept an object with url, others read from current location
                     // try both common signatures
-                    const res = await authWithLegacy.getSessionFromUrl({ url });
+                    const res = await withTimeout(
+                        authWithLegacy.getSessionFromUrl({ url }),
+                        8000,
+                        'Auth link processing timed out. Please open the link again.',
+                    );
                     // if no error, session will be stored and onAuthStateChange will fire
                     if (res?.error) {
                         showSnack(res.error.message || 'Failed to handle auth link');
@@ -127,7 +148,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const access_token = params.get('access_token');
                 const refresh_token = params.get('refresh_token');
                 if (access_token && refresh_token) {
-                    const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+                    const { error } = await withTimeout(
+                        supabase.auth.setSession({ access_token, refresh_token }),
+                        8000,
+                        'Auth session setup timed out. Please open the link again.',
+                    );
                     if (error) showSnack(error.message);
                 }
             } catch (e: any) {

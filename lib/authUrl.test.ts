@@ -12,4 +12,9 @@ describe('shouldHandleAuthUrl', () => {
     it('returns false for unrelated urls', () => {
         expect(shouldHandleAuthUrl('https://example.com/help')).toBe(false);
     });
+
+    it('returns false for route-only app links with no auth params', () => {
+        expect(shouldHandleAuthUrl('spino://login')).toBe(false);
+        expect(shouldHandleAuthUrl('spino://reset-password')).toBe(false);
+    });
 });

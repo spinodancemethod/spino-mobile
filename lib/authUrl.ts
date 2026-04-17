@@ -18,8 +18,6 @@ export function shouldHandleAuthUrl(url: string) {
         normalizedUrl.includes('refresh_token=') ||
         params.has('access_token') ||
         params.has('refresh_token') ||
-        params.has('type') ||
-        normalizedUrl.includes('://login') ||
-        normalizedUrl.includes('://reset-password')
+        params.has('type')
     );
 }
