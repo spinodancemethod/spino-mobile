@@ -35,9 +35,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { data } = await supabase.auth.getSession();
             let nextSession = data?.session ?? null;
 
-            // If an access token expired while the app was backgrounded, attempt one
-            // refresh pass before treating the user as signed out.
-            if (!nextSession) {
+            // Only attempt a refresh if there IS a stored session with an expired token.
+            // Calling refreshSession() with no session makes a pointless network request
+            // and can hang indefinitely if the Supabase URL is unreachable.
+            if (nextSession && !nextSession.access_token) {
                 const { data: refreshed } = await supabase.auth.refreshSession();
                 nextSession = refreshed?.session ?? null;
             }

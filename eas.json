@@ -8,6 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
         "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
@@ -16,6 +18,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
         "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
@@ -24,6 +28,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
         "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_FNprregaesVcGBPrjusZRZIzyat",
         "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_evavuRQADcxkTIBgHoTZOdZKFva",
         "EXPO_PUBLIC_REVENUECAT_PRO_ENTITLEMENT_ID": "Spinodancemethod ltd Pro"
