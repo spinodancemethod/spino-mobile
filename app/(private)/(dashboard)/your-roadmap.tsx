@@ -14,9 +14,9 @@ import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
 import { router } from 'expo-router'
 import { useTheme } from 'constants/useTheme'
-import { RoadmapCanvas } from './roadmap/RoadmapCanvas'
-import { RoadmapModals } from './roadmap/RoadmapModals'
-import { RoadmapPosition, RoadmapVideo, SelectedRoadmapVideo } from './roadmap/types'
+import { RoadmapCanvas } from 'Components/roadmap/RoadmapCanvas'
+import { RoadmapModals } from 'Components/roadmap/RoadmapModals'
+import { RoadmapPosition, RoadmapVideo, SelectedRoadmapVideo } from 'Components/roadmap/types'
 
 // Scale bounds for pinch-to-zoom so users can inspect the roadmap comfortably.
 const MIN_SCALE = 0.2
