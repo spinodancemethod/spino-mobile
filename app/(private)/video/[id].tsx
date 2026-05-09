@@ -18,6 +18,7 @@ import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
+import { supabase } from 'lib/supabase'
 
 
 export default function VideoDetailScreen() {
@@ -38,6 +39,7 @@ export default function VideoDetailScreen() {
     const [VideoComponent, setVideoComponent] = useState<any | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
     const [playerLoading, setPlayerLoading] = useState(false)
+    const [signedUrl, setSignedUrl] = useState<string | null>(null)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -97,6 +99,13 @@ export default function VideoDetailScreen() {
         load()
         return () => { mounted = false }
     }, [video?.id, video?.url, video?.file_path])
+
+    useEffect(() => {
+        setSignedUrl(null)
+        if (!video?.file_path) return
+        supabase.storage.from('videos').createSignedUrl(video.file_path as string, 3600)
+            .then(({ data }) => { if (data) setSignedUrl(data.signedUrl) })
+    }, [video?.file_path])
 
     // Render a thumbnail or a themed placeholder with a play icon
     const renderPoster = () => {
@@ -196,14 +205,14 @@ export default function VideoDetailScreen() {
                         ) : null}
                     </View>
 
-                    {/* playable video if URL or file_path exists */}
-                    {(video?.url || video?.file_path) ? (
+                    {/* playable video if URL or file_path (resolved to signedUrl) exists */}
+                    {(video?.url || signedUrl) ? (
                         <View style={{ width: '100%', marginTop: 12, position: 'relative' }}>
                             {VideoComponent ? (
                                 <View>
                                     {React.createElement(VideoComponent, {
                                         ref: videoRef,
-                                        source: { uri: video?.url || video?.file_path },
+                                        source: { uri: video?.url ?? signedUrl ?? '' },
                                         style: styles.thumb,
                                         useNativeControls: false,
                                         resizeMode: 'cover',
@@ -328,7 +337,7 @@ export default function VideoDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 16 },
+    container: { flexGrow: 1, padding: 16 },
     card: { padding: 16, borderRadius: 12, alignItems: 'flex-start' },
     thumb: { width: '100%', aspectRatio: 16 / 9, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
     notesTitle: { marginBottom: 8, fontSize: 16 },

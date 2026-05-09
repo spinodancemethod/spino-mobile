@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
@@ -15,6 +16,7 @@ import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
 import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
 import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { showSnack } from 'lib/snackbarService';
+import { useAuth } from 'lib/auth';
 
 const PRIVACY_POLICY_URL = 'https://spinodancemethod.com/privacy-policy';
 const TERMS_OF_SERVICE_URL = 'https://spinodancemethod.com/terms-of-services';
@@ -44,6 +46,7 @@ export default function AccountPage() {
     const { colors } = useTheme();
     const queryClient = useQueryClient();
     const accountQuery = useAccountDetails();
+    const { user } = useAuth();
     const [isRestoringPurchases, setIsRestoringPurchases] = React.useState(false);
 
     const account = accountQuery.data ?? null;
@@ -172,6 +175,14 @@ export default function AccountPage() {
                         title="Manage in your app store"
                         variant="ghost"
                         onPress={handleManageInStore}
+                        style={{ width: '100%', marginTop: 8 }}
+                    />
+                ) : null}
+
+                {user?.email === 'spino@spino.com' ? (
+                    <ThemedButton
+                        title="Upload Video (Admin)"
+                        onPress={() => router.push('/admin/upload-video')}
                         style={{ width: '100%', marginTop: 8 }}
                     />
                 ) : null}

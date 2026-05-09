@@ -39,8 +39,9 @@ const Library = () => {
     const { data: deckIds = [], isLoading: deckIdsLoading } = useDeckByUser();
 
     // Defense in depth: even if stale client cache still contains premium rows,
-    // free users only render free-tier videos.
-    const videos = isSubscribed
+    // free users only render free-tier videos. Admin bypasses the subscription check.
+    const isAdmin = user?.email === 'spino@spino.com'
+    const videos = isSubscribed || isAdmin
         ? videosData
         : videosData.filter((video: any) => video?.access_tier === 'free');
 

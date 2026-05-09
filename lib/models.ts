@@ -31,3 +31,20 @@ export type PositionRecord = {
 export type VideoIdRow = {
     video_id: string;
 };
+
+export type CreateVideoPayload = {
+    title: string;
+    description?: string | null;
+    position_id: string;
+    user_id: string;
+    dance_type?: 'salsa' | 'bachata' | null;
+    dance_style?: string | null;
+    level?: number | null;
+    access_tier: AccessTier;
+    is_position?: boolean;
+    file_path?: string | null;
+    url?: string | null;
+    thumbnail_url?: string | null;
+    roadmap_preview_url?: string | null;
+    roadmap_gif_url?: string | null;
+};

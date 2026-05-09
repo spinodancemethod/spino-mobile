@@ -53,6 +53,9 @@ CREATE TABLE IF NOT EXISTS public.videos (
   -- Determines content access tier: 'free' videos are visible to all authenticated users,
   -- 'paid' videos require an active subscription.
   access_tier text NOT NULL DEFAULT 'paid',
+  thumbnail_url text,
+  roadmap_preview_url text,
+  roadmap_gif_url text,
   CONSTRAINT videos_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions (id) ON DELETE RESTRICT,
   CONSTRAINT videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
   CONSTRAINT videos_access_tier_check CHECK (access_tier IN ('free', 'paid')),

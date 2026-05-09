@@ -359,6 +359,86 @@ GRANT DELETE ON public.videos TO authenticated;
 -- Sequence grants for authenticated (only USAGE needed, not ALL)
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
+-- Admin video management and storage upload policies
+DO $$
+BEGIN
+  -- Admin: full SELECT bypass (admin is not a subscriber, so tier checks block them otherwise)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos' AND policyname = 'videos_select_admin'
+  ) THEN
+    CREATE POLICY videos_select_admin ON public.videos
+      FOR SELECT TO authenticated
+      USING ((auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'positions' AND policyname = 'positions_select_admin'
+  ) THEN
+    CREATE POLICY positions_select_admin ON public.positions
+      FOR SELECT TO authenticated
+      USING ((auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  -- Admin: insert/update videos
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos' AND policyname = 'videos_insert_admin'
+  ) THEN
+    CREATE POLICY videos_insert_admin ON public.videos
+      FOR INSERT TO authenticated
+      WITH CHECK ((auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'videos' AND policyname = 'videos_update_admin'
+  ) THEN
+    CREATE POLICY videos_update_admin ON public.videos
+      FOR UPDATE TO authenticated
+      USING ((auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  -- Storage: all authenticated users can read from the videos bucket (enables signed URL generation)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'videos_bucket_select_authenticated'
+  ) THEN
+    CREATE POLICY videos_bucket_select_authenticated
+      ON storage.objects FOR SELECT TO authenticated
+      USING (bucket_id = 'videos');
+  END IF;
+
+  -- Storage: admin can upload to all three buckets
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'videos_bucket_insert_admin'
+  ) THEN
+    CREATE POLICY videos_bucket_insert_admin
+      ON storage.objects FOR INSERT TO authenticated
+      WITH CHECK (bucket_id = 'videos' AND (auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'thumbnails_bucket_insert_admin'
+  ) THEN
+    CREATE POLICY thumbnails_bucket_insert_admin
+      ON storage.objects FOR INSERT TO authenticated
+      WITH CHECK (bucket_id = 'thumbnails' AND (auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'roadmap_previews_bucket_insert_admin'
+  ) THEN
+    CREATE POLICY roadmap_previews_bucket_insert_admin
+      ON storage.objects FOR INSERT TO authenticated
+      WITH CHECK (bucket_id = 'roadmap-previews' AND (auth.jwt() ->> 'email') = 'spino@spino.com');
+  END IF;
+END $$;
+
 -- Service role retains full admin privileges for backend operations
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
