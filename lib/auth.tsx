@@ -109,9 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (pendingRecoveryRef.current) {
                     pendingRecoveryRef.current = false;
                     router.replace('/reset-password');
-                    return;
                 }
-                router.replace('/home');
             }
         });
 

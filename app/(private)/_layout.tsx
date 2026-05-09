@@ -35,7 +35,8 @@ const RootLayout = () => {
         if (pathname !== '/home') {
             router.replace('/home');
         }
-    }, [loading, user, pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, user]);
 
     if (loading) {
         return (
