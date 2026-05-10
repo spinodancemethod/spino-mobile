@@ -19,6 +19,7 @@ import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
 import { supabase } from 'lib/supabase'
+import { Video } from 'expo-av'
 
 
 export default function VideoDetailScreen() {
@@ -36,9 +37,7 @@ export default function VideoDetailScreen() {
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
     const videoRef = useRef<any | null>(null)
-    const [VideoComponent, setVideoComponent] = useState<any | null>(null)
     const [isPlaying, setIsPlaying] = useState(false)
-    const [playerLoading, setPlayerLoading] = useState(false)
     const [signedUrl, setSignedUrl] = useState<string | null>(null)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
@@ -71,40 +70,22 @@ export default function VideoDetailScreen() {
     useEffect(() => {
         setIsPlaying(false)
         videoRef.current?.stopAsync?.().catch(() => { /* ignore */ })
-
-        let mounted = true
-        const load = async () => {
-            // no playable resource
-            if (!video?.id && !video?.url && !video?.file_path) {
-                if (mounted) {
-                    setVideoComponent(null)
-                    setPlayerLoading(false)
-                }
-                return
-            }
-
-            // start player load indicator
-            if (mounted) setPlayerLoading(true)
-
-            try {
-                const mod = await import('expo-av')
-                if (mounted) setVideoComponent(() => mod.Video)
-            } catch (e) {
-                if (mounted) setVideoComponent(null)
-            } finally {
-                // clear the loading flag after attempting to load the player module
-                if (mounted) setPlayerLoading(false)
-            }
-        }
-        load()
-        return () => { mounted = false }
     }, [video?.id, video?.url, video?.file_path])
 
     useEffect(() => {
         setSignedUrl(null)
         if (!video?.file_path) return
         supabase.storage.from('videos').createSignedUrl(video.file_path as string, 3600)
-            .then(({ data }) => { if (data) setSignedUrl(data.signedUrl) })
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error('[VideoDetail] createSignedUrl error:', error)
+                    return
+                }
+                if (data?.signedUrl) {
+                    console.log('[VideoDetail] signedUrl ready')
+                    setSignedUrl(data.signedUrl)
+                }
+            })
     }, [video?.file_path])
 
     // Render a thumbnail or a themed placeholder with a play icon
@@ -208,40 +189,20 @@ export default function VideoDetailScreen() {
 
                     {/* playable video if URL or file_path (resolved to signedUrl) exists */}
                     {(video?.url || signedUrl) ? (
-                        <View style={{ width: '100%', marginTop: 12, position: 'relative' }}>
-                            {VideoComponent ? (
-                                <View>
-                                    {React.createElement(VideoComponent, {
-                                        ref: videoRef,
-                                        source: { uri: video?.url ?? signedUrl ?? '' },
-                                        style: styles.thumb,
-                                        useNativeControls: true,
-                                        resizeMode: 'contain',
-                                        isLooping: false,
-                                        onPlaybackStatusUpdate: (status: any) => {
-                                            if (status?.isLoaded) setPlayerLoading(false)
-                                            setIsPlaying(Boolean(status?.isPlaying))
-                                        }
-                                    })}
-                                    {playerLoading ? (
-                                        <View style={[styles.playerOverlay]}>
-                                            <View style={[styles.skelVideoOverlay, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
-                                        </View>
-                                    ) : null}
-                                </View>
-                            ) : (
-                                <View>
-                                    {renderPoster()}
-                                    {playerLoading ? (
-                                        <View style={[styles.playerOverlay]}>
-                                            <View style={[styles.skelVideoOverlay, { backgroundColor: 'rgba(0,0,0,0.15)' }]} />
-                                        </View>
-                                    ) : null}
-                                </View>
-                            )}
+                        <View style={{ width: '100%', marginTop: 12 }}>
+                            <Video
+                                ref={videoRef}
+                                source={{ uri: video?.url ?? signedUrl ?? '' }}
+                                style={styles.thumb}
+                                useNativeControls
+                                resizeMode={'contain' as any}
+                                isLooping={false}
+                                onPlaybackStatusUpdate={(status: any) => {
+                                    setIsPlaying(Boolean(status?.isPlaying))
+                                }}
+                            />
                         </View>
                     ) : (
-                        // thumbnail fallback / placeholder
                         renderPoster()
                     )}
 

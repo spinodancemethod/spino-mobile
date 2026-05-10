@@ -41,10 +41,13 @@ async function uploadFile(
     path: string,
     uri: string,
     mimeType: string,
+    filename: string,
 ): Promise<void> {
-    const response = await fetch(uri)
-    const blob = await response.blob()
-    const { error } = await supabase.storage.from(bucket).upload(path, blob, { contentType: mimeType })
+    const formData = new FormData()
+    // React Native requires the file entry to be an object with uri/name/type.
+    // On web the same object works as a Blob-compatible entry.
+    formData.append('file', { uri, name: filename, type: mimeType } as any)
+    const { error } = await supabase.storage.from(bucket).upload(path, formData, { contentType: mimeType })
     if (error) throw new Error(`Upload to ${bucket} failed: ${error.message}`)
 }
 
@@ -131,17 +134,17 @@ export default function UploadVideoScreen() {
             }
 
             // Uploads
-            await uploadFile('videos', videoPath, videoFile.uri, videoFile.mimeType ?? 'video/mp4')
+            await uploadFile('videos', videoPath, videoFile.uri, videoFile.mimeType ?? 'video/mp4', videoFile.name)
 
             let thumbnailUrl: string | null = null
             if (thumbnailFile && thumbnailPath) {
-                await uploadFile('thumbnails', thumbnailPath, thumbnailFile.uri, thumbnailFile.mimeType ?? 'image/jpeg')
+                await uploadFile('thumbnails', thumbnailPath, thumbnailFile.uri, thumbnailFile.mimeType ?? 'image/jpeg', thumbnailFile.name)
                 thumbnailUrl = getPublicUrl('thumbnails', thumbnailPath)
             }
 
             let roadmapUrl: string | null = null
             if (gifFile && gifPath) {
-                await uploadFile('roadmap-previews', gifPath, gifFile.uri, 'image/gif')
+                await uploadFile('roadmap-previews', gifPath, gifFile.uri, 'image/gif', gifFile.name)
                 roadmapUrl = getPublicUrl('roadmap-previews', gifPath)
             }
 
