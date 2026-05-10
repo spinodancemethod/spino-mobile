@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { supabase } from './supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { router } from 'expo-router';
-import { Linking, AppState, Modal, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { Linking, Modal, View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { showSnack } from 'lib/snackbarService';
 import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
@@ -181,28 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             handleUrl(event.url);
         });
 
-        // re-check session when app comes to foreground (helps catch refresh failures)
-        const appStateHandler = (next: string) => {
-            if (next === 'active') {
-                // revalidate session
-                readSessionWithRefreshFallback().then((nextSession) => {
-                    setSession(nextSession);
-                    setUser(nextSession?.user ?? null);
-                    if (!nextSession) {
-                        // if session is still unavailable after refresh, notify user.
-                        showSnack('Session expired, please sign in again');
-                    }
-                }).catch(() => { /* ignore */ });
-            }
-        };
-
-        const appStateSub = AppState.addEventListener('change', appStateHandler);
-
         return () => {
             mounted = false;
             sub?.subscription?.unsubscribe();
             try { subscription.remove(); } catch (e) { /* ignore */ }
-            try { appStateSub.remove(); } catch (e) { /* ignore */ }
         };
     }, []);
 
