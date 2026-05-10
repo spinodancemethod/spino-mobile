@@ -7,7 +7,7 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "prebuildCommand": "node scripts/prebuild.js",
+      "prebuildCommand": "prebuild --no-install --platform android && node scripts/clean-manifest.js",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
@@ -18,7 +18,7 @@
     },
     "preview": {
       "distribution": "internal",
-      "prebuildCommand": "node scripts/prebuild.js",
+      "prebuildCommand": "prebuild --no-install --platform android && node scripts/clean-manifest.js",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
@@ -29,7 +29,7 @@
     },
     "production": {
       "autoIncrement": true,
-      "prebuildCommand": "node scripts/prebuild.js",
+      "prebuildCommand": "prebuild --no-install --platform android && node scripts/clean-manifest.js",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
