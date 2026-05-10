@@ -285,7 +285,7 @@ export default function VideoDetailScreen() {
 const styles = StyleSheet.create({
     container: { flexGrow: 1, padding: 16 },
     card: { padding: 16, borderRadius: 12, alignItems: 'flex-start' },
-    thumb: { width: '100%', aspectRatio: 16 / 9, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
+    thumb: { width: '100%', aspectRatio: 4 / 3, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
     notesTitle: { marginBottom: 8, fontSize: 16 },
     noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
     noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     },
     playerOverlay: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8 },
     skelTitle: { height: 20, width: '60%', borderRadius: 6, marginBottom: 8 },
-    skelVideo: { width: '100%', aspectRatio: 16 / 9, borderRadius: 8, marginTop: 8 },
+    skelVideo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 8, marginTop: 8 },
     skelPill: { height: 28, width: 100, borderRadius: 16 },
     skelLine: { height: 12, borderRadius: 6, marginTop: 8 },
     skelVideoOverlay: { width: '100%', height: '100%', borderRadius: 8 },

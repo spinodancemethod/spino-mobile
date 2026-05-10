@@ -192,7 +192,7 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        aspectRatio: 16 / 9,
+        aspectRatio: 4 / 3,
         backgroundColor: '#000',
         borderRadius: 8,
         overflow: 'hidden',
