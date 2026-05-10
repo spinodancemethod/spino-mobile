@@ -27,12 +27,9 @@ export default function Login() {
         if (!ok) return;
         setLoading(true);
         try {
-            const res = await signIn(email, password);
-            if (res?.error) {
-                // signIn already shows snack
-            } else {
-                router.replace('/home');
-            }
+            await signIn(email, password);
+            // Navigation to /home is handled by onAuthStateChange('SIGNED_IN') in auth.tsx.
+            // Doing it here too races with the private layout's user-null guard on Android.
         } finally {
             setLoading(false);
         }

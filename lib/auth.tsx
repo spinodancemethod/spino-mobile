@@ -109,7 +109,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (pendingRecoveryRef.current) {
                     pendingRecoveryRef.current = false;
                     router.replace('/reset-password');
+                    return;
                 }
+                // Navigate to home on explicit sign-in. This fires only on actual
+                // sign-in actions, not on session restoration from storage, so it's
+                // safe to navigate here. Without this, a React state flush race on
+                // the private layout can redirect the user back to /login immediately
+                // after a successful login.
+                router.replace('/home');
             }
         });
 
