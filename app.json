@@ -58,6 +58,7 @@
           }
         }
       ],
+      "expo-system-ui",
       "./plugins/withRemovedPermissions"
     ],
     "extra": {
