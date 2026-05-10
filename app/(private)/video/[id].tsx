@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
@@ -19,7 +19,7 @@ import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
 import { supabase } from 'lib/supabase'
-import { Video } from 'expo-av'
+import CustomVideoPlayer from 'Components/CustomVideoPlayer'
 
 
 export default function VideoDetailScreen() {
@@ -36,8 +36,6 @@ export default function VideoDetailScreen() {
     const { data: positions = [] } = usePositions(undefined)
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
-    const videoRef = useRef<any | null>(null)
-    const [isPlaying, setIsPlaying] = useState(false)
     const [signedUrl, setSignedUrl] = useState<string | null>(null)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
@@ -66,11 +64,6 @@ export default function VideoDetailScreen() {
 
         await toggleCompletionWithFeedback(video.id, isComplete)
     }
-
-    useEffect(() => {
-        setIsPlaying(false)
-        videoRef.current?.stopAsync?.().catch(() => { /* ignore */ })
-    }, [video?.id, video?.url, video?.file_path])
 
     useEffect(() => {
         setSignedUrl(null)
@@ -189,19 +182,10 @@ export default function VideoDetailScreen() {
 
                     {/* playable video if URL or file_path (resolved to signedUrl) exists */}
                     {(video?.url || signedUrl) ? (
-                        <View style={{ width: '100%', marginTop: 12 }}>
-                            <Video
-                                ref={videoRef}
-                                source={{ uri: video?.url ?? signedUrl ?? '' }}
-                                style={styles.thumb}
-                                useNativeControls
-                                resizeMode={'contain' as any}
-                                isLooping={false}
-                                onPlaybackStatusUpdate={(status: any) => {
-                                    setIsPlaying(Boolean(status?.isPlaying))
-                                }}
-                            />
-                        </View>
+                        <CustomVideoPlayer
+                            source={(video?.url ?? signedUrl ?? '') as string}
+                            style={styles.thumb}
+                        />
                     ) : (
                         renderPoster()
                     )}

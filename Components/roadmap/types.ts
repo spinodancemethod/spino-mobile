@@ -14,6 +14,7 @@ export type RoadmapVideo = {
     position_id?: string | null;
     is_position?: boolean | null;
     access_tier?: string | null;
+    thumbnail_url?: string | null;
     roadmap_preview_url?: string | null;
     roadmap_gif_url?: string | null;
 }

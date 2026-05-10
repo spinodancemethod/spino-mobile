@@ -187,9 +187,10 @@ export function RoadmapCanvas({
                                     </Pressable>
                                 </View>
                                 <ExpoImage
-                                    source={{ uri: video?.roadmap_preview_url ?? sampleVideoPlaceholderUrl }}
+                                    source={{ uri: video?.thumbnail_url ?? sampleVideoPlaceholderUrl }}
                                     style={styles.videoGif}
                                     contentFit="cover"
+                                    autoplay={false}
                                 />
                                 <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>
@@ -279,9 +280,10 @@ export function RoadmapCanvas({
                                     </Pressable>
                                 </View>
                                 <ExpoImage
-                                    source={{ uri: video?.roadmap_preview_url ?? sampleVideoPlaceholderUrl }}
+                                    source={{ uri: video?.thumbnail_url ?? sampleVideoPlaceholderUrl }}
                                     style={styles.videoGif}
                                     contentFit="cover"
+                                    autoplay={false}
                                 />
                                 <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Slot } from 'expo-router';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
@@ -179,17 +180,19 @@ export default function RootLayout() {
     }
 
     return (
-        <ErrorBoundary>
-            <QueryClientProvider client={queryClient}>
-                <ThemeProvider>
-                    <AuthProvider>
-                        <RevenueCatBootstrap />
-                        <EntitlementCacheGuard />
-                        <Slot />
-                        <Snackbar />
-                    </AuthProvider>
-                </ThemeProvider>
-            </QueryClientProvider>
-        </ErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <ErrorBoundary>
+                <QueryClientProvider client={queryClient}>
+                    <ThemeProvider>
+                        <AuthProvider>
+                            <RevenueCatBootstrap />
+                            <EntitlementCacheGuard />
+                            <Slot />
+                            <Snackbar />
+                        </AuthProvider>
+                    </ThemeProvider>
+                </QueryClientProvider>
+            </ErrorBoundary>
+        </GestureHandlerRootView>
     );
 }
