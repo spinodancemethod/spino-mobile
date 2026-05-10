@@ -7,7 +7,6 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "prebuildCommand": "bash scripts/prebuild.sh",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
@@ -18,7 +17,6 @@
     },
     "preview": {
       "distribution": "internal",
-      "prebuildCommand": "bash scripts/prebuild.sh",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
@@ -29,7 +27,6 @@
     },
     "production": {
       "autoIncrement": true,
-      "prebuildCommand": "bash scripts/prebuild.sh",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://qvdacsdsxkrzceawchng.supabase.co",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PU3fPcE2TK_6iuUX_imEdA_IWWpxsS6",
