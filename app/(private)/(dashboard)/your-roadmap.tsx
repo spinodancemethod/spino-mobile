@@ -30,10 +30,10 @@ const SURFACE_WIDTH = 1800
 const POSITION_COLUMN_WIDTH = 180
 const SURFACE_HORIZONTAL_PADDING = 24
 const VIDEO_W = 170
-const VIDEO_H = 128
+// Tile height: paddingV(8*2) + header(20) + image at 4:3 on (170-16)=154px wide (~116) + hint(16) = 168
+const VIDEO_H = 168
 const POSITION_BOX_MIN_HEIGHT = VIDEO_H
 const VIDEO_MARGIN = 10
-const VIDEO_GIF_HEIGHT = 78
 const ICON_SIZE = 18
 const ROW_GAP = 18
 const VIDEO_GAP = 12
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     },
     videoGif: {
         width: '100%',
-        height: VIDEO_GIF_HEIGHT,
+        aspectRatio: 4 / 3,
         borderRadius: 6,
         backgroundColor: '#dbe4ee',
     },
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     },
     positionPlaceholderImage: {
         width: '100%',
-        height: VIDEO_GIF_HEIGHT,
+        aspectRatio: 4 / 3,
         borderRadius: 6,
         backgroundColor: '#fde68a',
     },
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     },
     modalGifPreview: {
         width: '100%',
-        height: 160,
+        aspectRatio: 4 / 3,
         borderRadius: 8,
         marginBottom: 12,
         backgroundColor: '#dbe4ee',
