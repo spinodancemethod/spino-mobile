@@ -1,9 +1,12 @@
-import React, { useCallback, useRef, useState } from 'react'
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
+import React, { useCallback } from 'react'
+import { StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native'
+import { Platform } from 'react-native'
+import Video, { SelectedTrackType, SelectedVideoTrackType } from 'react-native-video'
 import { VideoView } from 'expo-video'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
     runOnJS,
+    useAnimatedProps,
     useAnimatedStyle,
     useSharedValue,
     withDelay,
@@ -11,129 +14,159 @@ import Animated, {
 } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { Ionicons } from '@expo/vector-icons'
-import { useCustomVideoPlayer } from 'lib/hooks/useCustomVideoPlayer'
+import { useCustomVideoPlayer } from '../lib/hooks/useCustomVideoPlayer'
+
+// Worklet-safe formatter — runs on UI thread, no String() constructor needed
+function formatTimeWorklet(seconds: number): string {
+    'worklet'
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return m + ':' + (s < 10 ? '0' + s : '' + s)
+}
+
+// AnimatedTextInput lets useAnimatedProps drive text content entirely on the
+// UI thread — no JS bridge crossing, no React re-renders during scrub.
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput)
 
 interface CustomVideoPlayerProps {
     source: string
     style?: StyleProp<ViewStyle>
 }
 
-function formatTime(seconds: number): string {
-    const m = Math.floor(seconds / 60)
-    const s = Math.floor(seconds % 60)
-    return `${m}:${s.toString().padStart(2, '0')}`
-}
-
 export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerProps) {
     const {
-        player,
+        expoPlayer,
+        videoRef,
         isPlaying,
         isPlayingSv,
-        duration,
         durationSv,
         currentTimeSv,
         togglePlayPause,
-        pauseForScrub,
         seekTo,
-        resumePlayback,
+        seekBy,
+        pauseForScrub,
+        resumeIfWasPlaying,
+        onLoad,
+        onProgress,
+        onEnd,
+        onSeek,
     } = useCustomVideoPlayer(source)
 
-    // Shared values — all gesture state lives here to avoid React re-renders during pan
+    // Stored as shared value so gesture handlers on the UI thread can read it
     const videoWidth = useSharedValue(300)
+
+    // Scrub state — all shared values, all updates on UI thread
     const isScrubbing = useSharedValue(false)
-    const scrubPosition = useSharedValue(0)
-    const basePositionOnDrag = useSharedValue(0)
-    const wasPlaying = useSharedValue(false)
-    const overlayOpacity = useSharedValue(0)
-    const scrubOverlayOpacity = useSharedValue(0)
+    const scrubTime = useSharedValue(0)
+    const baseTime = useSharedValue(0)       // playback time captured at pan start
+    const wasPlaying = useSharedValue(false) // playing state captured at pan start
+    const lastHapticX = useSharedValue(0)   // last X that fired a haptic (throttle)
+    // Overlay visibility
+    const iconOpacity = useSharedValue(0)
+    const scrubOpacity = useSharedValue(0)
 
-    // Scrub timestamp shown in the overlay — updated via runOnJS during pan
-    const [scrubDisplayTime, setScrubDisplayTime] = useState(0)
-
-    // Haptic debounce ref — only ever touched on JS thread via runOnJS, so plain ref is fine
-    const lastHapticTime = useRef(0)
     const triggerHaptic = useCallback(() => {
-        const now = Date.now()
-        if (now - lastHapticTime.current > 150) {
-            lastHapticTime.current = now
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
-        }
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     }, [])
 
-    const updateScrubDisplay = useCallback((v: number) => {
-        setScrubDisplayTime(v)
-    }, [])
+    // ─── Scrub actions: use seekBy for incremental seeks during scrub ───────
+    const scrubTo = useCallback(
+        (target: number, resume = false) => {
+            seekTo(target)
+            if (resume) {
+                resumeIfWasPlaying(true)
+            }
+        },
+        [resumeIfWasPlaying, seekTo]
+    )
 
-    const commitScrub = useCallback((position: number, shouldResume: boolean) => {
-        seekTo(position)
-        if (shouldResume) {
-            // Small delay to let seek settle before resuming
-            setTimeout(() => resumePlayback(), 80)
-        }
-    }, [seekTo, resumePlayback])
-
-    const tap = Gesture.Tap()
-        .maxDuration(250)
-        .onEnd(() => {
-            'worklet'
-            runOnJS(togglePlayPause)()
-            overlayOpacity.value = 1
-            overlayOpacity.value = withDelay(600, withTiming(0, { duration: 300 }))
-        })
+    const scrubBy = useCallback(
+        (delta: number) => {
+            seekBy(delta)
+        },
+        [seekBy]
+    )
 
     const pan = Gesture.Pan()
-        .activeOffsetX([-12, 12])
-        .failOffsetY([-20, 20])
-        .onBegin(() => {
+        .minDistance(5)
+        .onStart(() => {
             'worklet'
-            isScrubbing.value = true
             wasPlaying.value = isPlayingSv.value
-            basePositionOnDrag.value = currentTimeSv.value
-            scrubPosition.value = currentTimeSv.value
+            baseTime.value = currentTimeSv.value
+            scrubTime.value = currentTimeSv.value
+            lastHapticX.value = 0
+            isScrubbing.value = true
+            scrubOpacity.value = withTiming(1, { duration: 150 })
             runOnJS(pauseForScrub)()
-            scrubOverlayOpacity.value = withTiming(1, { duration: 150 })
         })
         .onUpdate((e) => {
             'worklet'
             const delta = (e.translationX / videoWidth.value) * durationSv.value
-            const next = Math.max(0, Math.min(durationSv.value, basePositionOnDrag.value + delta))
-            scrubPosition.value = next
-            runOnJS(updateScrubDisplay)(next)
-            runOnJS(triggerHaptic)()
+            const newScrubTime = Math.max(0, Math.min(durationSv.value, baseTime.value + delta))
+            scrubTime.value = newScrubTime
+            runOnJS(seekTo)(newScrubTime)
+
+            if (Math.abs(e.translationX - lastHapticX.value) > 15) {  // More frequent haptic feedback
+                lastHapticX.value = e.translationX
+                runOnJS(triggerHaptic)()
+            }
         })
         .onEnd(() => {
             'worklet'
-            const finalPos = scrubPosition.value
-            const resume = wasPlaying.value
             isScrubbing.value = false
-            scrubOverlayOpacity.value = withTiming(0, { duration: 200 })
-            runOnJS(commitScrub)(finalPos, resume)
+            scrubOpacity.value = withTiming(0, { duration: 200 })
+            // Seek to the final position when user releases
+            runOnJS(scrubTo)(scrubTime.value, wasPlaying.value)
         })
         .onFinalize(() => {
             'worklet'
-            // Clean up if gesture is cancelled (e.g. interrupted by scroll)
             if (isScrubbing.value) {
                 isScrubbing.value = false
-                scrubOverlayOpacity.value = withTiming(0, { duration: 200 })
+                scrubOpacity.value = withTiming(0, { duration: 200 })
+                runOnJS(scrubTo)(scrubTime.value, wasPlaying.value)
             }
         })
 
-    // Pan wins over tap when horizontal movement exceeds threshold
+    // ─── Tap gesture: play/pause with brief icon flash ─────────────────────────
+
+    const tap = Gesture.Tap()
+        .maxDuration(250)
+        .maxDeltaX(10)
+        .maxDeltaY(10)
+        .onEnd(() => {
+            'worklet'
+            runOnJS(togglePlayPause)()
+            iconOpacity.value = 1
+            iconOpacity.value = withDelay(600, withTiming(0, { duration: 300 }))
+        })
+
+    // Pan takes priority; tap only activates when pan fails (no horizontal movement)
     const gesture = Gesture.Exclusive(pan, tap)
 
-    const overlayStyle = useAnimatedStyle(() => ({
-        opacity: overlayOpacity.value,
+    // ─── Animated styles ───────────────────────────────────────────────────────
+
+    const iconOverlayStyle = useAnimatedStyle(() => ({
+        opacity: iconOpacity.value,
     }))
 
     const scrubOverlayStyle = useAnimatedStyle(() => ({
-        opacity: scrubOverlayOpacity.value,
+        opacity: scrubOpacity.value,
     }))
 
+    // Progress bar width in pixels (not %) so the calculation stays on UI thread
     const progressStyle = useAnimatedStyle(() => {
-        const pos = isScrubbing.value ? scrubPosition.value : currentTimeSv.value
+        const pos = isScrubbing.value ? scrubTime.value : currentTimeSv.value
         const dur = durationSv.value
-        const pct = dur > 0 ? (pos / dur) * 100 : 0
-        return { width: `${pct}%` }
+        return { width: dur > 0 ? (pos / dur) * videoWidth.value : 0 }
+    })
+
+    // Timestamp text driven entirely on the UI thread via animated props.
+    // No React state, no bridge crossings, no VideoView re-renders during scrub.
+    const timestampProps = useAnimatedProps(() => {
+        const t = isScrubbing.value ? scrubTime.value : currentTimeSv.value
+        const dur = durationSv.value
+        const text = formatTimeWorklet(t) + (dur > 0 ? ' / ' + formatTimeWorklet(dur) : '')
+        return { text, defaultValue: text }
     })
 
     return (
@@ -144,20 +177,57 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
                     videoWidth.value = e.nativeEvent.layout.width
                 }}
             >
-                <VideoView
-                    player={player}
-                    style={styles.video}
-                    nativeControls={false}
-                    contentFit="contain"
-                    allowsFullscreen={false}
-                    allowsPictureInPicture={false}
-                />
+                {Platform.OS === 'web' ? (
+                    <VideoView
+                        player={expoPlayer!}
+                        style={styles.video}
+                        nativeControls={false}
+                        contentFit="contain"
+                        allowsPictureInPicture={false}
+                        surfaceType="surfaceView"
+                        allowsVideoFrameAnalysis={true}
+                    />
+                ) : (
+                    <Video
+                        ref={videoRef}
+                        source={{ uri: source }}
+                        style={styles.video}
+                        paused={!isPlaying}
+                        onLoad={onLoad}
+                        onProgress={onProgress}
+                        onEnd={onEnd}
+                        onSeek={onSeek}
+                        resizeMode="contain"
+                        controls={false}
+                        playInBackground={false}
+                        playWhenInactive={false}
+                        selectedVideoTrack={{
+                            type: SelectedVideoTrackType.RESOLUTION,
+                            value: 480
+                        }}
+                        selectedAudioTrack={{
+                            type: SelectedTrackType.TITLE,
+                            value: "default"
+                        }}
+                        bufferConfig={{
+                            minBufferMs: 5000,  // Reduced for faster seeking
+                            maxBufferMs: 15000,
+                            bufferForPlaybackMs: 1000,
+                            bufferForPlaybackAfterRebufferMs: 2000,
+                        }}
+                        maxBitRate={800000}  // Lower bitrate for smoother scrubbing
+                        reportBandwidth={true}
+                        allowsExternalPlayback={false}
+                        automaticallyWaitsToMinimizeStalling={false}
+                        preferredForwardBufferDuration={5}  // Shorter buffer for responsive seeking
+                        progressUpdateInterval={0.05}  // More frequent progress updates
+                        useTextureView={true}  // Better for performance
+                        disableFocus={true}  // Prevent focus issues during scrubbing
+                    />
+                )}
 
-                {/* Play/Pause flash overlay */}
-                <Animated.View
-                    style={[styles.overlay, overlayStyle]}
-                    pointerEvents="none"
-                >
+                {/* Play/pause flash — fades after 900ms total */}
+                <Animated.View style={[styles.overlay, iconOverlayStyle]} pointerEvents="none">
                     <View style={styles.iconCircle}>
                         <Ionicons
                             name={isPlaying ? 'pause' : 'play'}
@@ -167,16 +237,16 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
                     </View>
                 </Animated.View>
 
-                {/* Scrub timestamp overlay */}
-                <Animated.View
-                    style={[styles.scrubOverlay, scrubOverlayStyle]}
-                    pointerEvents="none"
-                >
+                {/* Scrub timestamp — text stays on UI thread via AnimatedTextInput */}
+                <Animated.View style={[styles.scrubOverlay, scrubOverlayStyle]} pointerEvents="none">
                     <View style={styles.timestampPill}>
-                        <Animated.Text style={styles.timestampText}>
-                            {formatTime(scrubDisplayTime)}
-                            {duration > 0 ? ` / ${formatTime(duration)}` : ''}
-                        </Animated.Text>
+                        <AnimatedTextInput
+                            style={styles.timestampText}
+                            animatedProps={timestampProps}
+                            editable={false}
+                            caretHidden
+                            underlineColorAndroid="transparent"
+                        />
                     </View>
                 </Animated.View>
 
@@ -230,6 +300,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         letterSpacing: 0.3,
+        backgroundColor: 'transparent',
+        padding: 0,
+        margin: 0,
+        minWidth: 80,
+        textAlign: 'center',
     },
     progressTrack: {
         position: 'absolute',
