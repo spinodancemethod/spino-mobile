@@ -1,7 +1,5 @@
 import React, { useCallback } from 'react'
 import { StyleProp, StyleSheet, TextInput, View, ViewStyle } from 'react-native'
-import { Platform } from 'react-native'
-import Video, { SelectedTrackType, SelectedVideoTrackType } from 'react-native-video'
 import { VideoView } from 'expo-video'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import Animated, {
@@ -36,20 +34,14 @@ interface CustomVideoPlayerProps {
 export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerProps) {
     const {
         expoPlayer,
-        videoRef,
         isPlaying,
         isPlayingSv,
         durationSv,
         currentTimeSv,
         togglePlayPause,
         seekTo,
-        seekBy,
         pauseForScrub,
         resumeIfWasPlaying,
-        onLoad,
-        onProgress,
-        onEnd,
-        onSeek,
     } = useCustomVideoPlayer(source)
 
     // Stored as shared value so gesture handlers on the UI thread can read it
@@ -69,7 +61,6 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
     }, [])
 
-    // ─── Scrub actions: use seekBy for incremental seeks during scrub ───────
     const scrubTo = useCallback(
         (target: number, resume = false) => {
             seekTo(target)
@@ -78,13 +69,6 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
             }
         },
         [resumeIfWasPlaying, seekTo]
-    )
-
-    const scrubBy = useCallback(
-        (delta: number) => {
-            seekBy(delta)
-        },
-        [seekBy]
     )
 
     const pan = Gesture.Pan()
@@ -106,7 +90,7 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
             scrubTime.value = newScrubTime
             runOnJS(seekTo)(newScrubTime)
 
-            if (Math.abs(e.translationX - lastHapticX.value) > 15) {  // More frequent haptic feedback
+            if (Math.abs(e.translationX - lastHapticX.value) > 15) {
                 lastHapticX.value = e.translationX
                 runOnJS(triggerHaptic)()
             }
@@ -115,7 +99,6 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
             'worklet'
             isScrubbing.value = false
             scrubOpacity.value = withTiming(0, { duration: 200 })
-            // Seek to the final position when user releases
             runOnJS(scrubTo)(scrubTime.value, wasPlaying.value)
         })
         .onFinalize(() => {
@@ -177,54 +160,13 @@ export default function CustomVideoPlayer({ source, style }: CustomVideoPlayerPr
                     videoWidth.value = e.nativeEvent.layout.width
                 }}
             >
-                {Platform.OS === 'web' ? (
-                    <VideoView
-                        player={expoPlayer!}
-                        style={styles.video}
-                        nativeControls={false}
-                        contentFit="contain"
-                        allowsPictureInPicture={false}
-                        surfaceType="surfaceView"
-                        allowsVideoFrameAnalysis={true}
-                    />
-                ) : (
-                    <Video
-                        ref={videoRef}
-                        source={{ uri: source }}
-                        style={styles.video}
-                        paused={!isPlaying}
-                        onLoad={onLoad}
-                        onProgress={onProgress}
-                        onEnd={onEnd}
-                        onSeek={onSeek}
-                        resizeMode="contain"
-                        controls={false}
-                        playInBackground={false}
-                        playWhenInactive={false}
-                        selectedVideoTrack={{
-                            type: SelectedVideoTrackType.RESOLUTION,
-                            value: 480
-                        }}
-                        selectedAudioTrack={{
-                            type: SelectedTrackType.TITLE,
-                            value: "default"
-                        }}
-                        bufferConfig={{
-                            minBufferMs: 5000,  // Reduced for faster seeking
-                            maxBufferMs: 15000,
-                            bufferForPlaybackMs: 1000,
-                            bufferForPlaybackAfterRebufferMs: 2000,
-                        }}
-                        maxBitRate={800000}  // Lower bitrate for smoother scrubbing
-                        reportBandwidth={true}
-                        allowsExternalPlayback={false}
-                        automaticallyWaitsToMinimizeStalling={false}
-                        preferredForwardBufferDuration={5}  // Shorter buffer for responsive seeking
-                        progressUpdateInterval={0.05}  // More frequent progress updates
-                        useTextureView={true}  // Better for performance
-                        disableFocus={true}  // Prevent focus issues during scrubbing
-                    />
-                )}
+                <VideoView
+                    player={expoPlayer}
+                    style={styles.video}
+                    nativeControls={false}
+                    contentFit="contain"
+                    allowsPictureInPicture={false}
+                />
 
                 {/* Play/pause flash — fades after 900ms total */}
                 <Animated.View style={[styles.overlay, iconOverlayStyle]} pointerEvents="none">
