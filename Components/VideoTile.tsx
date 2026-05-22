@@ -41,12 +41,12 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
             {item?.thumbnail_url ? (
                 <Image
                     source={item.thumbnail_url}
-                    style={{ width: '100%', aspectRatio: 4 / 3 }}
+                    style={{ width: '100%', aspectRatio: 1 }}
                     contentFit="cover"
                     cachePolicy="disk"
                 />
             ) : (
-                <View style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.uiBackground }} />
+                <View style={{ width: '100%', aspectRatio: 1, backgroundColor: colors.uiBackground }} />
             )}
 
             <View style={{ paddingVertical: 8, paddingHorizontal: 6 }}>
