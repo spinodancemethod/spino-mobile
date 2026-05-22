@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
+import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
@@ -20,6 +21,7 @@ import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
 import { supabase } from 'lib/supabase'
 import CustomVideoPlayer from 'Components/CustomVideoPlayer'
+import { useVideoSource } from 'lib/hooks/useVideoSource'
 
 
 export default function VideoDetailScreen() {
@@ -37,6 +39,7 @@ export default function VideoDetailScreen() {
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
     const [signedUrl, setSignedUrl] = useState<string | null>(null)
+    const { localUri: cachedVideoUri } = useVideoSource(signedUrl)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -84,7 +87,7 @@ export default function VideoDetailScreen() {
     // Render a thumbnail or a themed placeholder with a play icon
     const renderPoster = () => {
         if (video?.thumbnail_url) {
-            return <Image source={{ uri: video.thumbnail_url }} style={styles.thumb} />
+            return <Image source={video.thumbnail_url} style={styles.thumb} contentFit="cover" cachePolicy="disk" />
         }
 
         const bg = mode === 'dark' ? '#0f172a' : '#eef2ff'
@@ -181,9 +184,9 @@ export default function VideoDetailScreen() {
                     </View>
 
                     {/* playable video if URL or file_path (resolved to signedUrl) exists */}
-                    {(video?.url || signedUrl) ? (
+                    {(video?.url || cachedVideoUri) ? (
                         <CustomVideoPlayer
-                            source={(video?.url ?? signedUrl ?? '') as string}
+                            source={(video?.url ?? cachedVideoUri ?? '') as string}
                             style={styles.thumb}
                         />
                     ) : (

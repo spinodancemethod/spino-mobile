@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, TouchableOpacity, Image } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import ThemedText from 'Components/ThemedText';
 import ThemedPill from 'Components/ThemedPill';
 import { getLevelInfo } from 'constants/Levels';
@@ -39,9 +40,10 @@ const VideoTile: React.FC<Props> = ({ item, onPress, positionName, liked = false
         <>
             {item?.thumbnail_url ? (
                 <Image
-                    source={{ uri: item.thumbnail_url }}
+                    source={item.thumbnail_url}
                     style={{ width: '100%', aspectRatio: 4 / 3 }}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    cachePolicy="disk"
                 />
             ) : (
                 <View style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.uiBackground }} />
