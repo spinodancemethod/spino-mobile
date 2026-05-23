@@ -41,13 +41,11 @@ async function uploadFile(
     path: string,
     uri: string,
     mimeType: string,
-    filename: string,
+    _filename: string,
 ): Promise<void> {
-    const formData = new FormData()
-    // React Native requires the file entry to be an object with uri/name/type.
-    // On web the same object works as a Blob-compatible entry.
-    formData.append('file', { uri, name: filename, type: mimeType } as any)
-    const { error } = await supabase.storage.from(bucket).upload(path, formData, { contentType: mimeType })
+    const response = await fetch(uri)
+    const blob = await response.blob()
+    const { error } = await supabase.storage.from(bucket).upload(path, blob, { contentType: mimeType })
     if (error) throw new Error(`Upload to ${bucket} failed: ${error.message}`)
 }
 
