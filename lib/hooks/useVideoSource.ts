@@ -14,22 +14,24 @@ function cacheFilename(remoteUrl: string): string {
 }
 
 /**
- * Returns a local file:// URI for the given remote video URL.
- * Downloads to device cache on first call; returns cached path immediately on
- * subsequent calls with zero egress.
+ * Returns a URI for the given remote video URL.
+ * Immediately returns the remote URL so playback starts right away, then
+ * downloads to device cache in the background. On subsequent calls with the
+ * same URL the cached local path is returned instantly with zero egress.
  */
 export function useVideoSource(remoteUrl: string | null) {
-    const [localUri, setLocalUri] = useState<string | null>(null)
+    // Start with the remote URL immediately so the player doesn't wait for download
+    const [localUri, setLocalUri] = useState<string | null>(remoteUrl)
     const [isDownloading, setIsDownloading] = useState(false)
 
     useEffect(() => {
+        // Always update to the latest remoteUrl (covers source changes)
+        setLocalUri(remoteUrl)
+
         if (!remoteUrl) return
 
         // Web has no filesystem access — stream directly with no caching
-        if (Platform.OS === 'web') {
-            setLocalUri(remoteUrl)
-            return
-        }
+        if (Platform.OS === 'web') return
 
         let cancelled = false
 
@@ -45,17 +47,19 @@ export function useVideoSource(remoteUrl: string | null) {
             const fileInfo = await FileSystem.getInfoAsync(localPath)
 
             if (fileInfo.exists) {
+                // Cached — upgrade from remote to local URI
                 if (!cancelled) setLocalUri(localPath)
                 return
             }
 
+            // Download in background; player is already streaming from remoteUrl
             if (!cancelled) setIsDownloading(true)
             try {
                 const result = await FileSystem.downloadAsync(remoteUrl!, localPath)
                 if (!cancelled) setLocalUri(result.uri)
             } catch (e) {
-                console.warn('[useVideoSource] cache download failed, falling back to remote', e)
-                if (!cancelled) setLocalUri(remoteUrl!)
+                console.warn('[useVideoSource] background cache download failed', e)
+                // Player continues streaming from remoteUrl — no action needed
             } finally {
                 if (!cancelled) setIsDownloading(false)
             }
