@@ -39,7 +39,10 @@ export default function VideoDetailScreen() {
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
     const [signedUrl, setSignedUrl] = useState<string | null>(null)
-    const { localUri: cachedVideoUri } = useVideoSource(signedUrl)
+    // Warm the local cache in the background — but don't use localUri as the
+    // player source. Switching the source mid-play (remote → local file) would
+    // cause expo-video to replace the stream and reset playback to 0:00.
+    useVideoSource(signedUrl)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -184,9 +187,9 @@ export default function VideoDetailScreen() {
                     </View>
 
                     {/* playable video if URL or file_path (resolved to signedUrl) exists */}
-                    {(video?.url || cachedVideoUri) ? (
+                    {(video?.url || signedUrl) ? (
                         <CustomVideoPlayer
-                            source={(video?.url ?? cachedVideoUri ?? '') as string}
+                            source={(video?.url ?? signedUrl ?? '') as string}
                             style={styles.thumb}
                         />
                     ) : (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useVideoPlayer } from 'expo-video'
 import { useSharedValue } from 'react-native-reanimated'
 
@@ -12,11 +12,6 @@ export function useCustomVideoPlayer(source: string) {
     const [isPlaying, setIsPlaying] = useState(false)
     const [duration, setDuration] = useState(0)
     const [currentTime, setCurrentTime] = useState(0)
-
-    // Debounce rapid seeks: if a seek fires while one is in flight, queue the
-    // latest target and dispatch it on the next timeUpdate tick.
-    const seekInFlightRef = useRef(false)
-    const seekPendingRef = useRef<number | null>(null)
 
     const isPlayingSv = useSharedValue(false)
     const currentTimeSv = useSharedValue(0)
@@ -34,18 +29,6 @@ export function useCustomVideoPlayer(source: string) {
     useEffect(() => {
         const sub = expoPlayer.addListener('timeUpdate', (payload) => {
             const t = payload.currentTime
-            // Drain any queued seek once the player has advanced
-            if (seekInFlightRef.current) {
-                if (seekPendingRef.current !== null) {
-                    const target = seekPendingRef.current
-                    seekPendingRef.current = null
-                    expoPlayer.currentTime = target
-                    currentTimeSv.value = target
-                } else {
-                    seekInFlightRef.current = false
-                }
-                return
-            }
             setCurrentTime(t)
             currentTimeSv.value = t
         })
@@ -72,13 +55,10 @@ export function useCustomVideoPlayer(source: string) {
     }, [expoPlayer])
 
     const seekTo = useCallback((seconds: number) => {
+        // Update shared value immediately so the scrub UI stays in sync on the
+        // UI thread. expo-video handles rapid currentTime assignments natively.
         currentTimeSv.value = seconds
-        if (seekInFlightRef.current) {
-            seekPendingRef.current = seconds
-        } else {
-            seekInFlightRef.current = true
-            expoPlayer.currentTime = seconds
-        }
+        expoPlayer.currentTime = seconds
     }, [expoPlayer, currentTimeSv])
 
     const seekBy = useCallback((delta: number) => {
