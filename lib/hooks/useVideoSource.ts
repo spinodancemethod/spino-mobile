@@ -14,24 +14,33 @@ function cacheFilename(remoteUrl: string): string {
 }
 
 /**
- * Returns a URI for the given remote video URL.
- * Immediately returns the remote URL so playback starts right away, then
- * downloads to device cache in the background. On subsequent calls with the
- * same URL the cached local path is returned instantly with zero egress.
+ * Returns a URI for the given remote video URL, preferring a locally cached
+ * copy to eliminate egress on repeat views.
+ *
+ * Starts as `null` (pending), then resolves to:
+ *   - the local file path immediately if the video is already cached, or
+ *   - the remote URL while a background download runs.
+ *
+ * Because the source is determined before the player mounts, it never needs
+ * to switch mid-stream (which would reset playback to 0:00).
+ *
+ * Web: no filesystem access — always resolves to the remote URL.
  */
 export function useVideoSource(remoteUrl: string | null) {
-    // Start with the remote URL immediately so the player doesn't wait for download
-    const [localUri, setLocalUri] = useState<string | null>(remoteUrl)
+    const [localUri, setLocalUri] = useState<string | null>(null)
     const [isDownloading, setIsDownloading] = useState(false)
 
     useEffect(() => {
-        // Always update to the latest remoteUrl (covers source changes)
-        setLocalUri(remoteUrl)
+        // Reset on source change so the player doesn't flash stale content
+        setLocalUri(null)
 
         if (!remoteUrl) return
 
         // Web has no filesystem access — stream directly with no caching
-        if (Platform.OS === 'web') return
+        if (Platform.OS === 'web') {
+            setLocalUri(remoteUrl)
+            return
+        }
 
         let cancelled = false
 
@@ -47,15 +56,19 @@ export function useVideoSource(remoteUrl: string | null) {
             const fileInfo = await FileSystem.getInfoAsync(localPath)
 
             if (fileInfo.exists) {
-                // Cached — upgrade from remote to local URI
+                // Already cached — play locally with zero egress
                 if (!cancelled) setLocalUri(localPath)
                 return
             }
 
-            // Download in background; player is already streaming from remoteUrl
-            if (!cancelled) setIsDownloading(true)
+            // Not cached yet — stream from remote while downloading in background
+            if (!cancelled) {
+                setLocalUri(remoteUrl!)
+                setIsDownloading(true)
+            }
             try {
                 const result = await FileSystem.downloadAsync(remoteUrl!, localPath)
+                // Update to local URI once download completes (next visit uses cache)
                 if (!cancelled) setLocalUri(result.uri)
             } catch (e) {
                 console.warn('[useVideoSource] background cache download failed', e)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
 import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -19,9 +19,9 @@ import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
-import { supabase } from 'lib/supabase'
 import CustomVideoPlayer from 'Components/CustomVideoPlayer'
 import { useVideoSource } from 'lib/hooks/useVideoSource'
+import { useSignedVideoUrl } from 'lib/hooks/useSignedVideoUrl'
 
 
 export default function VideoDetailScreen() {
@@ -38,11 +38,16 @@ export default function VideoDetailScreen() {
     const { data: positions = [] } = usePositions(undefined)
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
-    const [signedUrl, setSignedUrl] = useState<string | null>(null)
-    // Warm the local cache in the background — but don't use localUri as the
-    // player source. Switching the source mid-play (remote → local file) would
-    // cause expo-video to replace the stream and reset playback to 0:00.
-    useVideoSource(signedUrl)
+    // Signed URL cached in React Query for 50 min — avoids a Storage API call on every visit
+    const { data: signedUrl = null } = useSignedVideoUrl(
+        !video?.url ? (video?.file_path as string | null) : null
+    )
+
+    // Resolve the remote URL to a local cached file when available.
+    // On first view: streams from remote, downloads in background.
+    // On repeat views: plays from device cache with zero egress.
+    const remoteSource = (video?.url ?? signedUrl) as string | null
+    const { localUri: playerSource } = useVideoSource(remoteSource)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -70,22 +75,6 @@ export default function VideoDetailScreen() {
 
         await toggleCompletionWithFeedback(video.id, isComplete)
     }
-
-    useEffect(() => {
-        setSignedUrl(null)
-        if (!video?.file_path) return
-        supabase.storage.from('videos').createSignedUrl(video.file_path as string, 3600)
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('[VideoDetail] createSignedUrl error:', error)
-                    return
-                }
-                if (data?.signedUrl) {
-                    console.log('[VideoDetail] signedUrl ready')
-                    setSignedUrl(data.signedUrl)
-                }
-            })
-    }, [video?.file_path])
 
     // Render a thumbnail or a themed placeholder with a play icon
     const renderPoster = () => {
@@ -186,10 +175,10 @@ export default function VideoDetailScreen() {
                         ) : null}
                     </View>
 
-                    {/* playable video if URL or file_path (resolved to signedUrl) exists */}
-                    {(video?.url || signedUrl) ? (
+                    {/* playable video — use local cache when available, otherwise remote */}
+                    {playerSource ? (
                         <CustomVideoPlayer
-                            source={(video?.url ?? signedUrl ?? '') as string}
+                            source={playerSource}
                             style={styles.thumb}
                         />
                     ) : (
