@@ -29,7 +29,6 @@ export function useSignedVideoUrl(filePath: string | null | undefined) {
         staleTime: CACHE_TTL_MS,
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
-        refetchOnMount: false,
         retry: 2,
     })
 }

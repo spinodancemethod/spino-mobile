@@ -43,14 +43,10 @@ export default function VideoDetailScreen() {
         !video?.url ? (video?.file_path as string | null) : null
     )
 
-    // Stable source for the player — never changes once resolved, so
-    // useVideoPlayer doesn't need to re-initialise mid-playback.
-    const playerSource = (video?.url ?? signedUrl ?? null) as string | null
-
-    // Download to device cache in the background so repeat visits skip egress.
-    // The return value is intentionally ignored — the player uses the stable
-    // remote source above to avoid any source-switching during playback.
-    useVideoSource(playerSource)
+    // Warm the local cache in the background — result is not used for playback.
+    // Switching the source mid-play (remote → local file) would cause
+    // expo-video to replace the stream and reset playback to 0:00.
+    useVideoSource(signedUrl)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -178,10 +174,10 @@ export default function VideoDetailScreen() {
                         ) : null}
                     </View>
 
-                    {/* playable video — use local cache when available, otherwise remote */}
-                    {playerSource ? (
+                    {/* playable video if URL or file_path (resolved to signedUrl) exists */}
+                    {(video?.url || signedUrl) ? (
                         <CustomVideoPlayer
-                            source={playerSource}
+                            source={(video?.url ?? signedUrl ?? '') as string}
                             style={styles.thumb}
                         />
                     ) : (
