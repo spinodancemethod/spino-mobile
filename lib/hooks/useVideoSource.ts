@@ -17,30 +17,27 @@ function cacheFilename(remoteUrl: string): string {
  * Returns a URI for the given remote video URL, preferring a locally cached
  * copy to eliminate egress on repeat views.
  *
- * Starts as `null` (pending), then resolves to:
- *   - the local file path immediately if the video is already cached, or
- *   - the remote URL while a background download runs.
+ * Always resolves immediately to `remoteUrl` so the player has a valid source
+ * from the very first render (avoids grey screen on native builds where
+ * useVideoPlayer initialises the native player at mount time).
  *
- * Because the source is determined before the player mounts, it never needs
- * to switch mid-stream (which would reset playback to 0:00).
+ * If the file is already cached it switches to the local path before
+ * expo-video has had time to start buffering (~10 ms vs ~1-2 s).
  *
- * Web: no filesystem access — always resolves to the remote URL.
+ * After a first-view background download the local URI is NOT swapped in —
+ * that would reset playback to 0:00. The cached file is picked up on the
+ * next visit instead.
+ *
+ * Web: no filesystem access — always streams from the remote URL.
  */
 export function useVideoSource(remoteUrl: string | null) {
-    const [localUri, setLocalUri] = useState<string | null>(null)
-    const [isDownloading, setIsDownloading] = useState(false)
+    const [localUri, setLocalUri] = useState<string | null>(remoteUrl)
 
     useEffect(() => {
-        // Reset on source change so the player doesn't flash stale content
-        setLocalUri(null)
+        // Always give the player a valid remote source immediately
+        setLocalUri(remoteUrl)
 
-        if (!remoteUrl) return
-
-        // Web has no filesystem access — stream directly with no caching
-        if (Platform.OS === 'web') {
-            setLocalUri(remoteUrl)
-            return
-        }
+        if (!remoteUrl || Platform.OS === 'web') return
 
         let cancelled = false
 
@@ -56,25 +53,18 @@ export function useVideoSource(remoteUrl: string | null) {
             const fileInfo = await FileSystem.getInfoAsync(localPath)
 
             if (fileInfo.exists) {
-                // Already cached — play locally with zero egress
+                // Already cached — upgrade to local file before buffering starts
                 if (!cancelled) setLocalUri(localPath)
                 return
             }
 
-            // Not cached yet — stream from remote while downloading in background
-            if (!cancelled) {
-                setLocalUri(remoteUrl!)
-                setIsDownloading(true)
-            }
+            // Download in background for future visits.
+            // Do NOT update localUri after completion — switching source
+            // mid-stream causes expo-video to reset playback to 0:00.
             try {
-                const result = await FileSystem.downloadAsync(remoteUrl!, localPath)
-                // Update to local URI once download completes (next visit uses cache)
-                if (!cancelled) setLocalUri(result.uri)
+                await FileSystem.downloadAsync(remoteUrl!, localPath)
             } catch (e) {
                 console.warn('[useVideoSource] background cache download failed', e)
-                // Player continues streaming from remoteUrl — no action needed
-            } finally {
-                if (!cancelled) setIsDownloading(false)
             }
         }
 
@@ -82,5 +72,5 @@ export function useVideoSource(remoteUrl: string | null) {
         return () => { cancelled = true }
     }, [remoteUrl])
 
-    return { localUri, isDownloading }
+    return { localUri }
 }
