@@ -13,6 +13,14 @@ export type CreateSegmentInput = {
     categoryId: string
 }
 
+export type UpdateSegmentInput = {
+    id: string
+    videoUploadId: string
+    startTime: number
+    endTime: number
+    categoryId: string
+}
+
 async function fetchCategories(): Promise<VideoCategoryRecord[]> {
     const { data, error } = await supabase
         .from('video_categories')
@@ -95,6 +103,54 @@ export function useCreateVideoSegment() {
                 .single()
             if (error) throw error
             return data as SegmentRecord
+        },
+        onSuccess: (segment) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+        },
+    })
+}
+
+export function useUpdateVideoSegment() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (input: UpdateSegmentInput) => {
+            const userId = requireUserId(undefined, user?.id)
+            if (input.startTime < 0 || input.startTime >= input.endTime) {
+                throw new Error('Segment start time must be less than end time.')
+            }
+            const { data, error } = await supabase
+                .from('segments')
+                .update({
+                    start_time: input.startTime,
+                    end_time: input.endTime,
+                    category_id: input.categoryId,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', input.id)
+                .eq('user_id', userId)
+                .select()
+                .single()
+            if (error) throw error
+            return data as SegmentRecord
+        },
+        onSuccess: (segment) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+        },
+    })
+}
+
+export function useDeleteVideoSegment() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (segment: Pick<SegmentRecord, 'id' | 'video_upload_id'>) => {
+            const userId = requireUserId(undefined, user?.id)
+            const { error } = await supabase
+                .from('segments')
+                .delete()
+                .eq('id', segment.id)
+                .eq('user_id', userId)
+            if (error) throw error
+            return segment
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })

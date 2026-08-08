@@ -5,6 +5,8 @@
 - Added a local-video Phase 1 test screen with on-device SQLite metadata, Expo media-library video selection, availability states, replacement/removal actions, and timestamp-player groundwork. Source videos are not uploaded.
 - Added the Phase 1 `video_uploads` metadata migration and authenticated upsert path. Local references remain usable when Supabase sync is unavailable; source videos are never uploaded.
 - Added categorized timestamp segments with mandatory `Misc` fallback, custom categories, segment validation, ownership RLS, and local-video review controls.
+- Updated explicit video-reference removal to delete the authenticated cloud metadata and cascaded segments while leaving the source video on the device.
+- Added SQLite-first category persistence with offline `Misc` support, custom category creation, pending category sync, and cloud-ID mapping for segment synchronization.
 
 ## Current Product (Google Play Runtime)
 

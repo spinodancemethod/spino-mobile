@@ -88,3 +88,24 @@ export function useSyncVideoUpload() {
         },
     })
 }
+
+export function useDeleteVideoUpload() {
+    const { user } = useAuth()
+
+    return useMutation({
+        mutationFn: async (videoUploadId: string) => {
+            const userId = requireUserId(undefined, user?.id)
+            const { error } = await supabase
+                .from('video_uploads')
+                .delete()
+                .eq('id', videoUploadId)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return videoUploadId
+        },
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
+        },
+    })
+}
