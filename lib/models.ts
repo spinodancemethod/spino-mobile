@@ -54,6 +54,33 @@ export type VideoUploadRecord = {
     updated_at: string;
 };
 
+export type VideoCategoryRecord = {
+    id: string;
+    user_id: string | null;
+    name: string;
+    system_category: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
+export type SegmentRecord = {
+    id: string;
+    user_id: string;
+    video_upload_id: string;
+    sequence: number | null;
+    start_time: number;
+    end_time: number;
+    count_start: number | null;
+    count_end: number | null;
+    category_id: string;
+    user_notes: string | null;
+    ai_confidence: number | null;
+    ai_generated: boolean;
+    user_confirmed: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
 export type CreateVideoPayload = {
     title: string;
     description?: string | null;

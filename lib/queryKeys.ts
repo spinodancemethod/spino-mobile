@@ -25,6 +25,8 @@ export const queryKeys = {
     note: (userId?: string | null, videoId?: string | null) => ['note', userId ?? null, videoId ?? null] as const,
     signedVideoUrl: (filePath?: string | null) => ['signedVideoUrl', filePath ?? null] as const,
     videoUploads: (userId?: string | null) => ['videoUploads', userId ?? null] as const,
+    videoCategories: (userId?: string | null) => ['videoCategories', userId ?? null] as const,
+    segments: (userId?: string | null, videoUploadId?: string | null) => ['segments', userId ?? null, videoUploadId ?? null] as const,
 };
 
 export function isQueryKeyEqual(a: QueryKey, b: QueryKey) {

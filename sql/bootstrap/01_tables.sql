@@ -118,6 +118,42 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
   CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key)
 );
 
+CREATE TABLE IF NOT EXISTS public.video_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users (id) ON DELETE CASCADE,
+  name text NOT NULL,
+  system_category boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT video_categories_name_check CHECK (length(trim(name)) > 0),
+  CONSTRAINT video_categories_system_owner_check CHECK ((system_category AND user_id IS NULL) OR (NOT system_category AND user_id IS NOT NULL)),
+  CONSTRAINT video_categories_misc_reserved_check CHECK (system_category OR lower(trim(name)) <> 'misc')
+);
+
+INSERT INTO public.video_categories (user_id, name, system_category)
+VALUES (NULL, 'Misc', true)
+ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS public.segments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  video_upload_id uuid NOT NULL REFERENCES public.video_uploads (id) ON DELETE CASCADE,
+  sequence integer,
+  start_time double precision NOT NULL,
+  end_time double precision NOT NULL,
+  count_start integer,
+  count_end integer,
+  category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE RESTRICT,
+  user_notes text,
+  ai_confidence double precision,
+  ai_generated boolean NOT NULL DEFAULT false,
+  user_confirmed boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT segments_time_order_check CHECK (start_time >= 0 AND start_time < end_time),
+  CONSTRAINT segments_confidence_check CHECK (ai_confidence IS NULL OR (ai_confidence >= 0 AND ai_confidence <= 1))
+);
+
 -- Stores per-user status for each video so roadmap completion stays user-specific.
 CREATE TABLE IF NOT EXISTS public.user_video_progress (
   user_id uuid NOT NULL,

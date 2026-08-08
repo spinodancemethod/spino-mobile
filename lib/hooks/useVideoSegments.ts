@@ -1,0 +1,103 @@
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { supabase } from '../supabase'
+import { useAuth } from '../auth'
+import { queryClient } from '../queryClient'
+import { queryKeys } from '../queryKeys'
+import { requireUserId } from './userId'
+import type { SegmentRecord, VideoCategoryRecord } from '../models'
+
+export type CreateSegmentInput = {
+    videoUploadId: string
+    startTime: number
+    endTime: number
+    categoryId: string
+}
+
+async function fetchCategories(): Promise<VideoCategoryRecord[]> {
+    const { data, error } = await supabase
+        .from('video_categories')
+        .select('*')
+        .order('system_category', { ascending: false })
+        .order('name')
+    if (error) throw error
+    return (data ?? []) as VideoCategoryRecord[]
+}
+
+async function fetchSegments(userId: string, videoUploadId: string): Promise<SegmentRecord[]> {
+    const { data, error } = await supabase
+        .from('segments')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('video_upload_id', videoUploadId)
+        .order('sequence', { ascending: true, nullsFirst: false })
+        .order('created_at')
+    if (error) throw error
+    return (data ?? []) as SegmentRecord[]
+}
+
+export function useVideoCategories() {
+    const { user, loading } = useAuth()
+    return useQuery({
+        queryKey: queryKeys.videoCategories(user?.id),
+        queryFn: fetchCategories,
+        enabled: !loading && !!user?.id,
+    })
+}
+
+export function useVideoSegments(videoUploadId: string | null) {
+    const { user, loading } = useAuth()
+    return useQuery({
+        queryKey: queryKeys.segments(user?.id, videoUploadId),
+        queryFn: () => fetchSegments(user!.id, videoUploadId!),
+        enabled: !loading && !!user?.id && !!videoUploadId,
+    })
+}
+
+export function useCreateVideoCategory() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (name: string) => {
+            const userId = requireUserId(undefined, user?.id)
+            const { data, error } = await supabase
+                .from('video_categories')
+                .insert({ user_id: userId, name: name.trim(), system_category: false })
+                .select()
+                .single()
+            if (error) throw error
+            return data as VideoCategoryRecord
+        },
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id) })
+        },
+    })
+}
+
+export function useCreateVideoSegment() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (input: CreateSegmentInput) => {
+            const userId = requireUserId(undefined, user?.id)
+            if (input.startTime < 0 || input.startTime >= input.endTime) {
+                throw new Error('Segment start time must be less than end time.')
+            }
+            const { data, error } = await supabase
+                .from('segments')
+                .insert({
+                    user_id: userId,
+                    video_upload_id: input.videoUploadId,
+                    start_time: input.startTime,
+                    end_time: input.endTime,
+                    category_id: input.categoryId,
+                    user_confirmed: true,
+                    ai_generated: false,
+                })
+                .select()
+                .single()
+            if (error) throw error
+            return data as SegmentRecord
+        },
+        onSuccess: (segment) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+        },
+    })
+}

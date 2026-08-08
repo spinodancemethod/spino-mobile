@@ -10,6 +10,7 @@ import LocalSegmentPlayer from 'Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useSyncVideoUpload, useVideoUploads } from 'lib/hooks/useVideoUploads'
+import { useCreateVideoCategory, useCreateVideoSegment, useVideoCategories, useVideoSegments } from 'lib/hooks/useVideoSegments'
 import {
     deleteLocalVideoUpload,
     listLocalVideoUploads,
@@ -48,6 +49,13 @@ export default function LocalVideosScreen() {
     const [rangeEnd, setRangeEnd] = useState('10')
     const syncVideoUpload = useSyncVideoUpload()
     const cloudUploadsQuery = useVideoUploads()
+    const categoriesQuery = useVideoCategories()
+    const createCategory = useCreateVideoCategory()
+    const createSegment = useCreateVideoSegment()
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+    const [newCategoryName, setNewCategoryName] = useState('')
+    const selectedCloudVideoId = cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.id ?? null
+    const segmentsQuery = useVideoSegments(selectedCloudVideoId)
 
     const loadVideos = useCallback(async () => {
         const storedVideos = await listLocalVideoUploads()
@@ -148,7 +156,49 @@ export default function LocalVideosScreen() {
     function openPreview(video: LocalVideoUpload) {
         setRangeStart(String(video.rangeStart))
         setRangeEnd(String(video.rangeEnd))
+        const miscCategory = categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
+        setSelectedCategoryId(miscCategory?.id ?? categoriesQuery.data?.[0]?.id ?? null)
         setSelectedVideoId(video.id)
+    }
+
+    async function addCategory() {
+        const name = newCategoryName.trim()
+        if (!name) {
+            showSnack('Enter a category name.')
+            return
+        }
+        try {
+            const category = await createCategory.mutateAsync(name)
+            setNewCategoryName('')
+            setSelectedCategoryId(category.id)
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not create category.')
+        }
+    }
+
+    async function saveSegment(video: LocalVideoUpload) {
+        const cloudVideo = cloudUploadsQuery.data?.find((item) => item.local_reference_key === video.id)
+        const start = Number(rangeStart)
+        const end = Number(rangeEnd)
+        if (!cloudVideo) {
+            showSnack('Sync this video to Supabase before saving a segment.')
+            return
+        }
+        if (!selectedCategoryId) {
+            showSnack('Choose a category before saving the segment.')
+            return
+        }
+        try {
+            await createSegment.mutateAsync({
+                videoUploadId: cloudVideo.id,
+                startTime: start,
+                endTime: end,
+                categoryId: selectedCategoryId,
+            })
+            showSnack('Segment saved.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not save segment.')
+        }
     }
 
     function confirmRemove(video: LocalVideoUpload) {
@@ -243,6 +293,42 @@ export default function LocalVideosScreen() {
                                         onPress={() => void saveRange(video)}
                                         style={styles.fullButton}
                                     />
+                                    <ThemedText variant="small" style={styles.rangeLabel}>Category</ThemedText>
+                                    <View style={styles.categoryList}>
+                                        {(categoriesQuery.data ?? []).map((category) => (
+                                            <ThemedButton
+                                                key={category.id}
+                                                title={category.name}
+                                                variant={selectedCategoryId === category.id ? 'primary' : 'ghost'}
+                                                onPress={() => setSelectedCategoryId(category.id)}
+                                                style={styles.categoryButton}
+                                            />
+                                        ))}
+                                    </View>
+                                    <View style={styles.rangeInputs}>
+                                        <TextInput
+                                            value={newCategoryName}
+                                            onChangeText={setNewCategoryName}
+                                            placeholder="New category"
+                                            placeholderTextColor={colors.border}
+                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                        />
+                                        <ThemedButton title="Add" onPress={() => void addCategory()} style={styles.addCategoryButton} />
+                                    </View>
+                                    <ThemedButton
+                                        title={createSegment.isPending ? 'Saving segment...' : 'Save segment'}
+                                        onPress={() => void saveSegment(video)}
+                                        loading={createSegment.isPending}
+                                        style={styles.fullButton}
+                                    />
+                                    <ThemedText variant="small" style={styles.rangeLabel}>Saved segments</ThemedText>
+                                    {segmentsQuery.isError ? (
+                                        <ThemedText variant="small">Apply the segments migration to load saved segments.</ThemedText>
+                                    ) : (segmentsQuery.data ?? []).map((segment) => (
+                                        <ThemedText key={segment.id} variant="small">
+                                            {segment.start_time}s → {segment.end_time}s · {(categoriesQuery.data ?? []).find((category) => category.id === segment.category_id)?.name ?? 'Category'}
+                                        </ThemedText>
+                                    ))}
                                     <ThemedText variant="small" style={styles.previewHint}>
                                         The selected range is what Phase 1 will preserve as a segment timestamp.
                                     </ThemedText>
@@ -332,6 +418,19 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 40,
         paddingHorizontal: 10,
+    },
+    categoryList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    categoryButton: {
+        width: 'auto',
+        minWidth: 80,
+        margin: 0,
+    },
+    addCategoryButton: {
+        minWidth: 70,
     },
     previewHint: {
         lineHeight: 20,

@@ -30,3 +30,15 @@ CREATE INDEX IF NOT EXISTS user_video_progress_user_status_idx
 
 CREATE INDEX IF NOT EXISTS video_uploads_user_updated_idx
   ON public.video_uploads (user_id, updated_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS video_categories_system_name_idx
+  ON public.video_categories (lower(name)) WHERE system_category = true;
+
+CREATE UNIQUE INDEX IF NOT EXISTS video_categories_user_name_idx
+  ON public.video_categories (user_id, lower(name)) WHERE system_category = false;
+
+CREATE INDEX IF NOT EXISTS segments_user_video_idx
+  ON public.segments (user_id, video_upload_id, sequence, created_at);
+
+CREATE INDEX IF NOT EXISTS segments_category_idx
+  ON public.segments (user_id, category_id);
