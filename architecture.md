@@ -443,33 +443,22 @@ Manually created
 Every saved segment must have a category, defaulting to `Misc` when the user
 does not choose a more specific category.
 
-17. Local-First Behaviour
-Core video functionality should work without an internet connection.
-Offline functionality should include:
-    • Playing source videos
-    • Playing segments
-    • Editing segment boundaries
-    • Viewing categories
-    • Categorising segments
-    • Viewing saved video and segment metadata already available on the device
-Cloud-dependent functionality includes:
-    • Initial account synchronisation
-    • AI analysis when cloud processing is used
-    • Cross-device metadata synchronisation
-    • Subscription state
-Do not require cloud access merely to play a video that already exists on the
-user's device.
+17. Metadata Persistence
+For the current MVP, Supabase is the single authoritative store for application
+metadata:
+    • Video references
+    • Segments
+    • Categories
+    • User corrections and notes
+The device media library remains authoritative for the original video file and
+the app keeps its resolved URI in runtime state for playback. Persistent SQLite
+metadata is not required for the MVP.
 
-For the MVP, durable offline editing and cross-device metadata synchronization
-are secondary architecture work. Keep both options available for the next
-implementation decision:
-        • Cloud-first: Supabase persists video and segment metadata; local playback
-            works without a network request, while metadata editing requires sync.
-        • Local-first: SQLite persists the working video and segment metadata, with
-            an outbox, retries, and later Supabase synchronization.
-Before promising full offline creation/editing, define conflict resolution and
-logout/account-isolation behavior. The existing Expo project already includes
-expo-sqlite, so the local-first option can be introduced deliberately.
+Playback still works whenever the source video is available on the device, but
+creating or editing metadata requires an authenticated network connection. If
+offline metadata editing becomes a product requirement, revisit a SQLite cache
+or local-first outbox as a separate architecture phase with explicit conflict
+resolution and account-isolation rules.
 
 18. Supabase
 Use the existing Supabase project.

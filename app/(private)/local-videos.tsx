@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
@@ -11,15 +11,26 @@ import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useDeleteVideoUpload, useSyncVideoUpload, useVideoUploads } from 'lib/hooks/useVideoUploads'
 import { useCreateVideoCategory, useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoCategories, useVideoSegments } from 'lib/hooks/useVideoSegments'
-import { deleteLocalSegment, listLocalSegments, LocalSegment, saveLocalSegment } from 'lib/localSegmentStore'
-import { listLocalCategories, LocalCategory, saveLocalCategory } from 'lib/localCategoryStore'
-import {
-    deleteLocalVideoUpload,
-    listLocalVideoUploads,
-    LocalVideoStatus,
-    LocalVideoUpload,
-    saveLocalVideoUpload,
-} from 'lib/localVideoStore'
+import type { LocalVideoStatus, LocalVideoUpload, VideoUploadRecord } from 'lib/models'
+
+function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): LocalVideoUpload {
+    return {
+        id: record.local_reference_key,
+        assetId: record.media_identifier ?? null,
+        uri: runtimeUri ?? record.fallback_uri ?? '',
+        fileName: record.filename ?? record.name ?? null,
+        mimeType: record.mime_type ?? null,
+        duration: record.duration_seconds ?? null,
+        fileSize: record.file_size_bytes ?? null,
+        width: record.width ?? null,
+        height: record.height ?? null,
+        creationTime: record.creation_time ? new Date(record.creation_time).getTime() : null,
+        rangeStart: 0,
+        rangeEnd: Math.min(record.duration_seconds ?? 10, 10),
+        status: record.status,
+        updatedAt: record.updated_at,
+    }
+}
 
 async function resolveStatus(uri: string): Promise<LocalVideoStatus> {
     try {
@@ -53,149 +64,22 @@ export default function LocalVideosScreen() {
     const { mutateAsync: deleteCloudVideoUpload } = useDeleteVideoUpload()
     const cloudUploadsQuery = useVideoUploads()
     const categoriesQuery = useVideoCategories()
-    const { mutateAsync: syncCategory } = useCreateVideoCategory()
-    const { mutateAsync: syncSegment, isPending: isCreatingSegment } = useCreateVideoSegment()
+    const createCategory = useCreateVideoCategory()
+    const { mutateAsync: saveCloudSegment, isPending: isCreatingSegment } = useCreateVideoSegment()
     const updateSegment = useUpdateVideoSegment()
     const deleteSegment = useDeleteVideoSegment()
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
     const [newCategoryName, setNewCategoryName] = useState('')
-    const [localSegments, setLocalSegments] = useState<LocalSegment[]>([])
-    const [localCategories, setLocalCategories] = useState<LocalCategory[]>([])
-    const selectedCloudVideoId = cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.id ?? null
+    const [runtimeUris, setRuntimeUris] = useState<Record<string, string>>({})
+    const selectedCloudVideoId = selectedVideoId
+        ? cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.id ?? null
+        : null
     const segmentsQuery = useVideoSegments(selectedCloudVideoId)
-
     useEffect(() => {
-        void listLocalCategories().then(async (categories) => {
-            if (categories.length > 0) {
-                setLocalCategories(categories)
-                return
-            }
-            const misc: LocalCategory = {
-                id: 'local-system-misc',
-                cloudCategoryId: null,
-                name: 'Misc',
-                systemCategory: true,
-                syncStatus: 'PENDING',
-                updatedAt: new Date().toISOString(),
-            }
-            await saveLocalCategory(misc)
-            setLocalCategories([misc])
-        })
-    }, [])
-
-    useEffect(() => {
-        if (!selectedVideoId) {
-            setLocalSegments([])
-            return
-        }
-        void listLocalSegments(selectedVideoId).then(setLocalSegments)
-    }, [selectedVideoId])
-
-    useEffect(() => {
-        if (!categoriesQuery.data) return
-        void (async () => {
-            const storedCategories = await listLocalCategories()
-            const nextCategories = [...storedCategories]
-            const cloudMisc = categoriesQuery.data.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
-            let localMisc = nextCategories.find((category) => category.systemCategory && category.name.toLowerCase() === 'misc')
-            if (!localMisc) {
-                localMisc = {
-                    id: 'local-system-misc',
-                    cloudCategoryId: cloudMisc?.id ?? null,
-                    name: 'Misc',
-                    systemCategory: true,
-                    syncStatus: cloudMisc ? 'SYNCED' : 'PENDING',
-                    updatedAt: new Date().toISOString(),
-                }
-                nextCategories.push(localMisc)
-            } else if (cloudMisc && localMisc.cloudCategoryId !== cloudMisc.id) {
-                localMisc = { ...localMisc, cloudCategoryId: cloudMisc.id, syncStatus: 'SYNCED', updatedAt: new Date().toISOString() }
-                const index = nextCategories.findIndex((category) => category.id === localMisc!.id)
-                nextCategories[index] = localMisc
-            }
-
-            for (const cloudCategory of categoriesQuery.data) {
-                if (cloudCategory.name.toLowerCase() === 'misc') continue
-                const existing = nextCategories.find((category) => category.cloudCategoryId === cloudCategory.id || category.name.toLowerCase() === cloudCategory.name.toLowerCase())
-                const category = existing
-                    ? { ...existing, cloudCategoryId: cloudCategory.id, name: cloudCategory.name, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-                    : { id: `local-category-${cloudCategory.id}`, cloudCategoryId: cloudCategory.id, name: cloudCategory.name, systemCategory: cloudCategory.system_category, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-                const index = nextCategories.findIndex((item) => item.id === category.id)
-                if (index >= 0) nextCategories[index] = category
-                else nextCategories.push(category)
-            }
-
-            for (const category of nextCategories) {
-                if (category.syncStatus !== 'PENDING' || category.systemCategory || category.name.toLowerCase() === 'misc') {
-                    await saveLocalCategory(category)
-                    continue
-                }
-                try {
-                    const cloudCategory = await syncCategory(category.name)
-                    const syncedCategory = { ...category, cloudCategoryId: cloudCategory.id, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-                    const index = nextCategories.findIndex((item) => item.id === category.id)
-                    nextCategories[index] = syncedCategory
-                    await saveLocalCategory(syncedCategory)
-                } catch {
-                    await saveLocalCategory(category)
-                }
-            }
-            setLocalCategories(nextCategories)
-        })()
-    }, [categoriesQuery.data, syncCategory])
-
-    useEffect(() => {
-        if (!selectedCloudVideoId || localSegments.length === 0) return
-        const pendingSegments = localSegments.filter((segment) => segment.syncStatus === 'PENDING' && segment.categoryId)
-        if (pendingSegments.length === 0) return
-
-        void Promise.all(pendingSegments.map(async (segment) => {
-            try {
-                const cloudSegment = await syncSegment({
-                    videoUploadId: selectedCloudVideoId,
-                    startTime: segment.startTime,
-                    endTime: segment.endTime,
-                    categoryId: segment.categoryId!,
-                })
-                const syncedSegment = { ...segment, cloudSegmentId: cloudSegment.id, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-                await saveLocalSegment(syncedSegment)
-                setLocalSegments((currentSegments) => currentSegments.map((item) => item.id === segment.id ? syncedSegment : item))
-            } catch {
-                // Keep the segment local and retry when the screen is loaded again.
-            }
-        }))
-    }, [localSegments, selectedCloudVideoId, syncSegment])
-
-    const loadVideos = useCallback(async () => {
-        const storedVideos = await listLocalVideoUploads()
-        const refreshedVideos = await Promise.all(
-            storedVideos.map(async (video) => {
-                const status = await resolveStatus(video.uri)
-                if (status !== video.status) {
-                    const refreshed = { ...video, status, updatedAt: new Date().toISOString() }
-                    await saveLocalVideoUpload(refreshed)
-                    return refreshed
-                }
-                return video
-            }),
-        )
-        setVideos(refreshedVideos)
-
-        // Backfill local references created before Supabase migrations were applied.
-        // Local playback remains available if the account or network is unavailable.
-        await Promise.all(refreshedVideos.map(async (video) => {
-            try {
-                await syncVideoUpload(video)
-            } catch {
-                // The screen already exposes cloud sync status; do not block local use.
-            }
-        }))
+        if (!cloudUploadsQuery.data) return
+        setVideos(cloudUploadsQuery.data.map((record) => cloudRecordToLocal(record, runtimeUris[record.local_reference_key])))
         setLoading(false)
-    }, [syncVideoUpload])
-
-    useEffect(() => {
-        void loadVideos()
-    }, [loadVideos])
+    }, [cloudUploadsQuery.data, runtimeUris])
 
     async function pickVideo(replacementFor?: LocalVideoUpload) {
         setPicking(true)
@@ -214,7 +98,6 @@ export default function LocalVideosScreen() {
             if (result.canceled) return
 
             const asset = result.assets[0]
-            const now = new Date().toISOString()
             const video: LocalVideoUpload = {
                 id: replacementFor?.id ?? `${asset.assetId ?? asset.uri}-${Date.now()}`,
                 assetId: asset.assetId ?? null,
@@ -229,16 +112,15 @@ export default function LocalVideosScreen() {
                 rangeStart: replacementFor?.rangeStart ?? 0,
                 rangeEnd: replacementFor?.rangeEnd ?? Math.min(asset.duration ?? 10, 10),
                 status: 'AVAILABLE',
-                updatedAt: now,
+                updatedAt: new Date().toISOString(),
             }
-            await saveLocalVideoUpload(video)
             try {
                 await syncVideoUpload(video)
+                setRuntimeUris((currentUris) => ({ ...currentUris, [video.id]: video.uri }))
             } catch {
-                // Local playback must continue even if cloud metadata sync is unavailable.
-                showSnack('Saved on this device. Cloud metadata sync will need another attempt.')
+                showSnack('Could not save the video reference to Supabase.')
+                return
             }
-            await loadVideos()
             setSelectedVideoId(video.id)
             showSnack(replacementFor ? 'Replacement video saved. Review its segments.' : 'Local video reference saved.')
         } catch (error) {
@@ -256,27 +138,16 @@ export default function LocalVideosScreen() {
             return
         }
 
-        const updatedVideo = {
-            ...video,
-            rangeStart: start,
-            rangeEnd: end,
-            updatedAt: new Date().toISOString(),
-        }
-        await saveLocalVideoUpload(updatedVideo)
-        try {
-            await syncVideoUpload(updatedVideo)
-        } catch {
-            showSnack('Range saved on this device. Cloud sync will need another attempt.')
-        }
-        setVideos((currentVideos) => currentVideos.map((item) => item.id === video.id ? updatedVideo : item))
-        showSnack('Timestamp range saved.')
+        setRangeStart(String(start))
+        setRangeEnd(String(end))
+        showSnack('Timestamp range ready to save as a segment.')
     }
 
     function openPreview(video: LocalVideoUpload) {
         setRangeStart(String(video.rangeStart))
         setRangeEnd(String(video.rangeEnd))
-        const miscCategory = localCategories.find((category) => category.systemCategory && category.name.toLowerCase() === 'misc')
-        setSelectedCategoryId(miscCategory?.id ?? localCategories[0]?.id ?? null)
+        const miscCategory = categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
+        setSelectedCategoryId(miscCategory?.id ?? categoriesQuery.data?.[0]?.id ?? null)
         setSelectedVideoId(video.id)
     }
 
@@ -287,25 +158,8 @@ export default function LocalVideosScreen() {
             return
         }
         try {
-            const localCategory: LocalCategory = {
-                id: `local-category-${Date.now()}`,
-                cloudCategoryId: null,
-                name,
-                systemCategory: false,
-                syncStatus: 'PENDING',
-                updatedAt: new Date().toISOString(),
-            }
-            await saveLocalCategory(localCategory)
-            setLocalCategories((currentCategories) => [...currentCategories, localCategory])
-            try {
-                const category = await syncCategory(name)
-                const syncedCategory = { ...localCategory, cloudCategoryId: category.id, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-                await saveLocalCategory(syncedCategory)
-                setLocalCategories((currentCategories) => currentCategories.map((item) => item.id === localCategory.id ? syncedCategory : item))
-                setSelectedCategoryId(syncedCategory.id)
-            } catch {
-                setSelectedCategoryId(localCategory.id)
-            }
+            const category = await createCategory.mutateAsync(name)
+            setSelectedCategoryId(category.id)
             setNewCategoryName('')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not create category.')
@@ -324,38 +178,16 @@ export default function LocalVideosScreen() {
             showSnack('Choose a category before saving the segment.')
             return
         }
-        const selectedCategory = localCategories.find((category) => category.id === selectedCategoryId)
-        const categoryName = selectedCategory?.name ?? 'Misc'
-        const localSegment: LocalSegment = {
-            id: `local-segment-${video.id}-${Date.now()}`,
-            videoUploadKey: video.id,
-            startTime: start,
-            endTime: end,
-            categoryId: selectedCategoryId,
-            categoryName,
-            cloudSegmentId: null,
-            syncStatus: 'PENDING',
-            updatedAt: new Date().toISOString(),
-        }
-        await saveLocalSegment(localSegment)
-        setLocalSegments((currentSegments) => [...currentSegments, localSegment].sort((a, b) => a.startTime - b.startTime))
         try {
-            if (!selectedCategory?.cloudCategoryId) {
-                showSnack('Saved locally. Category will sync before the segment.')
-                return
-            }
-            const cloudSegment = await syncSegment({
+            await saveCloudSegment({
                 videoUploadId: cloudVideo.id,
                 startTime: start,
                 endTime: end,
-                categoryId: selectedCategory.cloudCategoryId,
+                categoryId: selectedCategoryId,
             })
-            const syncedSegment = { ...localSegment, cloudSegmentId: cloudSegment.id, syncStatus: 'SYNCED' as const, updatedAt: new Date().toISOString() }
-            await saveLocalSegment(syncedSegment)
-            setLocalSegments((currentSegments) => currentSegments.map((item) => item.id === localSegment.id ? syncedSegment : item))
             showSnack('Segment saved.')
         } catch (error) {
-            showSnack('Saved locally. Cloud sync will retry later.')
+            showSnack(error instanceof Error ? error.message : 'Could not save segment.')
         }
     }
 
@@ -367,11 +199,6 @@ export default function LocalVideosScreen() {
 
     async function removeSegment(segment: { id: string; video_upload_id: string }) {
         try {
-            const localSegment = localSegments.find((item) => item.cloudSegmentId === segment.id)
-            if (localSegment) {
-                await deleteLocalSegment(localSegment.id)
-                setLocalSegments((currentSegments) => currentSegments.filter((item) => item.id !== localSegment.id))
-            }
             await deleteSegment.mutateAsync(segment)
             showSnack('Segment deleted.')
         } catch (error) {
@@ -386,26 +213,14 @@ export default function LocalVideosScreen() {
             showSnack('Choose a category before updating the segment.')
             return
         }
-        const selectedCategory = localCategories.find((category) => category.id === selectedCategoryId)
-        if (!selectedCategory?.cloudCategoryId) {
-            showSnack('Category saved locally. It must sync before this segment can update in Supabase.')
-            return
-        }
         try {
-            const updatedAt = new Date().toISOString()
             await updateSegment.mutateAsync({
                 id: segment.id,
                 videoUploadId: segment.video_upload_id,
                 startTime: start,
                 endTime: end,
-                categoryId: selectedCategory.cloudCategoryId,
+                categoryId: selectedCategoryId,
             })
-            const localSegment = localSegments.find((item) => item.cloudSegmentId === segment.id)
-            if (localSegment) {
-                const updatedLocalSegment = { ...localSegment, startTime: start, endTime: end, categoryId: selectedCategory.id, categoryName: selectedCategory.name, syncStatus: 'SYNCED' as const, updatedAt }
-                await saveLocalSegment(updatedLocalSegment)
-                setLocalSegments((currentSegments) => currentSegments.map((item) => item.id === localSegment.id ? updatedLocalSegment : item))
-            }
             showSnack('Segment updated.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not update segment.')
@@ -429,9 +244,12 @@ export default function LocalVideosScreen() {
                             showSnack(error instanceof Error ? error.message : 'Could not remove the cloud reference.')
                             return
                         }
-                        await deleteLocalVideoUpload(video.id)
                         if (selectedVideoId === video.id) setSelectedVideoId(null)
-                        await loadVideos()
+                        setRuntimeUris((currentUris) => {
+                            const nextUris = { ...currentUris }
+                            delete nextUris[video.id]
+                            return nextUris
+                        })
                     })()
                 },
             },
@@ -515,7 +333,7 @@ export default function LocalVideosScreen() {
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Category</ThemedText>
                                     <View style={styles.categoryList}>
-                                        {localCategories.map((category) => (
+                                        {(categoriesQuery.data ?? []).map((category) => (
                                             <ThemedButton
                                                 key={category.id}
                                                 title={category.name}
@@ -542,17 +360,17 @@ export default function LocalVideosScreen() {
                                         style={styles.fullButton}
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Saved segments</ThemedText>
-                                    {segmentsQuery.isError && localSegments.length === 0 ? (
+                                    {segmentsQuery.isError ? (
                                         <ThemedText variant="small">Apply the segments migration to load saved segments.</ThemedText>
-                                    ) : localSegments.map((segment) => (
+                                    ) : (segmentsQuery.data ?? []).map((segment) => (
                                         <View key={segment.id} style={styles.savedSegment}>
                                             <ThemedText variant="small">
-                                                {segment.startTime}s → {segment.endTime}s · {segment.categoryName} · {segment.syncStatus === 'SYNCED' ? 'synced' : 'local'}
+                                                {segment.start_time}s → {segment.end_time}s · {(categoriesQuery.data ?? []).find((category) => category.id === segment.category_id)?.name ?? 'Misc'} · synced
                                             </ThemedText>
                                             <View style={styles.segmentActions}>
-                                                <ThemedButton title="Edit" variant="ghost" onPress={() => editSegment({ start_time: segment.startTime, end_time: segment.endTime, category_id: segment.categoryId ?? '' })} style={styles.segmentActionButton} />
-                                                {segment.cloudSegmentId ? <ThemedButton title="Update" onPress={() => void updateSelectedSegment({ id: segment.cloudSegmentId!, video_upload_id: selectedCloudVideoId! })} loading={updateSegment.isPending} style={styles.segmentActionButton} /> : null}
-                                                <ThemedButton title="Delete" variant="warning" onPress={() => void (segment.cloudSegmentId ? removeSegment({ id: segment.cloudSegmentId, video_upload_id: selectedCloudVideoId! }) : deleteLocalSegment(segment.id).then(() => setLocalSegments((items) => items.filter((item) => item.id !== segment.id))))} loading={deleteSegment.isPending} style={styles.segmentActionButton} />
+                                                <ThemedButton title="Edit" variant="ghost" onPress={() => editSegment(segment)} style={styles.segmentActionButton} />
+                                                <ThemedButton title="Update" onPress={() => void updateSelectedSegment(segment)} loading={updateSegment.isPending} style={styles.segmentActionButton} />
+                                                <ThemedButton title="Delete" variant="warning" onPress={() => void removeSegment(segment)} loading={deleteSegment.isPending} style={styles.segmentActionButton} />
                                             </View>
                                         </View>
                                     ))}

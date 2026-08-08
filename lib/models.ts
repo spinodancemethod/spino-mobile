@@ -54,6 +54,25 @@ export type VideoUploadRecord = {
     updated_at: string;
 };
 
+export type LocalVideoStatus = 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'UNKNOWN';
+
+export type LocalVideoUpload = {
+    id: string;
+    assetId: string | null;
+    uri: string;
+    fileName: string | null;
+    mimeType: string | null;
+    duration: number | null;
+    fileSize: number | null;
+    width: number | null;
+    height: number | null;
+    creationTime: number | null;
+    rangeStart: number;
+    rangeEnd: number;
+    status: LocalVideoStatus;
+    updatedAt: string;
+};
+
 export type VideoCategoryRecord = {
     id: string;
     user_id: string | null;

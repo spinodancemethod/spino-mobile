@@ -4,8 +4,7 @@ import { queryClient } from '../queryClient'
 import { queryKeys } from '../queryKeys'
 import { requireUserId } from './userId'
 import { supabase } from '../supabase'
-import type { VideoUploadRecord } from '../models'
-import type { LocalVideoUpload } from '../localVideoStore'
+import type { LocalVideoUpload, VideoUploadRecord } from '../models'
 import { Platform } from 'react-native'
 
 type VideoUploadUpsert = {
