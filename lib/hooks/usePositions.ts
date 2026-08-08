@@ -32,6 +32,9 @@ export function usePositions(params: PositionsParams | undefined) {
     return useQuery<PositionRecord[], Error>({
         queryKey: queryKeys.positions(params),
         queryFn: fetchPositions,
+        staleTime: 1000 * 60 * 30, // 30 minutes — positions rarely change
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
     });
 }
 

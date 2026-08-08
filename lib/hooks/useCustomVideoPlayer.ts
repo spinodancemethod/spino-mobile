@@ -3,7 +3,7 @@ import { useVideoPlayer } from 'expo-video'
 import { useSharedValue } from 'react-native-reanimated'
 
 export function useCustomVideoPlayer(source: string) {
-    const player = useVideoPlayer(source, (p) => {
+    const expoPlayer = useVideoPlayer(source, (p) => {
         p.loop = false
         p.muted = false
         p.timeUpdateEventInterval = 0.25
@@ -18,65 +18,64 @@ export function useCustomVideoPlayer(source: string) {
     const durationSv = useSharedValue(0)
 
     useEffect(() => {
-        const sub = player.addListener('playingChange', (payload) => {
+        const sub = expoPlayer.addListener('playingChange', (payload) => {
             const playing = payload.isPlaying
             setIsPlaying(playing)
             isPlayingSv.value = playing
         })
         return () => sub.remove()
-    }, [player])
+    }, [expoPlayer])
 
     useEffect(() => {
-        const sub = player.addListener('timeUpdate', (payload) => {
+        const sub = expoPlayer.addListener('timeUpdate', (payload) => {
             const t = payload.currentTime
             setCurrentTime(t)
             currentTimeSv.value = t
         })
         return () => sub.remove()
-    }, [player])
+    }, [expoPlayer])
 
     useEffect(() => {
-        const sub = player.addListener('statusChange', (payload) => {
+        const sub = expoPlayer.addListener('statusChange', (payload) => {
             if (payload.status === 'readyToPlay') {
-                const d = player.duration ?? 0
+                const d = expoPlayer.duration ?? 0
                 setDuration(d)
                 durationSv.value = d
             }
         })
         return () => sub.remove()
-    }, [player])
-
-    useEffect(() => {
-        setIsPlaying(false)
-        setCurrentTime(0)
-        isPlayingSv.value = false
-        currentTimeSv.value = 0
-    }, [source])
+    }, [expoPlayer])
 
     const togglePlayPause = useCallback(() => {
-        if (player.playing) {
-            player.pause()
+        if (expoPlayer.playing) {
+            expoPlayer.pause()
         } else {
-            player.play()
+            expoPlayer.play()
         }
-    }, [player])
-
-    const pauseForScrub = useCallback(() => {
-        if (player.playing) {
-            player.pause()
-        }
-    }, [player])
+    }, [expoPlayer])
 
     const seekTo = useCallback((seconds: number) => {
-        player.currentTime = seconds
-    }, [player])
+        // Update shared value immediately so the scrub UI stays in sync on the
+        // UI thread. expo-video handles rapid currentTime assignments natively.
+        currentTimeSv.value = seconds
+        expoPlayer.currentTime = seconds
+    }, [expoPlayer, currentTimeSv])
 
-    const resumePlayback = useCallback(() => {
-        player.play()
-    }, [player])
+    const seekBy = useCallback((delta: number) => {
+        const newTime = Math.max(0, Math.min(durationSv.value, currentTimeSv.value + delta))
+        seekTo(newTime)
+    }, [currentTimeSv, durationSv, seekTo])
+
+    const pauseForScrub = useCallback(() => {
+        if (expoPlayer.playing) expoPlayer.pause()
+    }, [expoPlayer])
+
+    const resumeIfWasPlaying = useCallback((force = false) => {
+        if (force) expoPlayer.play()
+    }, [expoPlayer])
 
     return {
-        player,
+        expoPlayer,
         isPlaying,
         isPlayingSv,
         duration,
@@ -84,8 +83,9 @@ export function useCustomVideoPlayer(source: string) {
         currentTime,
         currentTimeSv,
         togglePlayPause,
-        pauseForScrub,
         seekTo,
-        resumePlayback,
+        seekBy,
+        pauseForScrub,
+        resumeIfWasPlaying,
     }
 }

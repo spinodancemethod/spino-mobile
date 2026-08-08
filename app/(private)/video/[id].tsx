@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { View, StyleSheet, Image, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
+import React, { useState } from 'react'
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native'
+import { Image } from 'expo-image'
 import { router, useLocalSearchParams } from 'expo-router'
 import ThemedView from 'Components/ThemedView'
 import ThemedText from 'Components/ThemedText'
@@ -18,8 +19,9 @@ import { useEntitlement } from 'lib/hooks/useEntitlement'
 import { useVideoActionToggles } from 'lib/hooks/useVideoActionToggles'
 import { useAuth } from 'lib/auth'
 import { reportAppEvent } from 'lib/observability'
-import { supabase } from 'lib/supabase'
 import CustomVideoPlayer from 'Components/CustomVideoPlayer'
+import { useVideoSource } from 'lib/hooks/useVideoSource'
+import { useSignedVideoUrl } from 'lib/hooks/useSignedVideoUrl'
 
 
 export default function VideoDetailScreen() {
@@ -36,7 +38,15 @@ export default function VideoDetailScreen() {
     const { data: positions = [] } = usePositions(undefined)
     const position = positions.find((p: any) => p.id === video?.position_id) || null
 
-    const [signedUrl, setSignedUrl] = useState<string | null>(null)
+    // Signed URL cached in React Query for 50 min — avoids a Storage API call on every visit
+    const { data: signedUrl = null } = useSignedVideoUrl(
+        !video?.url ? (video?.file_path as string | null) : null
+    )
+
+    // Warm the local cache in the background — result is not used for playback.
+    // Switching the source mid-play (remote → local file) would cause
+    // expo-video to replace the stream and reset playback to 0:00.
+    useVideoSource(signedUrl)
     // notes are read-only in this view; fetch from DB for current user + video
     const { data: noteRow, isLoading: noteLoading } = useNoteByUserAndVideo(undefined, id as string)
     const noteText = noteRow?.note_text ?? null
@@ -65,26 +75,10 @@ export default function VideoDetailScreen() {
         await toggleCompletionWithFeedback(video.id, isComplete)
     }
 
-    useEffect(() => {
-        setSignedUrl(null)
-        if (!video?.file_path) return
-        supabase.storage.from('videos').createSignedUrl(video.file_path as string, 3600)
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error('[VideoDetail] createSignedUrl error:', error)
-                    return
-                }
-                if (data?.signedUrl) {
-                    console.log('[VideoDetail] signedUrl ready')
-                    setSignedUrl(data.signedUrl)
-                }
-            })
-    }, [video?.file_path])
-
     // Render a thumbnail or a themed placeholder with a play icon
     const renderPoster = () => {
         if (video?.thumbnail_url) {
-            return <Image source={{ uri: video.thumbnail_url }} style={styles.thumb} />
+            return <Image source={video.thumbnail_url} style={styles.thumb} contentFit="cover" cachePolicy="disk" />
         }
 
         const bg = mode === 'dark' ? '#0f172a' : '#eef2ff'
@@ -283,9 +277,9 @@ export default function VideoDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, padding: 16 },
-    card: { padding: 16, borderRadius: 12, alignItems: 'flex-start' },
-    thumb: { width: '100%', aspectRatio: 4 / 3, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
+    container: { flexGrow: 1, padding: 8 },
+    card: { padding: 8, borderRadius: 12, alignItems: 'flex-start' },
+    thumb: { width: '100%', aspectRatio: 1, marginTop: 12, borderRadius: 8, backgroundColor: '#eee' },
     notesTitle: { marginBottom: 8, fontSize: 16 },
     noteBubble: { padding: 12, borderRadius: 8, marginBottom: 8 },
     noteBox: { borderRadius: 8, padding: 8, maxHeight: 320 },
@@ -310,7 +304,7 @@ const styles = StyleSheet.create({
     },
     playerOverlay: { position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 8 },
     skelTitle: { height: 20, width: '60%', borderRadius: 6, marginBottom: 8 },
-    skelVideo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 8, marginTop: 8 },
+    skelVideo: { width: '100%', aspectRatio: 1, borderRadius: 8, marginTop: 8 },
     skelPill: { height: 28, width: 100, borderRadius: 16 },
     skelLine: { height: 12, borderRadius: 6, marginTop: 8 },
     skelVideoOverlay: { width: '100%', height: '100%', borderRadius: 8 },
