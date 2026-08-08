@@ -187,6 +187,13 @@ export default function AccountPage() {
                     />
                 ) : null}
 
+                <ThemedButton
+                    title="Test Local Videos"
+                    variant="ghost"
+                    onPress={() => router.push('/local-videos')}
+                    style={{ width: '100%', marginTop: 8 }}
+                />
+
                 {/* Legal and support links for Play Store compliance */}
                 <View style={{ marginTop: 32, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border, gap: 12 }}>
                     <ThemedButton

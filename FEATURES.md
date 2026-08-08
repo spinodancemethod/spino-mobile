@@ -1,5 +1,9 @@
 # Features
 
+## Dance Memory MVP
+
+- Added a local-video Phase 1 test screen with on-device SQLite metadata, Expo media-library video selection, availability states, replacement/removal actions, and timestamp-player groundwork. Source videos are not uploaded.
+
 ## Current Product (Google Play Runtime)
 
 - Fixed standalone/test-build login hang by tightening auth deep-link detection to only process links with auth params/tokens and adding an 8-second timeout guard around auth-link session handling so the "Signing you in..." overlay cannot persist indefinitely.
