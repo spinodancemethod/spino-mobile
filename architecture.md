@@ -31,6 +31,7 @@ The project already contains:
     • RevenueCat
 Do NOT rebuild:
     • Authentication
+
     • Subscription infrastructure
     • RevenueCat integration
     • Existing application shell/navigation unless required for the new functionality
@@ -103,6 +104,8 @@ Potential fields:
     • Thumbnail
     • Platform
     • Reference status
+    • Local content fingerprint
+    • Fingerprint algorithm/version
 The application must distinguish between:
 AVAILABLE
 MISSING
@@ -113,12 +116,32 @@ must account for platform differences: iOS asset identifiers and Android media
 store/content identifiers are the preferred identity, while the URI is a
 re-resolved playback locator rather than the sole identity.
 
+OS identifiers are device/library references and are recovery hints, not a
+guaranteed cross-device identity. Generate a content fingerprint locally when
+the video is first selected. Store only the fingerprint, algorithm/version, and
+supporting metadata in Supabase; never upload the video to create the
+fingerprint. The fingerprint should be designed for efficient mobile
+processing, for example a hash of stable metadata plus sampled file data rather
+than an unnecessarily expensive full-file hash.
+
 If the operating system cannot provide a stable media identifier, persist the
 best available URI plus file metadata and mark the identity as best-effort.
 This case must be handled explicitly rather than silently treating a temporary
 picker URI as permanent. Keep both strategies available: prefer a native asset
 identifier, but support a best-effort URI fallback where platform APIs require
 it.
+
+Cross-device recovery should use this flow in a future phase:
+    1. Restore video metadata, fingerprints, categories, and segments from Supabase.
+    2. Scan videos available through the new device's media library.
+    3. Compare fingerprints and supporting metadata against the restored records.
+    4. Automatically propose only high-confidence matches.
+    5. Require user confirmation for matches below the high-confidence threshold.
+    6. Mark unresolved records as unavailable and allow manual replacement.
+
+The app must never silently bind a possibly different video to existing
+segments. A confirmed match updates the local media binding while preserving
+the Supabase video and segment records.
 
 6. Video Storage
 The original video remains on the user's device.
@@ -183,6 +206,8 @@ created_at
 updated_at
 platform
 media_identifier
+content_fingerprint
+fingerprint_algorithm_version
 filename
 duration
 mime_type
@@ -566,7 +591,23 @@ Keep three replaceable interfaces:
 The domain and database layers must depend on these interfaces, not directly on
 expo-video, a specific media-library package, Whisper, or a worker vendor.
 
-22. MVP Development Phases
+22. Future Cross-Device Recovery
+Cross-device media recovery is planned but deferred after the initial MVP.
+It should add:
+    • Fingerprint generation and versioning
+    • Media-library scanning and matching adapters for iOS and Android
+    • Match confidence scoring
+    • A confirmation UI for proposed matches
+    • Manual replacement for unresolved videos
+    • Optional metadata export/import as a fallback
+
+Supabase can restore the structured knowledge, but it cannot restore the source
+video under the no-hosting rule. iCloud Photos, Google Photos, or another user
+media provider may restore the file to the new device, after which the app can
+attempt matching. Provider-specific identifiers must not be assumed to be
+stable across devices.
+
+23. MVP Development Phases
 Phase 1 — Media Foundation
 Implement:
     • Native video picker
@@ -616,7 +657,7 @@ Implement:
 Success criterion
 A dancer can quickly find and replay a specific movement without searching through the entire original class video.
 
-23. Explicitly Out of Scope for This MVP
+24. Explicitly Out of Scope for This MVP
 Do NOT build:
     • Video hosting
     • Cloud copies of source videos
@@ -637,7 +678,7 @@ Do NOT build:
 The MVP is about:
     Turning a dancer's existing class video into a structured, searchable collection of useful movement segments.
 
-24. MVP North Star
+25. MVP North Star
 A dancer leaves a class with a 3-minute demonstration video on their phone.
 They open the app.
 They select the video.
@@ -662,7 +703,7 @@ and watch only that section of the original video.
 The dancer's phone retains the actual video.
 Supabase retains the structured knowledge about the video.
 
-25. Core Architectural Principle
+26. Core Architectural Principle
 The application should maintain this separation:
 USER'S DEVICE
     │
