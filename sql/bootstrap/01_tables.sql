@@ -92,6 +92,32 @@ CREATE TABLE IF NOT EXISTS public.notes (
   CONSTRAINT notes_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE
 );
 
+-- Stores metadata and local media references; source video files remain on the user's device.
+CREATE TABLE IF NOT EXISTS public.video_uploads (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  local_reference_key text NOT NULL,
+  platform text NOT NULL,
+  media_identifier text,
+  fallback_uri text,
+  name text,
+  filename text,
+  duration_seconds double precision,
+  mime_type text,
+  file_size_bytes bigint,
+  width integer,
+  height integer,
+  creation_time timestamptz,
+  thumbnail_reference text,
+  status text NOT NULL DEFAULT 'UNKNOWN',
+  replacement_review_pending boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
+  CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
+  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key)
+);
+
 -- Stores per-user status for each video so roadmap completion stays user-specific.
 CREATE TABLE IF NOT EXISTS public.user_video_progress (
   user_id uuid NOT NULL,

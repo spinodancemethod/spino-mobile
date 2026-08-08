@@ -32,6 +32,28 @@ export type VideoIdRow = {
     video_id: string;
 };
 
+export type VideoUploadRecord = {
+    id: string;
+    user_id: string;
+    local_reference_key: string;
+    platform: string;
+    media_identifier?: string | null;
+    fallback_uri?: string | null;
+    name?: string | null;
+    filename?: string | null;
+    duration_seconds?: number | null;
+    mime_type?: string | null;
+    file_size_bytes?: number | null;
+    width?: number | null;
+    height?: number | null;
+    creation_time?: string | null;
+    thumbnail_reference?: string | null;
+    status: 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'UNKNOWN';
+    replacement_review_pending: boolean;
+    created_at: string;
+    updated_at: string;
+};
+
 export type CreateVideoPayload = {
     title: string;
     description?: string | null;

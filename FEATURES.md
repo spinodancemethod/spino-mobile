@@ -3,6 +3,7 @@
 ## Dance Memory MVP
 
 - Added a local-video Phase 1 test screen with on-device SQLite metadata, Expo media-library video selection, availability states, replacement/removal actions, and timestamp-player groundwork. Source videos are not uploaded.
+- Added the Phase 1 `video_uploads` metadata migration and authenticated upsert path. Local references remain usable when Supabase sync is unavailable; source videos are never uploaded.
 
 ## Current Product (Google Play Runtime)
 

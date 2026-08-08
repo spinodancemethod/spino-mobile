@@ -14,6 +14,7 @@ ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_video_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.video_uploads ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN
@@ -325,6 +326,41 @@ BEGIN
   END IF;
 END $$;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'video_uploads' AND policyname = 'video_uploads_select_own'
+  ) THEN
+    CREATE POLICY video_uploads_select_own ON public.video_uploads
+      FOR SELECT TO authenticated USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'video_uploads' AND policyname = 'video_uploads_insert_own'
+  ) THEN
+    CREATE POLICY video_uploads_insert_own ON public.video_uploads
+      FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'video_uploads' AND policyname = 'video_uploads_update_own'
+  ) THEN
+    CREATE POLICY video_uploads_update_own ON public.video_uploads
+      FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'video_uploads' AND policyname = 'video_uploads_delete_own'
+  ) THEN
+    CREATE POLICY video_uploads_delete_own ON public.video_uploads
+      FOR DELETE TO authenticated USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
 -- Least-privilege grants: authenticated users get only the permissions required by RLS policies.
 -- Avoid broad grants to reduce blast radius; service_role retains admin privileges.
 
@@ -348,6 +384,10 @@ GRANT SELECT ON public.user_video_progress TO authenticated;
 GRANT INSERT ON public.user_video_progress TO authenticated;
 GRANT UPDATE ON public.user_video_progress TO authenticated;
 GRANT DELETE ON public.user_video_progress TO authenticated;
+GRANT SELECT ON public.video_uploads TO authenticated;
+GRANT INSERT ON public.video_uploads TO authenticated;
+GRANT UPDATE ON public.video_uploads TO authenticated;
+GRANT DELETE ON public.video_uploads TO authenticated;
 GRANT SELECT ON public.user_profiles TO authenticated;
 GRANT INSERT ON public.user_profiles TO authenticated;
 GRANT UPDATE ON public.user_profiles TO authenticated;

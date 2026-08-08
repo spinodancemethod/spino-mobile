@@ -9,6 +9,7 @@ import ThemedView from 'Components/ThemedView'
 import LocalSegmentPlayer from 'Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
+import { useSyncVideoUpload, useVideoUploads } from 'lib/hooks/useVideoUploads'
 import {
     deleteLocalVideoUpload,
     listLocalVideoUploads,
@@ -45,6 +46,8 @@ export default function LocalVideosScreen() {
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
     const [rangeStart, setRangeStart] = useState('0')
     const [rangeEnd, setRangeEnd] = useState('10')
+    const syncVideoUpload = useSyncVideoUpload()
+    const cloudUploadsQuery = useVideoUploads()
 
     const loadVideos = useCallback(async () => {
         const storedVideos = await listLocalVideoUploads()
@@ -102,6 +105,12 @@ export default function LocalVideosScreen() {
                 updatedAt: now,
             }
             await saveLocalVideoUpload(video)
+            try {
+                await syncVideoUpload.mutateAsync(video)
+            } catch {
+                // Local playback must continue even if cloud metadata sync is unavailable.
+                showSnack('Saved on this device. Cloud metadata sync will need another attempt.')
+            }
             await loadVideos()
             setSelectedVideoId(video.id)
             showSnack(replacementFor ? 'Replacement video saved. Review its segments.' : 'Local video reference saved.')
@@ -127,6 +136,11 @@ export default function LocalVideosScreen() {
             updatedAt: new Date().toISOString(),
         }
         await saveLocalVideoUpload(updatedVideo)
+        try {
+            await syncVideoUpload.mutateAsync(updatedVideo)
+        } catch {
+            showSnack('Range saved on this device. Cloud sync will need another attempt.')
+        }
         setVideos((currentVideos) => currentVideos.map((item) => item.id === video.id ? updatedVideo : item))
         showSnack('Timestamp range saved.')
     }
@@ -169,6 +183,9 @@ export default function LocalVideosScreen() {
                 <ThemedText variant="title">Local Videos</ThemedText>
                 <ThemedText variant="subheader" style={styles.intro}>
                     Phase 1 test area. Videos stay on this device; only their local reference metadata is stored.
+                </ThemedText>
+                <ThemedText variant="small">
+                    Cloud metadata: {cloudUploadsQuery.isLoading ? 'checking...' : cloudUploadsQuery.error ? 'migration required' : `${cloudUploadsQuery.data?.length ?? 0} reference(s) synced`}
                 </ThemedText>
 
                 <ThemedButton
