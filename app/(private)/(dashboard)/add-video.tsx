@@ -40,7 +40,6 @@ export default function AddVideoScreen() {
     const [segmentEnd, setSegmentEnd] = useState('10')
     const [categoryId, setCategoryId] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
-    const [segmentDescription, setSegmentDescription] = useState('')
     const [newCategoryName, setNewCategoryName] = useState('')
     const [newCategoryDescription, setNewCategoryDescription] = useState('')
 
@@ -98,7 +97,6 @@ export default function AddVideoScreen() {
             setSegmentStart('0')
             setSegmentEnd(String(Math.min(asset.duration ?? 10, 10)))
             setSegmentTitle('')
-            setSegmentDescription('')
             if (!params.categoryId) {
                 setCategoryId(categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')?.id ?? '')
             }
@@ -167,13 +165,11 @@ export default function AddVideoScreen() {
                 endTime: end,
                 categoryId,
                 title: segmentTitle,
-                description: segmentDescription,
                 thumbnailReference: selectedVideo.thumbnailReference,
             })
             showSnack('Video segment added.')
             setSelectedVideo(null)
             setSegmentTitle('')
-            setSegmentDescription('')
         } catch (error) {
             if (savedUploadId) {
                 await deleteVideoUpload.mutateAsync(savedUploadId).catch(() => undefined)
@@ -276,15 +272,6 @@ export default function AddVideoScreen() {
                                 placeholder="Optional learning item title"
                                 placeholderTextColor={colors.border}
                                 style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
-                            />
-                            <ThemedText variant="small" style={styles.label}>Segment description</ThemedText>
-                            <TextInput
-                                value={segmentDescription}
-                                onChangeText={setSegmentDescription}
-                                multiline
-                                placeholder="Optional notes shown on this learning item"
-                                placeholderTextColor={colors.border}
-                                style={[styles.input, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                             />
                             <ThemedText variant="small" style={styles.label}>Segment category</ThemedText>
                             <View style={styles.styleList}>

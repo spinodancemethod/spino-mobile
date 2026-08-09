@@ -97,7 +97,6 @@ export type SegmentRecord = {
     count_end: number | null;
     category_id: string;
     title: string | null;
-    description: string | null;
     thumbnail_reference: string | null;
     user_notes: string | null;
     ai_confidence: number | null;

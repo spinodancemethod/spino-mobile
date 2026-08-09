@@ -166,7 +166,6 @@ CREATE TABLE IF NOT EXISTS public.segments (
   count_end integer,
   category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE CASCADE,
   title text,
-  description text,
   thumbnail_reference text,
   user_notes text,
   ai_confidence double precision,

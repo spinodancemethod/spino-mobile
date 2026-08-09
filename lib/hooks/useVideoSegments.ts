@@ -12,7 +12,6 @@ export type CreateSegmentInput = {
     endTime: number
     categoryId: string
     title?: string | null
-    description?: string | null
     thumbnailReference?: string | null
 }
 
@@ -23,7 +22,6 @@ export type UpdateSegmentInput = {
     endTime: number
     categoryId: string
     title?: string | null
-    description?: string | null
     thumbnailReference?: string | null
 }
 
@@ -187,7 +185,6 @@ export function useCreateVideoSegment() {
                     end_time: input.endTime,
                     category_id: input.categoryId,
                     title: cleanOptionalText(input.title),
-                    description: cleanOptionalText(input.description),
                     thumbnail_reference: cleanOptionalText(input.thumbnailReference),
                     user_confirmed: true,
                     ai_generated: false,
@@ -220,7 +217,6 @@ export function useUpdateVideoSegment() {
                     end_time: input.endTime,
                     category_id: input.categoryId,
                     title: cleanOptionalText(input.title),
-                    description: cleanOptionalText(input.description),
                     thumbnail_reference: cleanOptionalText(input.thumbnailReference),
                     updated_at: new Date().toISOString(),
                 })

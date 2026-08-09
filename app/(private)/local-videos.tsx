@@ -80,7 +80,6 @@ export default function LocalVideosScreen() {
     const [newCategoryName, setNewCategoryName] = useState('')
     const [newCategoryDescription, setNewCategoryDescription] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
-    const [segmentDescription, setSegmentDescription] = useState('')
     const [segmentThumbnailTime, setSegmentThumbnailTime] = useState('0')
     const [segmentThumbnailReference, setSegmentThumbnailReference] = useState<string | null>(null)
     const [segmentThumbnailLoading, setSegmentThumbnailLoading] = useState(false)
@@ -167,7 +166,6 @@ export default function LocalVideosScreen() {
         setRangeStart(String(video.rangeStart))
         setRangeEnd(String(video.rangeEnd))
         setSegmentTitle('')
-        setSegmentDescription('')
         setSegmentThumbnailReference(video.thumbnailReference ?? null)
         setEditingSegmentId(null)
         const miscCategory = categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
@@ -237,7 +235,6 @@ export default function LocalVideosScreen() {
                 endTime: end,
                 categoryId: selectedCategoryId,
                 title: segmentTitle,
-                description: segmentDescription,
                 thumbnailReference: segmentThumbnailReference,
             })
             setEditingSegmentId(null)
@@ -252,7 +249,6 @@ export default function LocalVideosScreen() {
         setRangeEnd(String(segment.end_time))
         setSelectedCategoryId(segment.category_id)
         setSegmentTitle(segment.title ?? '')
-        setSegmentDescription(segment.description ?? '')
         setSegmentThumbnailReference(segment.thumbnail_reference ?? null)
         setEditingSegmentId(segment.id)
     }
@@ -281,7 +277,6 @@ export default function LocalVideosScreen() {
                 endTime: end,
                 categoryId: selectedCategoryId,
                 title: segmentTitle,
-                description: segmentDescription,
                 thumbnailReference: segmentThumbnailReference,
             })
             setEditingSegmentId(segment.id)
@@ -434,15 +429,6 @@ export default function LocalVideosScreen() {
                                         placeholderTextColor={colors.border}
                                         style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                     />
-                                    <ThemedText variant="small" style={styles.rangeLabel}>Learning item description</ThemedText>
-                                    <TextInput
-                                        value={segmentDescription}
-                                        onChangeText={setSegmentDescription}
-                                        placeholder="Optional custom description"
-                                        placeholderTextColor={colors.border}
-                                        multiline
-                                        style={[styles.rangeInput, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
-                                    />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Segment thumbnail</ThemedText>
                                     <View style={styles.rangeInputs}>
                                         <TextInput
@@ -470,7 +456,6 @@ export default function LocalVideosScreen() {
                                             <ThemedText variant="small">
                                                 {(segment.title ?? '').trim() || ((categoriesQuery.data ?? []).find((category) => category.id === segment.category_id)?.name ?? 'Misc')} · {segment.start_time}s → {segment.end_time}s · synced
                                             </ThemedText>
-                                            {segment.description ? <ThemedText variant="small">{segment.description}</ThemedText> : null}
                                             <View style={styles.segmentActions}>
                                                 <ThemedButton title="Edit" variant="ghost" onPress={() => editSegment(segment)} style={styles.segmentActionButton} />
                                                 <ThemedButton title="Update" onPress={() => void updateSelectedSegment(segment)} loading={updateSegment.isPending} style={styles.segmentActionButton} />

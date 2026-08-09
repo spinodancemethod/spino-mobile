@@ -22,6 +22,7 @@ export type RoadmapVideo = {
     start_time?: number | null;
     end_time?: number | null;
     category_name?: string | null;
+    note_text?: string | null;
 }
 
 export type SelectedRoadmapVideo = {

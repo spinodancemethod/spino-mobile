@@ -551,6 +551,15 @@ export const styles = StyleSheet.create({
         borderRadius: 6,
         backgroundColor: '#dbe4ee',
     },
+    videoNoteText: {
+        marginTop: 6,
+        color: '#334155',
+        lineHeight: 15,
+    },
+    positionDescriptionText: {
+        marginTop: 0,
+        marginBottom: 6,
+    },
     zoomHintText: {
         marginTop: 4,
         textAlign: 'center',

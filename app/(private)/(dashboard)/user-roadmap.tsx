@@ -20,7 +20,7 @@ import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion
 
 const SURFACE_WIDTH = 1800
 const VIDEO_W = 170
-const VIDEO_H = 214
+const VIDEO_H = 244
 const VIDEO_MARGIN = 10
 const VIDEO_GAP = 12
 const POSITION_COLUMN_WIDTH = 180
@@ -66,7 +66,7 @@ export default function UserRoadmapScreen() {
         return (categoriesQuery.data ?? []).map((category) => ({
             id: category.id,
             name: category.name,
-            description: category.description ?? (category.system_category ? 'System category' : 'Custom category'),
+            description: category.description ?? null,
         }))
     }, [categoriesQuery.data])
     const videosByCategory = useMemo(() => {
@@ -77,7 +77,7 @@ export default function UserRoadmapScreen() {
                 id: segment.id,
                 // Segment title should represent the learning item, not the category bucket.
                 title: segment.title ?? segment.video_name ?? null,
-                description: segment.description,
+                note_text: segment.note_text,
                 thumbnail_url: segment.video_thumbnail,
                 video_upload_id: segment.video_upload_id,
                 start_time: segment.start_time,
@@ -357,11 +357,12 @@ export default function UserRoadmapScreen() {
                     centerHeaderText="Categories"
                     rightHeaderText="Segments"
                     showCenterAddButton
+                    showPositionDescription
                     onCenterAddPress={() => setAddCategoryModalOpen(true)}
                     onNodePress={openManageCategoryModal}
                     onEmptyPositionPress={(position) => router.push({ pathname: '/(private)/(dashboard)/add-video', params: { roadmapId: roadmap.id, categoryId: position.id } })}
                     onEmptyPositionVideoPress={() => undefined}
-                    onVideoPress={(_position, _index, video) => router.push({ pathname: `/video-upload/${video.video_upload_id}`, params: { segmentId: video.id, startTime: String(video.start_time ?? 0), endTime: String(video.end_time ?? 0), category: video.category_name ?? 'Misc', title: video.title ?? '', description: video.description ?? '' } })}
+                    onVideoPress={(_position, _index, video) => router.push({ pathname: `/video-upload/${video.video_upload_id}`, params: { segmentId: video.id, startTime: String(video.start_time ?? 0), endTime: String(video.end_time ?? 0), category: video.category_name ?? 'Misc', title: video.title ?? '' } })}
                     onLockedPositionPress={() => undefined}
                     onToggleCompletion={(segmentId, isComplete) => {
                         void toggleSegmentCompletion

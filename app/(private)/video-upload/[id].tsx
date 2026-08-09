@@ -1,30 +1,28 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Image as ExpoImage } from 'expo-image'
+import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import LocalSegmentPlayer from 'Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
-import { useVideoSegments } from 'lib/hooks/useVideoSegments'
 import { useUpsertVideoUploadNote, useVideoUploadById, useVideoUploadNote } from 'lib/hooks/useVideoUploadDetails'
-import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
 import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
 
 export default function VideoUploadDetailScreen() {
-    const { id, segmentId, startTime, endTime, category, title, description } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string; description?: string }>()
+    const { id, segmentId, startTime, endTime, category, title } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string }>()
     const { colors } = useTheme()
     const uploadQuery = useVideoUploadById(id)
     const noteQuery = useVideoUploadNote(id)
     const noteMutation = useUpsertVideoUploadNote()
-    const segmentsQuery = useVideoSegments(id ?? null)
-    const roadmapsQuery = useUserRoadmaps()
     const completedSegmentsQuery = useCompletedSegmentIdsByUser()
     const toggleSegmentCompletion = useToggleSegmentCompletion()
     const [noteText, setNoteText] = useState('')
+    const [noteEditorOpen, setNoteEditorOpen] = useState(false)
 
     useEffect(() => {
         setNoteText(noteQuery.data?.note_text ?? '')
@@ -39,22 +37,32 @@ export default function VideoUploadDetailScreen() {
     }
 
     const upload = uploadQuery.data
-    const roadmap = roadmapsQuery.data?.find((item) => item.id === upload.roadmap_id)
     const segmentStart = Number(startTime)
     const segmentEnd = Number(endTime)
     const hasSegmentRange = !!segmentId && Number.isFinite(segmentStart) && Number.isFinite(segmentEnd) && segmentStart < segmentEnd
     const activeSegmentId = typeof segmentId === 'string' && segmentId.length > 0 ? segmentId : null
     const isComplete = activeSegmentId ? (completedSegmentsQuery.data ?? []).includes(activeSegmentId) : false
     const segmentTitle = (title ?? '').trim() || (category ?? 'Movement segment')
-    const segmentDescription = (description ?? '').trim()
+    const completionColor = isComplete ? '#16a34a' : '#94a3b8'
 
     async function saveNote() {
         try {
             await noteMutation.mutateAsync({ videoUploadId: upload.id, noteText })
             showSnack('Note saved.')
+            setNoteEditorOpen(false)
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not save note.')
         }
+    }
+
+    function openNoteEditor() {
+        setNoteText(noteQuery.data?.note_text ?? '')
+        setNoteEditorOpen(true)
+    }
+
+    function closeNoteEditor() {
+        if (noteMutation.isPending) return
+        setNoteEditorOpen(false)
     }
 
     async function toggleCurrentSegmentCompletion() {
@@ -73,25 +81,21 @@ export default function VideoUploadDetailScreen() {
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
-                <ThemedText variant="title">{segmentTitle}</ThemedText>
-                {segmentDescription ? <ThemedText variant="small">{segmentDescription}</ThemedText> : null}
-                <View style={styles.metadata}>
-                    <ThemedText variant="small">Source ID: {upload.media_identifier ?? upload.local_reference_key}</ThemedText>
-                    <ThemedText variant="small">Source file: {upload.filename ?? upload.name ?? 'Video reference'}</ThemedText>
-                    <ThemedText variant="small">Roadmap: {roadmap?.name ?? 'Unknown'}</ThemedText>
-                    {hasSegmentRange ? <ThemedText variant="small">Segment: {segmentStart}s → {segmentEnd}s</ThemedText> : null}
-                    <ThemedText variant="small">Duration: {upload.duration_seconds == null ? 'Unknown' : `${Math.round(upload.duration_seconds)} seconds`}</ThemedText>
-                    <ThemedText variant="small">Status: {upload.status}</ThemedText>
+                <View style={styles.titleRow}>
+                    <ThemedText variant="title" style={styles.titleText}>{segmentTitle}</ThemedText>
+                    {activeSegmentId ? (
+                        <Pressable
+                            onPress={() => void toggleCurrentSegmentCompletion()}
+                            disabled={toggleSegmentCompletion.isPending}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={isComplete ? 'Mark as in progress' : 'Mark segment complete'}
+                            style={[styles.completeIconButton, { backgroundColor: completionColor }]}
+                        >
+                            <ThemedText style={styles.completeIconText}>✓</ThemedText>
+                        </Pressable>
+                    ) : null}
                 </View>
-
-                {activeSegmentId ? (
-                    <ThemedButton
-                        title={isComplete ? 'Mark as in progress' : 'Mark segment complete'}
-                        onPress={() => void toggleCurrentSegmentCompletion()}
-                        loading={toggleSegmentCompletion.isPending}
-                        style={styles.fullButton}
-                    />
-                ) : null}
 
                 {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
                     <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
@@ -104,29 +108,48 @@ export default function VideoUploadDetailScreen() {
                 )}
 
                 <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <ThemedText variant="subheader">Segments</ThemedText>
-                    {segmentsQuery.data?.length ? segmentsQuery.data.map((segment) => (
-                        <View key={segment.id} style={styles.segmentRow}>
-                            <ThemedText variant="small">{(segment.title ?? '').trim() || 'Untitled segment'}</ThemedText>
-                            <ThemedText variant="small">{segment.start_time}s → {segment.end_time}s</ThemedText>
-                            {segment.description ? <ThemedText variant="small">{segment.description}</ThemedText> : null}
-                        </View>
-                    )) : <ThemedText variant="small">No saved segments yet.</ThemedText>}
-                </View>
-
-                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <ThemedText variant="subheader">Your Notes</ThemedText>
-                    <TextInput
-                        value={noteText}
-                        onChangeText={setNoteText}
-                        multiline
-                        placeholder="What do you want to remember?"
-                        placeholderTextColor={colors.border}
-                        style={[styles.notesInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-                    />
-                    <ThemedButton title="Save note" onPress={() => void saveNote()} loading={noteMutation.isPending} style={styles.fullButton} />
+                    <View style={styles.sectionHeaderRow}>
+                        <ThemedText variant="subheader">Your Notes</ThemedText>
+                        <Pressable
+                            onPress={openNoteEditor}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={(noteQuery.data?.note_text ?? '').trim().length > 0 ? 'Edit note' : 'Add note'}
+                            style={[styles.editIconButton, { borderColor: colors.border }]}
+                        >
+                            <Ionicons name="create-outline" size={18} color={colors.text} />
+                        </Pressable>
+                    </View>
+                    {(noteQuery.data?.note_text ?? '').trim().length > 0 ? (
+                        <ThemedText style={styles.noteBody}>{noteQuery.data?.note_text}</ThemedText>
+                    ) : (
+                        <ThemedText variant="small" style={{ color: colors.border }}>No notes yet.</ThemedText>
+                    )}
                 </View>
             </ScrollView>
+
+            <Modal visible={noteEditorOpen} transparent animationType="fade" onRequestClose={closeNoteEditor}>
+                <Pressable style={styles.modalOverlay} onPress={closeNoteEditor}>
+                    <Pressable
+                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                    >
+                        <ThemedText variant="subheader">Edit Note</ThemedText>
+                        <TextInput
+                            value={noteText}
+                            onChangeText={setNoteText}
+                            multiline
+                            placeholder="What do you want to remember?"
+                            placeholderTextColor={colors.border}
+                            style={[styles.notesInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                        />
+                        <View style={styles.modalActions}>
+                            <ThemedButton title="Cancel" variant="ghost" onPress={closeNoteEditor} style={styles.modalActionButton} />
+                            <ThemedButton title="Save" onPress={() => void saveNote()} loading={noteMutation.isPending} style={styles.modalActionButton} />
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </ThemedView>
     )
 }
@@ -134,12 +157,34 @@ export default function VideoUploadDetailScreen() {
 const styles = StyleSheet.create({
     container: { padding: 16, paddingBottom: 40, gap: 12 },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    metadata: { gap: 4 },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    titleText: { flex: 1 },
     player: { aspectRatio: 16 / 9 },
     unavailable: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 10 },
     thumbnail: { width: '100%', aspectRatio: 16 / 9, borderRadius: 6 },
     section: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 8 },
-    segmentRow: { gap: 2, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#ddd' },
+    sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    completeIconButton: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    completeIconText: { color: '#fff', fontSize: 12, lineHeight: 12 },
+    editIconButton: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    noteBody: { lineHeight: 20 },
     notesInput: { minHeight: 120, borderWidth: 1, borderRadius: 6, padding: 10, textAlignVertical: 'top' },
     fullButton: { width: '100%' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.45)', justifyContent: 'center', padding: 16 },
+    modalCard: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 12 },
+    modalActions: { flexDirection: 'row', gap: 8 },
+    modalActionButton: { flex: 1 },
 })

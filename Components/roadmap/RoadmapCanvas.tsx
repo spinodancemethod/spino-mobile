@@ -44,6 +44,7 @@ type RoadmapCanvasProps = {
     rightHeaderText?: string;
     showCenterAddButton?: boolean;
     onCenterAddPress?: () => void;
+    showPositionDescription?: boolean;
 }
 
 export function RoadmapCanvas({
@@ -85,6 +86,7 @@ export function RoadmapCanvas({
     rightHeaderText = 'Chosen moves',
     showCenterAddButton = false,
     onCenterAddPress,
+    showPositionDescription = false,
 }: RoadmapCanvasProps) {
     const getCategoryPlaceholderUrl = (label: string) => {
         // Keep placeholder images meaningful when a custom preview thumbnail is missing.
@@ -211,6 +213,15 @@ export function RoadmapCanvas({
                                     contentFit="cover"
                                     autoplay={false}
                                 />
+                                {video?.note_text ? (
+                                    <ThemedText
+                                        variant="small"
+                                        style={styles.videoNoteText}
+                                        numberOfLines={2}
+                                    >
+                                        {video.note_text}
+                                    </ThemedText>
+                                ) : null}
                             </View>
                         </TouchableOpacity>
                     )
@@ -303,6 +314,15 @@ export function RoadmapCanvas({
                                     contentFit="cover"
                                     autoplay={false}
                                 />
+                                {video?.note_text ? (
+                                    <ThemedText
+                                        variant="small"
+                                        style={styles.videoNoteText}
+                                        numberOfLines={2}
+                                    >
+                                        {video.note_text}
+                                    </ThemedText>
+                                ) : null}
                             </View>
                         </TouchableOpacity>
                     )
@@ -373,6 +393,7 @@ export function RoadmapCanvas({
                                                 styles.positionBoxStatic,
                                                 {
                                                     width: positionColumnWidth,
+                                                    height: videoHeight,
                                                 },
                                             ]}
                                         >
@@ -392,6 +413,15 @@ export function RoadmapCanvas({
                                                 style={styles.positionPlaceholderImage}
                                                 contentFit="cover"
                                             />
+                                            {showPositionDescription && position?.description ? (
+                                                <ThemedText
+                                                    variant="small"
+                                                    style={{ ...styles.videoNoteText, ...styles.positionDescriptionText }}
+                                                    numberOfLines={2}
+                                                >
+                                                    {position.description}
+                                                </ThemedText>
+                                            ) : null}
                                         </View>
                                     </TouchableOpacity>
                                 </View>

@@ -19,6 +19,16 @@
 
 ## Current Product (Google Play Runtime)
 
+- Local segment player controls were simplified by removing +/- seek buttons and limiting playback speed options to 0.5x and 1x.
+- Local segment scrubber now supports live frame updates while dragging, with throttled seeking to keep scrubbing smooth.
+- Local segment player now includes a scrub bar (tap or drag) for quick seeking within the active segment range.
+- Local segment player now supports tap-to-play/pause without native dim overlays, plus configurable native controls, custom controls visibility, seek step size, and speed options.
+- Category tiles on the user roadmap now match the taller segment tile height and can show category descriptions under the title using the same small-note text style.
+- Your Roadmap segment tiles now show the user's saved note under each thumbnail, clamped to 2 lines for compact readability.
+- Video reference detail now uses icon actions: a right-aligned edit icon on the Your Notes header and a right-aligned completion check icon on the segment title row.
+- Updated video-reference notes UX to show saved notes as readable text and edit/add them via a modal editor instead of an inline textbox.
+- Removed segment-description capture/display from segment flows and UI so long-form text now lives only in notes.
+- Simplified the video reference detail page by removing metadata-heavy UI and the embedded segments list, leaving a cleaner segment-focused view with playback, completion toggle, and notes.
 - Switched the roadmap settings panel from an inline drawer to a modal opened by the floating bottom-right settings button, while keeping toggle and Edit roadmap controls intact.
 - Added a compact top drawer menu on the user roadmap that houses Show empty categories, Show completed, and an Edit roadmap action (opens the roadmap edit modal) to reduce persistent header clutter.
 - Restored roadmap completion controls for the segment-based roadmap flow: added Show empty categories and Show completed toggles, plus segment completion toggling directly on the video-upload detail page.
