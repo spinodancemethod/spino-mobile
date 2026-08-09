@@ -37,6 +37,11 @@ type RoadmapCanvasProps = {
     onVideoPress: (position: RoadmapPosition, index: number, video: RoadmapVideo) => void;
     onLockedPositionPress: (position: RoadmapPosition) => void;
     onToggleCompletion: (videoId: string, isComplete: boolean) => void;
+    showLeftLane?: boolean;
+    showConnectorStubs?: boolean;
+    leftHeaderText?: string;
+    centerHeaderText?: string;
+    rightHeaderText?: string;
 }
 
 export function RoadmapCanvas({
@@ -71,6 +76,11 @@ export function RoadmapCanvas({
     onVideoPress,
     onLockedPositionPress,
     onToggleCompletion,
+    showLeftLane = true,
+    showConnectorStubs = true,
+    leftHeaderText = 'Getting to position',
+    centerHeaderText = 'Positions',
+    rightHeaderText = 'Chosen moves',
 }: RoadmapCanvasProps) {
     const PositionVideoStack: React.FC<{ pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
         const hasVisibleFreeVideos = (freeTierVideosByPosition.get(pos?.id)?.length ?? 0) > 0
@@ -192,7 +202,6 @@ export function RoadmapCanvas({
                                     contentFit="cover"
                                     autoplay={false}
                                 />
-                                <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>
                         </TouchableOpacity>
                     )
@@ -285,7 +294,6 @@ export function RoadmapCanvas({
                                     contentFit="cover"
                                     autoplay={false}
                                 />
-                                <ThemedText variant="small" style={styles.zoomHintText}>Tap to preview</ThemedText>
                             </View>
                         </TouchableOpacity>
                     )
@@ -311,14 +319,16 @@ export function RoadmapCanvas({
             >
                 <View style={[styles.surface, { minHeight: estimatedSurfaceHeight }]}>
                     <View style={styles.surfaceHeaderRow}>
-                        <View style={styles.selectedVideosHeaderLeft}>
-                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Getting to position</ThemedText>
-                        </View>
+                        {showLeftLane ? (
+                            <View style={styles.selectedVideosHeaderLeft}>
+                                <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>{leftHeaderText}</ThemedText>
+                            </View>
+                        ) : null}
                         <View style={[styles.rootBox, styles.rootBoxStatic]}>
-                            <ThemedText variant="subheader" style={styles.rootText}>Positions</ThemedText>
+                            <ThemedText variant="subheader" style={styles.rootText}>{centerHeaderText}</ThemedText>
                         </View>
                         <View style={styles.selectedVideosHeaderRight}>
-                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>Chosen moves</ThemedText>
+                            <ThemedText variant="subheader" style={styles.selectedVideosHeaderText}>{rightHeaderText}</ThemedText>
                         </View>
                     </View>
 
@@ -334,15 +344,17 @@ export function RoadmapCanvas({
 
                         return (
                             <View key={position.id} style={styles.roadmapRow}>
-                                <View style={styles.leftVideosColumn}>
-                                    <PositionEntryStack
-                                        pos={position}
-                                        videos={positionRoadmapVideos}
-                                        showAddButton={shouldShowPositionAddButton}
-                                    />
-                                </View>
+                                {showLeftLane ? (
+                                    <View style={styles.leftVideosColumn}>
+                                        <PositionEntryStack
+                                            pos={position}
+                                            videos={positionRoadmapVideos}
+                                            showAddButton={shouldShowPositionAddButton}
+                                        />
+                                    </View>
+                                ) : null}
 
-                                <View style={styles.connectorStub} />
+                                {showLeftLane && showConnectorStubs ? <View style={styles.connectorStub} /> : null}
 
                                 <View style={styles.positionColumn}>
                                     <TouchableOpacity onPress={() => onNodePress(position)} activeOpacity={0.85}>
@@ -371,7 +383,7 @@ export function RoadmapCanvas({
                                     </TouchableOpacity>
                                 </View>
 
-                                <View style={styles.connectorStub} />
+                                {showConnectorStubs ? <View style={styles.connectorStub} /> : null}
 
                                 <View style={styles.rightVideosColumn}>
                                     <PositionVideoStack

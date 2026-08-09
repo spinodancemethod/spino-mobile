@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput,
 import * as ImagePicker from 'expo-image-picker'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
+import { router } from 'expo-router'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -10,7 +11,7 @@ import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useDeleteVideoUpload, useSyncVideoUpload } from 'lib/hooks/useVideoUploads'
 import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
-import { useCreateVideoSegment, useVideoCategories } from 'lib/hooks/useVideoSegments'
+import { useCreateVideoCategory, useCreateVideoSegment, useVideoCategories } from 'lib/hooks/useVideoSegments'
 import type { LocalVideoUpload } from 'lib/models'
 import { useLocalSearchParams } from 'expo-router'
 
@@ -24,9 +25,10 @@ export default function AddVideoScreen() {
     const syncVideoUpload = useSyncVideoUpload()
     const deleteVideoUpload = useDeleteVideoUpload()
     const createSegment = useCreateVideoSegment()
+    const createCategory = useCreateVideoCategory()
     const roadmapsQuery = useUserRoadmaps()
     const categoriesQuery = useVideoCategories()
-    const params = useLocalSearchParams<{ roadmapId?: string }>()
+    const params = useLocalSearchParams<{ roadmapId?: string; categoryId?: string }>()
     const [selectedVideo, setSelectedVideo] = useState<LocalVideoUpload | null>(null)
     const [roadmapId, setRoadmapId] = useState('')
     const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(false)
@@ -38,11 +40,23 @@ export default function AddVideoScreen() {
     const [categoryId, setCategoryId] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
     const [segmentDescription, setSegmentDescription] = useState('')
+    const [newCategoryName, setNewCategoryName] = useState('')
 
     useEffect(() => {
         if (params.roadmapId) setRoadmapId(params.roadmapId)
         else if (!roadmapId && roadmapsQuery.data?.[0]) setRoadmapId(roadmapsQuery.data[0].id)
     }, [params.roadmapId, roadmapId, roadmapsQuery.data])
+
+    useEffect(() => {
+        if (params.categoryId) {
+            setCategoryId(params.categoryId)
+            return
+        }
+        if (!categoryId && categoriesQuery.data?.length) {
+            const miscCategory = categoriesQuery.data.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
+            setCategoryId(miscCategory?.id ?? categoriesQuery.data[0].id)
+        }
+    }, [params.categoryId, categoryId, categoriesQuery.data])
 
     async function chooseVideo() {
         setPicking(true)
@@ -83,7 +97,9 @@ export default function AddVideoScreen() {
             setSegmentEnd(String(Math.min(asset.duration ?? 10, 10)))
             setSegmentTitle('')
             setSegmentDescription('')
-            setCategoryId(categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')?.id ?? '')
+            if (!params.categoryId) {
+                setCategoryId(categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')?.id ?? '')
+            }
             await generateThumbnail(nextVideo)
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not choose that video.')
@@ -164,6 +180,22 @@ export default function AddVideoScreen() {
         }
     }
 
+    async function addCategory() {
+        const name = newCategoryName.trim()
+        if (!name) {
+            showSnack('Enter a category name.')
+            return
+        }
+        try {
+            const category = await createCategory.mutateAsync(name)
+            setCategoryId(category.id)
+            setNewCategoryName('')
+            showSnack('Category created.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not create category.')
+        }
+    }
+
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -171,6 +203,12 @@ export default function AddVideoScreen() {
                 <ThemedText variant="subheader" style={styles.intro}>
                     Add a segment from a video already on your device. The video is only a source reference and is not uploaded.
                 </ThemedText>
+                <ThemedButton
+                    title="Go to Roadmaps"
+                    variant="ghost"
+                    onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
+                    style={styles.fullButton}
+                />
 
                 <View style={[styles.formSection, { borderColor: colors.border, backgroundColor: colors.card }]}>
                     <ThemedText variant="small" style={styles.label}>Roadmap</ThemedText>
@@ -238,6 +276,21 @@ export default function AddVideoScreen() {
                                 {(categoriesQuery.data ?? []).map((category) => (
                                     <ThemedButton key={category.id} title={category.name} variant={categoryId === category.id ? 'primary' : 'ghost'} onPress={() => setCategoryId(category.id)} style={styles.styleButton} />
                                 ))}
+                            </View>
+                            <View style={styles.thumbnailControls}>
+                                <TextInput
+                                    value={newCategoryName}
+                                    onChangeText={setNewCategoryName}
+                                    placeholder="Add category"
+                                    placeholderTextColor={colors.border}
+                                    style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                />
+                                <ThemedButton
+                                    title={createCategory.isPending ? 'Adding...' : 'Add'}
+                                    onPress={() => void addCategory()}
+                                    loading={createCategory.isPending}
+                                    style={styles.thumbnailButton}
+                                />
                             </View>
                             <ThemedText variant="small" style={styles.label}>Choose thumbnail frame</ThemedText>
                             <ThemedText variant="small">Enter the video time in seconds, then choose the frame to show on your roadmap tile.</ThemedText>

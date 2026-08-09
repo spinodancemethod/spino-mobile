@@ -9,6 +9,7 @@ import { styles } from './your-roadmap'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
 import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
 import { useRoadmapSegments } from 'lib/hooks/useRoadmapSegments'
+import { useVideoCategories } from 'lib/hooks/useVideoSegments'
 import { useTheme } from 'constants/useTheme'
 
 const SURFACE_WIDTH = 1800
@@ -30,18 +31,37 @@ export default function UserRoadmapScreen() {
     const roadmapsQuery = useUserRoadmaps()
     const roadmap = roadmapsQuery.data?.find((item) => item.id === roadmapId) ?? roadmapsQuery.data?.[0]
     const segmentsQuery = useRoadmapSegments(roadmap?.id)
-    const roadmapPosition = useMemo<RoadmapPosition[]>(() => roadmap ? [{ id: roadmap.id, name: roadmap.name, description: roadmap.description }] : [], [roadmap])
-    const roadmapVideos = useMemo<RoadmapVideo[]>(() => (segmentsQuery.data ?? []).map((segment) => ({
-        id: segment.id,
-        title: segment.title ?? segment.category_name,
-        description: segment.description,
-        thumbnail_url: segment.video_thumbnail,
-        video_upload_id: segment.video_upload_id,
-        start_time: segment.start_time,
-        end_time: segment.end_time,
-        category_name: segment.category_name,
-    })), [segmentsQuery.data])
-    const videosByRoadmap = useMemo(() => new Map(roadmap ? [[roadmap.id, roadmapVideos]] : []), [roadmap, roadmapVideos])
+    const categoriesQuery = useVideoCategories()
+    const roadmapPosition = useMemo<RoadmapPosition[]>(() => {
+        return (categoriesQuery.data ?? []).map((category) => ({
+            id: category.id,
+            name: category.name,
+            description: category.system_category ? 'System category' : 'Custom category',
+        }))
+    }, [categoriesQuery.data])
+    const videosByCategory = useMemo(() => {
+        const grouped = new Map<string, RoadmapVideo[]>()
+        for (const segment of segmentsQuery.data ?? []) {
+            const categoryVideos = grouped.get(segment.category_id) ?? []
+            categoryVideos.push({
+                id: segment.id,
+                title: segment.title ?? segment.category_name,
+                description: segment.description,
+                thumbnail_url: segment.video_thumbnail,
+                video_upload_id: segment.video_upload_id,
+                start_time: segment.start_time,
+                end_time: segment.end_time,
+                category_name: segment.category_name,
+            })
+            grouped.set(segment.category_id, categoryVideos)
+        }
+        return grouped
+    }, [segmentsQuery.data])
+    const categoryRows = useMemo(() => {
+        if (roadmapPosition.length > 0) return roadmapPosition
+        // Fallback for transitional states where categories are not loaded yet.
+        return Array.from(videosByCategory.keys()).map((id) => ({ id, name: 'Category' }))
+    }, [roadmapPosition, videosByCategory])
     const emptyVideos = useMemo(() => new Map<string, RoadmapVideo[]>(), [])
     const [surfaceHeight, setSurfaceHeight] = useState(500)
     const defaultPanX = (INITIAL_VIEWPORT_WIDTH / 2) - ((SURFACE_WIDTH / 2) * DEFAULT_SCALE)
@@ -58,7 +78,7 @@ export default function UserRoadmapScreen() {
         setGestureSurfaceHeight(surfaceHeight)
     }, [setGestureSurfaceHeight, surfaceHeight])
 
-    if (roadmapsQuery.isLoading || segmentsQuery.isLoading) {
+    if (roadmapsQuery.isLoading || segmentsQuery.isLoading || categoriesQuery.isLoading) {
         return <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator /><ThemedText variant="small">Loading roadmap...</ThemedText></ThemedView>
     }
 
@@ -70,7 +90,7 @@ export default function UserRoadmapScreen() {
         <ThemedView style={{ flex: 1 }}>
             <View style={{ padding: 12 }}>
                 <ThemedText variant="title">{roadmap.name}</ThemedText>
-                <ThemedText variant="small">Your uploaded video references appear in this roadmap.</ThemedText>
+                <ThemedText variant="small">Segments are grouped by category. Source videos are references only.</ThemedText>
             </View>
             <RoadmapCanvas
                 styles={styles}
@@ -87,19 +107,23 @@ export default function UserRoadmapScreen() {
                 videoMargin={VIDEO_MARGIN}
                 videoGap={VIDEO_GAP}
                 iconSize={ICON_SIZE}
-                roadmapPositions={roadmapPosition}
-                roadmapVideosByPosition={videosByRoadmap}
+                roadmapPositions={categoryRows}
+                roadmapVideosByPosition={videosByCategory}
                 roadmapPositionVideosByPosition={emptyVideos}
                 freeTierVideosByPosition={emptyVideos}
-                availableVideosByPosition={videosByRoadmap}
+                availableVideosByPosition={videosByCategory}
                 availablePositionVideosByPosition={emptyVideos}
                 completedVideoIdSet={new Set()}
                 isSubscribed
                 showEmptyPositions
                 samplePositionPlaceholderUrl={SAMPLE_POSITION_PLACEHOLDER_URL}
                 sampleVideoPlaceholderUrl={SAMPLE_PLACEHOLDER_URL}
+                showLeftLane={false}
+                showConnectorStubs
+                centerHeaderText="Categories"
+                rightHeaderText="Segments"
                 onNodePress={() => undefined}
-                onEmptyPositionPress={() => router.push({ pathname: '/(private)/(dashboard)/add-video', params: { roadmapId: roadmap.id } })}
+                onEmptyPositionPress={(position) => router.push({ pathname: '/(private)/(dashboard)/add-video', params: { roadmapId: roadmap.id, categoryId: position.id } })}
                 onEmptyPositionVideoPress={() => undefined}
                 onVideoPress={(_position, _index, video) => router.push({ pathname: `/video-upload/${video.video_upload_id}`, params: { segmentId: video.id, startTime: String(video.start_time ?? 0), endTime: String(video.end_time ?? 0), category: video.category_name ?? 'Misc', title: video.title ?? '', description: video.description ?? '' } })}
                 onLockedPositionPress={() => undefined}
