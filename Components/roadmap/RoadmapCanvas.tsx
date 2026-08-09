@@ -42,6 +42,8 @@ type RoadmapCanvasProps = {
     leftHeaderText?: string;
     centerHeaderText?: string;
     rightHeaderText?: string;
+    showCenterAddButton?: boolean;
+    onCenterAddPress?: () => void;
 }
 
 export function RoadmapCanvas({
@@ -81,6 +83,8 @@ export function RoadmapCanvas({
     leftHeaderText = 'Getting to position',
     centerHeaderText = 'Positions',
     rightHeaderText = 'Chosen moves',
+    showCenterAddButton = false,
+    onCenterAddPress,
 }: RoadmapCanvasProps) {
     const PositionVideoStack: React.FC<{ pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
         const hasVisibleFreeVideos = (freeTierVideosByPosition.get(pos?.id)?.length ?? 0) > 0
@@ -402,6 +406,26 @@ export function RoadmapCanvas({
                             <ThemedText variant="small" style={styles.emptyRoadmapText}>Favourite videos to build your roadmap, or turn on "Show empty positions" to inspect gaps.</ThemedText>
                         </View>
                     )}
+
+                    {showCenterAddButton ? (
+                        <View style={styles.roadmapRow}>
+                            {showLeftLane ? <View style={styles.leftVideosColumn} /> : null}
+
+                            <View style={styles.positionColumn}>
+                                <TouchableOpacity
+                                    activeOpacity={0.85}
+                                    onPress={() => onCenterAddPress?.()}
+                                    style={{ alignItems: 'center', paddingTop: 6 }}
+                                >
+                                    <View style={styles.emptyLeafButton}>
+                                        <Ionicons name="add" size={24} color="#ffffff" />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.rightVideosColumn} />
+                        </View>
+                    ) : null}
                 </View>
             </Animated.View>
         </View>

@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
 import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -199,16 +200,20 @@ export default function AddVideoScreen() {
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-                <ThemedText variant="title">Add Video</ThemedText>
+                <View style={styles.titleRow}>
+                    <Pressable
+                        onPress={() => router.back()}
+                        style={({ pressed }) => [styles.backIconButton, pressed ? styles.backIconPressed : null]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Back"
+                    >
+                        <Ionicons name="arrow-back" size={20} color={colors.text} />
+                    </Pressable>
+                    <ThemedText variant="title">Add Video</ThemedText>
+                </View>
                 <ThemedText variant="subheader" style={styles.intro}>
                     Add a segment from a video already on your device. The video is only a source reference and is not uploaded.
                 </ThemedText>
-                <ThemedButton
-                    title="Go to Roadmaps"
-                    variant="ghost"
-                    onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
-                    style={styles.fullButton}
-                />
 
                 <View style={[styles.formSection, { borderColor: colors.border, backgroundColor: colors.card }]}>
                     <ThemedText variant="small" style={styles.label}>Roadmap</ThemedText>
@@ -329,6 +334,22 @@ const styles = StyleSheet.create({
     intro: {
         lineHeight: 24,
         marginBottom: 4,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 2,
+    },
+    backIconButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    backIconPressed: {
+        opacity: 0.65,
     },
     formSection: {
         borderWidth: 1,

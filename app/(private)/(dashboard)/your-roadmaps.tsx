@@ -1,79 +1,65 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { router } from 'expo-router'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
-import { useCreateUserRoadmap, useDeleteUserRoadmap, useUpdateUserRoadmap, useUserRoadmaps, UserRoadmap } from 'lib/hooks/useUserRoadmaps'
-import { router } from 'expo-router'
+import {
+    useCreateUserRoadmap,
+    useUserRoadmaps,
+    UserRoadmap,
+} from 'lib/hooks/useUserRoadmaps'
 
 export default function YourRoadmapsScreen() {
     const { colors } = useTheme()
     const roadmapsQuery = useUserRoadmaps()
     const createRoadmap = useCreateUserRoadmap()
-    const updateRoadmap = useUpdateUserRoadmap()
-    const deleteRoadmap = useDeleteUserRoadmap()
+
+    const [createModalOpen, setCreateModalOpen] = useState(false)
+
     const [name, setName] = useState('')
     const [description, setDescription] = useState('')
-    const [editingId, setEditingId] = useState<string | null>(null)
 
     function resetForm() {
         setName('')
         setDescription('')
-        setEditingId(null)
     }
 
-    async function saveRoadmap() {
+    function openCreateModal() {
+        resetForm()
+        setCreateModalOpen(true)
+    }
+
+    async function saveNewRoadmap() {
         if (!name.trim()) {
             showSnack('Enter a roadmap name.')
             return
         }
+
         try {
-            if (editingId) {
-                await updateRoadmap.mutateAsync({ id: editingId, name, description })
-                showSnack('Roadmap updated.')
-            } else {
-                await createRoadmap.mutateAsync({ name, description })
-                showSnack('Roadmap created.')
-            }
+            await createRoadmap.mutateAsync({ name, description })
+            showSnack('Roadmap created.')
+            setCreateModalOpen(false)
             resetForm()
         } catch (error) {
-            showSnack(error instanceof Error ? error.message : 'Could not save roadmap.')
+            showSnack(error instanceof Error ? error.message : 'Could not create roadmap.')
         }
     }
 
-    function beginEdit(roadmap: UserRoadmap) {
-        setEditingId(roadmap.id)
-        setName(roadmap.name)
-        setDescription(roadmap.description ?? '')
-    }
-
-    function confirmDelete(roadmap: UserRoadmap) {
-        Alert.alert('Delete roadmap?', 'Videos and segments assigned to this roadmap will also be deleted.', [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: () => void deleteRoadmap.mutateAsync(roadmap.id).then(() => showSnack('Roadmap deleted.')).catch((error) => showSnack(error instanceof Error ? error.message : 'Could not delete roadmap.')),
-            },
-        ])
+    function openRoadmap(roadmap: UserRoadmap) {
+        router.push({ pathname: '/(private)/(dashboard)/user-roadmap', params: { roadmapId: roadmap.id } })
     }
 
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
-                <ThemedText variant="title">Your Roadmaps</ThemedText>
-                <ThemedText variant="subheader" style={styles.intro}>
-                    Create your own Salsa, Bachata, Dominican, or completely custom learning paths.
-                </ThemedText>
-
-                <View style={[styles.form, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <ThemedText variant="small" style={styles.label}>{editingId ? 'Edit roadmap' : 'New roadmap'}</ThemedText>
-                    <TextInput value={name} onChangeText={setName} placeholder="e.g. Bachata foundations" placeholderTextColor={colors.border} style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]} />
-                    <TextInput value={description} onChangeText={setDescription} placeholder="Optional description" placeholderTextColor={colors.border} style={[styles.input, styles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]} multiline />
-                    <ThemedButton title={editingId ? 'Update roadmap' : 'Create roadmap'} onPress={() => void saveRoadmap()} loading={createRoadmap.isPending || updateRoadmap.isPending} style={styles.fullButton} />
-                    {editingId ? <ThemedButton title="Cancel edit" variant="ghost" onPress={resetForm} style={styles.fullButton} /> : null}
+                <View style={styles.headerRow}>
+                    <View>
+                        <ThemedText variant="title">Your Roadmaps</ThemedText>
+                        <ThemedText variant="small" style={styles.intro}>Choose a roadmap to continue.</ThemedText>
+                    </View>
                 </View>
 
                 {roadmapsQuery.isLoading ? (
@@ -89,35 +75,90 @@ export default function YourRoadmapsScreen() {
                 ) : roadmapsQuery.data?.length === 0 ? (
                     <View style={[styles.message, { borderColor: colors.border }]}>
                         <ThemedText variant="subheader">You have no roadmaps yet</ThemedText>
-                        <ThemedText variant="small">Create a roadmap above to begin organizing your Salsa, Bachata, Dominican, or custom videos.</ThemedText>
+                        <ThemedText variant="small">Tap Create to add your first roadmap.</ThemedText>
                     </View>
                 ) : roadmapsQuery.data?.map((roadmap) => (
-                    <View key={roadmap.id} style={[styles.roadmap, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <ThemedText variant="subheader">{roadmap.name}</ThemedText>
+                    <Pressable
+                        key={roadmap.id}
+                        style={[styles.roadmap, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={() => openRoadmap(roadmap)}
+                    >
+                        <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
                         {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
-                        <ThemedButton title="Open roadmap" onPress={() => router.push({ pathname: '/(private)/(dashboard)/user-roadmap', params: { roadmapId: roadmap.id } })} style={styles.fullButton} />
-                        <ThemedButton title="Add video reference" onPress={() => router.push({ pathname: '/(private)/(dashboard)/add-video', params: { roadmapId: roadmap.id } })} style={styles.fullButton} />
-                        <View style={styles.actions}>
-                            <ThemedButton title="Edit" variant="ghost" onPress={() => beginEdit(roadmap)} style={styles.actionButton} />
-                            <ThemedButton title="Delete" variant="warning" onPress={() => confirmDelete(roadmap)} style={styles.actionButton} />
-                        </View>
-                    </View>
+                    </Pressable>
                 ))}
             </ScrollView>
+
+            <Pressable
+                onPress={openCreateModal}
+                style={styles.fabButton}
+                accessibilityRole="button"
+                accessibilityLabel="Create roadmap"
+            >
+                <ThemedText style={styles.fabPlus}>+</ThemedText>
+            </Pressable>
+
+            <Modal visible={createModalOpen} transparent animationType="fade" onRequestClose={() => setCreateModalOpen(false)}>
+                <Pressable style={styles.modalBackdrop} onPress={() => setCreateModalOpen(false)}>
+                    <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <ThemedText variant="subheader" style={styles.modalTitle}>Create roadmap</ThemedText>
+                        <TextInput
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Roadmap name"
+                            placeholderTextColor={colors.border}
+                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                        />
+                        <TextInput
+                            value={description}
+                            onChangeText={setDescription}
+                            placeholder="Optional description"
+                            placeholderTextColor={colors.border}
+                            style={[styles.input, styles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            multiline
+                        />
+                        <ThemedButton
+                            title={createRoadmap.isPending ? 'Creating...' : 'Create roadmap'}
+                            onPress={() => void saveNewRoadmap()}
+                            loading={createRoadmap.isPending}
+                            style={styles.fullButton}
+                        />
+                        <ThemedButton title="Cancel" variant="ghost" onPress={() => setCreateModalOpen(false)} style={styles.fullButton} />
+                    </View>
+                </Pressable>
+            </Modal>
         </ThemedView>
     )
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 16, paddingBottom: 40, gap: 12 },
-    intro: { lineHeight: 24, marginBottom: 4 },
-    form: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 10 },
-    roadmap: { borderWidth: 1, borderRadius: 10, padding: 14, gap: 8 },
-    label: { fontWeight: '700' },
+    container: { padding: 16, paddingBottom: 120, gap: 10 },
+    headerRow: { marginBottom: 6 },
+    intro: { color: '#64748b', marginTop: 2 },
+    roadmap: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 6 },
+    roadmapTitle: { flex: 1 },
     input: { borderWidth: 1, borderRadius: 6, minHeight: 44, paddingHorizontal: 10 },
     multiline: { minHeight: 76, paddingTop: 10, textAlignVertical: 'top' },
     fullButton: { width: '100%' },
-    actions: { flexDirection: 'row', gap: 8 },
-    actionButton: { flex: 1 },
     message: { borderWidth: 1, borderRadius: 10, padding: 16, gap: 8 },
+    fabButton: {
+        position: 'absolute',
+        right: 18,
+        bottom: 22,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#16a34a',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 6,
+    },
+    fabPlus: { color: '#ffffff', fontSize: 30, lineHeight: 32, fontWeight: '700', marginTop: -2 },
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
+    modalCard: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
+    modalTitle: { marginBottom: 4 },
 })
