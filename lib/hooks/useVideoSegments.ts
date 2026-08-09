@@ -11,6 +11,9 @@ export type CreateSegmentInput = {
     startTime: number
     endTime: number
     categoryId: string
+    title?: string | null
+    description?: string | null
+    thumbnailReference?: string | null
 }
 
 export type UpdateSegmentInput = {
@@ -19,6 +22,15 @@ export type UpdateSegmentInput = {
     startTime: number
     endTime: number
     categoryId: string
+    title?: string | null
+    description?: string | null
+    thumbnailReference?: string | null
+}
+
+function cleanOptionalText(value?: string | null): string | null {
+    if (value == null) return null
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : null
 }
 
 async function fetchCategories(): Promise<VideoCategoryRecord[]> {
@@ -96,6 +108,9 @@ export function useCreateVideoSegment() {
                     start_time: input.startTime,
                     end_time: input.endTime,
                     category_id: input.categoryId,
+                    title: cleanOptionalText(input.title),
+                    description: cleanOptionalText(input.description),
+                    thumbnail_reference: cleanOptionalText(input.thumbnailReference),
                     user_confirmed: true,
                     ai_generated: false,
                 })
@@ -124,6 +139,9 @@ export function useUpdateVideoSegment() {
                     start_time: input.startTime,
                     end_time: input.endTime,
                     category_id: input.categoryId,
+                    title: cleanOptionalText(input.title),
+                    description: cleanOptionalText(input.description),
+                    thumbnail_reference: cleanOptionalText(input.thumbnailReference),
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', input.id)

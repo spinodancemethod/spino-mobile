@@ -9,6 +9,7 @@ import { Platform } from 'react-native'
 
 type VideoUploadUpsert = {
     local_reference_key: string
+    roadmap_id: string
     platform: string
     media_identifier: string | null
     fallback_uri: string | null
@@ -19,6 +20,7 @@ type VideoUploadUpsert = {
     file_size_bytes: number | null
     width: number | null
     height: number | null
+    thumbnail_reference: string | null
     status: LocalVideoUpload['status']
 }
 
@@ -33,9 +35,10 @@ async function fetchVideoUploads(userId: string): Promise<VideoUploadRecord[]> {
     return (data ?? []) as VideoUploadRecord[]
 }
 
-function toUpsertPayload(video: LocalVideoUpload): VideoUploadUpsert {
+function toUpsertPayload(video: LocalVideoUpload & { roadmapId: string }): VideoUploadUpsert {
     return {
         local_reference_key: video.id,
+        roadmap_id: video.roadmapId,
         platform: Platform.OS,
         media_identifier: video.assetId,
         fallback_uri: video.uri,
@@ -46,6 +49,7 @@ function toUpsertPayload(video: LocalVideoUpload): VideoUploadUpsert {
         file_size_bytes: video.fileSize,
         width: video.width,
         height: video.height,
+        thumbnail_reference: video.thumbnailReference,
         status: video.status,
     }
 }
@@ -65,7 +69,7 @@ export function useSyncVideoUpload() {
     const { user } = useAuth()
 
     return useMutation({
-        mutationFn: async (video: LocalVideoUpload) => {
+        mutationFn: async (video: LocalVideoUpload & { roadmapId: string }) => {
             const userId = requireUserId(undefined, user?.id)
             const { data, error } = await supabase
                 .from('video_uploads')

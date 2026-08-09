@@ -93,9 +93,21 @@ CREATE TABLE IF NOT EXISTS public.notes (
 );
 
 -- Stores metadata and local media references; source video files remain on the user's device.
+CREATE TABLE IF NOT EXISTS public.user_roadmaps (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  name text NOT NULL,
+  description text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT user_roadmaps_name_check CHECK (length(trim(name)) > 0),
+  CONSTRAINT user_roadmaps_user_name_unique UNIQUE (user_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS public.video_uploads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  roadmap_id uuid NOT NULL REFERENCES public.user_roadmaps (id) ON DELETE CASCADE,
   local_reference_key text NOT NULL,
   platform text NOT NULL,
   media_identifier text,
@@ -144,6 +156,9 @@ CREATE TABLE IF NOT EXISTS public.segments (
   count_start integer,
   count_end integer,
   category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE RESTRICT,
+  title text,
+  description text,
+  thumbnail_reference text,
   user_notes text,
   ai_confidence double precision,
   ai_generated boolean NOT NULL DEFAULT false,
@@ -151,7 +166,8 @@ CREATE TABLE IF NOT EXISTS public.segments (
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT segments_time_order_check CHECK (start_time >= 0 AND start_time < end_time),
-  CONSTRAINT segments_confidence_check CHECK (ai_confidence IS NULL OR (ai_confidence >= 0 AND ai_confidence <= 1))
+  CONSTRAINT segments_confidence_check CHECK (ai_confidence IS NULL OR (ai_confidence >= 0 AND ai_confidence <= 1)),
+  CONSTRAINT segments_title_non_empty_check CHECK (title IS NULL OR length(trim(title)) > 0)
 );
 
 -- Stores per-user status for each video so roadmap completion stays user-specific.

@@ -40,7 +40,7 @@ export default function DashboardLayout() {
     return (
         <>
             <Tabs
-                initialRouteName="your-roadmap"
+                initialRouteName="your-roadmaps"
                 screenOptions={{
                     headerShown: false,
                     tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
@@ -49,9 +49,9 @@ export default function DashboardLayout() {
                 }}
             >
                 <Tabs.Screen
-                    name="your-roadmap"
+                    name="your-roadmaps"
                     options={{
-                        title: "Your Roadmap", tabBarIcon: ({ focused }) => (
+                        title: "Your Roadmaps", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
                                 name={focused ? 'map' : 'map-outline'}
@@ -61,41 +61,22 @@ export default function DashboardLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="library"
+                    name="add-video"
                     options={{
-                        title: "Library", tabBarIcon: ({ focused }) => (
+                        title: "Add Video", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
-                                name={focused ? 'library' : 'library-outline'}
+                                name={focused ? 'add-circle' : 'add-circle-outline'}
                                 color={focused ? styles.icon.color : styles.inactiveIcon.color}
                             />
                         )
                     }}
                 />
-                <Tabs.Screen
-                    name="positions"
-                    options={{
-                        title: "Positions", tabBarIcon: ({ focused }) => (
-                            <Ionicons
-                                size={24}
-                                name={focused ? 'accessibility' : 'accessibility-outline'}
-                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
-                            />
-                        )
-                    }}
-                />
-                <Tabs.Screen
-                    name="position-list"
-                    options={{
-                        title: "Position List", tabBarIcon: ({ focused }) => (
-                            <Ionicons
-                                size={24}
-                                name={focused ? 'list' : 'list-outline'}
-                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
-                            />
-                        )
-                    }}
-                />
+                <Tabs.Screen name="user-roadmap" options={{ href: null }} />
+                <Tabs.Screen name="your-roadmap" options={{ href: null }} />
+                <Tabs.Screen name="library" options={{ href: null }} />
+                <Tabs.Screen name="positions" options={{ href: null }} />
+                <Tabs.Screen name="position-list" options={{ href: null }} />
             </Tabs>
         </>
     )

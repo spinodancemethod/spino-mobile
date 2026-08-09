@@ -15,6 +15,7 @@ ALTER TABLE public.user_video_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_uploads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_roadmaps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.segments ENABLE ROW LEVEL SECURITY;
 
@@ -330,6 +331,22 @@ END $$;
 
 DO $$
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_roadmaps' AND policyname = 'user_roadmaps_select_own') THEN
+    CREATE POLICY user_roadmaps_select_own ON public.user_roadmaps FOR SELECT TO authenticated USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_roadmaps' AND policyname = 'user_roadmaps_insert_own') THEN
+    CREATE POLICY user_roadmaps_insert_own ON public.user_roadmaps FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_roadmaps' AND policyname = 'user_roadmaps_update_own') THEN
+    CREATE POLICY user_roadmaps_update_own ON public.user_roadmaps FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_roadmaps' AND policyname = 'user_roadmaps_delete_own') THEN
+    CREATE POLICY user_roadmaps_delete_own ON public.user_roadmaps FOR DELETE TO authenticated USING (auth.uid() = user_id);
+  END IF;
+END $$;
+
+DO $$
+BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_categories' AND policyname = 'video_categories_select_available') THEN
     CREATE POLICY video_categories_select_available ON public.video_categories FOR SELECT TO authenticated
       USING (system_category = true OR auth.uid() = user_id);
@@ -432,6 +449,7 @@ GRANT SELECT ON public.video_uploads TO authenticated;
 GRANT INSERT ON public.video_uploads TO authenticated;
 GRANT UPDATE ON public.video_uploads TO authenticated;
 GRANT DELETE ON public.video_uploads TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_roadmaps TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.video_categories TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.segments TO authenticated;
 GRANT SELECT ON public.user_profiles TO authenticated;

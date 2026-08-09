@@ -31,6 +31,12 @@ CREATE INDEX IF NOT EXISTS user_video_progress_user_status_idx
 CREATE INDEX IF NOT EXISTS video_uploads_user_updated_idx
   ON public.video_uploads (user_id, updated_at DESC);
 
+CREATE INDEX IF NOT EXISTS user_roadmaps_user_updated_idx
+  ON public.user_roadmaps (user_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS video_uploads_roadmap_idx
+  ON public.video_uploads (user_id, roadmap_id, updated_at DESC);
+
 CREATE UNIQUE INDEX IF NOT EXISTS video_categories_system_name_idx
   ON public.video_categories (lower(name)) WHERE system_category = true;
 

@@ -196,12 +196,21 @@ Do not create a separate video file for each segment.
 Use Supabase/PostgreSQL for the application's structured data.
 The database stores metadata around the user's video, not the video itself.
 
-video_uploads
+user_roadmaps
 Suggested fields:
 id
 user_id
 name
-dance_style
+description
+created_at
+updated_at
+
+video_uploads
+Suggested fields:
+id
+user_id
+roadmap_id
+name
 created_at
 updated_at
 platform

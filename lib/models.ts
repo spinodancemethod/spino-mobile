@@ -36,6 +36,7 @@ export type VideoUploadRecord = {
     id: string;
     user_id: string;
     local_reference_key: string;
+    roadmap_id: string;
     platform: string;
     media_identifier?: string | null;
     fallback_uri?: string | null;
@@ -69,6 +70,7 @@ export type LocalVideoUpload = {
     creationTime: number | null;
     rangeStart: number;
     rangeEnd: number;
+    thumbnailReference: string | null;
     status: LocalVideoStatus;
     updatedAt: string;
 };
@@ -92,6 +94,9 @@ export type SegmentRecord = {
     count_start: number | null;
     count_end: number | null;
     category_id: string;
+    title: string | null;
+    description: string | null;
+    thumbnail_reference: string | null;
     user_notes: string | null;
     ai_confidence: number | null;
     ai_generated: boolean;

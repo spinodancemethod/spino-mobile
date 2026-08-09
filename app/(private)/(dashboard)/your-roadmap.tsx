@@ -421,7 +421,7 @@ const YourRoadmap = () => {
     )
 }
 
-const styles = StyleSheet.create({
+export const styles = StyleSheet.create({
     headerRow: {
         paddingHorizontal: 12,
         paddingTop: 10,

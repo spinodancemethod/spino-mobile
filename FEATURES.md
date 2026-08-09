@@ -2,11 +2,20 @@
 
 ## Dance Memory MVP
 
+- Refocused capture/edit flows so videos are treated as source-reference IDs while segment metadata (title, description, thumbnail, range) is the primary authored content.
+- Wired the segment editor UI so users can create and update learning-item title, description, and thumbnail override metadata across Add Video, Local Videos, and roadmap detail flows.
+- Upgraded roadmap segments into customizable learning items with per-segment title, description, and thumbnail metadata (with video-level thumbnail fallback).
 - Added a local-video Phase 1 test screen with Supabase metadata, Expo media-library video selection, availability states, replacement/removal actions, and timestamp-player groundwork. Source videos are not uploaded.
 - Added the Phase 1 `video_uploads` metadata migration and authenticated upsert path. Local references remain usable when Supabase sync is unavailable; source videos are never uploaded.
 - Added categorized timestamp segments with mandatory `Misc` fallback, custom categories, segment validation, ownership RLS, and local-video review controls.
 - Updated explicit video-reference removal to delete the authenticated cloud metadata and cascaded segments while leaving the source video on the device.
 - Made Supabase the authoritative store for video metadata, categories, and segments; local media URIs remain runtime-only for device playback.
+- Added an Add Video dashboard tab before Your Roadmap for naming and saving local video references without uploading source files.
+- Reworked the Dance Memory MVP around user-owned roadmaps: added roadmap CRUD, required roadmap assignment for video references, and archived the legacy catalog/GIF tabs from MVP navigation.
+- Added user-selected local video-frame thumbnails using `expo-video-thumbnails`; roadmap tiles now use the saved thumbnail reference instead of the legacy GIF or Local video fallback.
+- Added user-upload video detail pages with the existing native player pattern, metadata, saved segments, and upload-specific notes.
+- Changed user roadmap tiles to represent saved segments rather than whole source videos; opening a tile plays only its saved timestamp range.
+- Updated Add Video so a source reference cannot be saved alone: each submission requires a segment range, category, and selected thumbnail, then creates the video and segment metadata together.
 
 ## Current Product (Google Play Runtime)
 

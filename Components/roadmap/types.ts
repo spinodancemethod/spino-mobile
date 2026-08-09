@@ -11,12 +11,17 @@ export type RoadmapPosition = {
 export type RoadmapVideo = {
     id?: string | null;
     title?: string | null;
+    description?: string | null;
     position_id?: string | null;
     is_position?: boolean | null;
     access_tier?: string | null;
     thumbnail_url?: string | null;
     roadmap_preview_url?: string | null;
     roadmap_gif_url?: string | null;
+    video_upload_id?: string | null;
+    start_time?: number | null;
+    end_time?: number | null;
+    category_name?: string | null;
 }
 
 export type SelectedRoadmapVideo = {

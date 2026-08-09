@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system/legacy'
+import * as VideoThumbnails from 'expo-video-thumbnails'
+import { Image as ExpoImage } from 'expo-image'
 import { router } from 'expo-router'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
@@ -11,7 +13,8 @@ import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useDeleteVideoUpload, useSyncVideoUpload, useVideoUploads } from 'lib/hooks/useVideoUploads'
 import { useCreateVideoCategory, useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoCategories, useVideoSegments } from 'lib/hooks/useVideoSegments'
-import type { LocalVideoStatus, LocalVideoUpload, VideoUploadRecord } from 'lib/models'
+import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
+import type { LocalVideoStatus, LocalVideoUpload, SegmentRecord, VideoUploadRecord } from 'lib/models'
 
 function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): LocalVideoUpload {
     return {
@@ -27,6 +30,7 @@ function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): Loc
         creationTime: record.creation_time ? new Date(record.creation_time).getTime() : null,
         rangeStart: 0,
         rangeEnd: Math.min(record.duration_seconds ?? 10, 10),
+        thumbnailReference: record.thumbnail_reference ?? null,
         status: record.status,
         updatedAt: record.updated_at,
     }
@@ -63,6 +67,7 @@ export default function LocalVideosScreen() {
     const { mutateAsync: syncVideoUpload } = useSyncVideoUpload()
     const { mutateAsync: deleteCloudVideoUpload } = useDeleteVideoUpload()
     const cloudUploadsQuery = useVideoUploads()
+    const roadmapsQuery = useUserRoadmaps()
     const categoriesQuery = useVideoCategories()
     const createCategory = useCreateVideoCategory()
     const { mutateAsync: saveCloudSegment, isPending: isCreatingSegment } = useCreateVideoSegment()
@@ -70,6 +75,12 @@ export default function LocalVideosScreen() {
     const deleteSegment = useDeleteVideoSegment()
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [segmentTitle, setSegmentTitle] = useState('')
+    const [segmentDescription, setSegmentDescription] = useState('')
+    const [segmentThumbnailTime, setSegmentThumbnailTime] = useState('0')
+    const [segmentThumbnailReference, setSegmentThumbnailReference] = useState<string | null>(null)
+    const [segmentThumbnailLoading, setSegmentThumbnailLoading] = useState(false)
+    const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null)
     const [runtimeUris, setRuntimeUris] = useState<Record<string, string>>({})
     const selectedCloudVideoId = selectedVideoId
         ? cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.id ?? null
@@ -111,11 +122,16 @@ export default function LocalVideosScreen() {
                 creationTime: null,
                 rangeStart: replacementFor?.rangeStart ?? 0,
                 rangeEnd: replacementFor?.rangeEnd ?? Math.min(asset.duration ?? 10, 10),
+                thumbnailReference: replacementFor?.thumbnailReference ?? null,
                 status: 'AVAILABLE',
                 updatedAt: new Date().toISOString(),
             }
             try {
-                await syncVideoUpload(video)
+                const roadmapId = replacementFor?.id
+                    ? cloudUploadsQuery.data?.find((item) => item.local_reference_key === replacementFor.id)?.roadmap_id
+                    : roadmapsQuery.data?.[0]?.id
+                if (!roadmapId) throw new Error('Create a roadmap before adding a video reference.')
+                await syncVideoUpload({ ...video, roadmapId })
                 setRuntimeUris((currentUris) => ({ ...currentUris, [video.id]: video.uri }))
             } catch {
                 showSnack('Could not save the video reference to Supabase.')
@@ -146,9 +162,32 @@ export default function LocalVideosScreen() {
     function openPreview(video: LocalVideoUpload) {
         setRangeStart(String(video.rangeStart))
         setRangeEnd(String(video.rangeEnd))
+        setSegmentTitle('')
+        setSegmentDescription('')
+        setSegmentThumbnailReference(video.thumbnailReference ?? null)
+        setEditingSegmentId(null)
         const miscCategory = categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')
         setSelectedCategoryId(miscCategory?.id ?? categoriesQuery.data?.[0]?.id ?? null)
         setSelectedVideoId(video.id)
+    }
+
+    async function generateSegmentThumbnail(video: LocalVideoUpload) {
+        const seconds = Number(segmentThumbnailTime)
+        const boundedSeconds = video.duration == null ? seconds : Math.max(0, Math.min(seconds, video.duration))
+        if (!Number.isFinite(boundedSeconds) || boundedSeconds < 0) {
+            showSnack('Enter a valid thumbnail timestamp.')
+            return
+        }
+
+        setSegmentThumbnailLoading(true)
+        try {
+            const result = await VideoThumbnails.getThumbnailAsync(video.uri, { time: Math.round(boundedSeconds * 1000) })
+            setSegmentThumbnailReference(result.uri)
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not generate thumbnail for this segment.')
+        } finally {
+            setSegmentThumbnailLoading(false)
+        }
     }
 
     async function addCategory() {
@@ -184,17 +223,25 @@ export default function LocalVideosScreen() {
                 startTime: start,
                 endTime: end,
                 categoryId: selectedCategoryId,
+                title: segmentTitle,
+                description: segmentDescription,
+                thumbnailReference: segmentThumbnailReference,
             })
+            setEditingSegmentId(null)
             showSnack('Segment saved.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not save segment.')
         }
     }
 
-    function editSegment(segment: { start_time: number; end_time: number; category_id: string }) {
+    function editSegment(segment: SegmentRecord) {
         setRangeStart(String(segment.start_time))
         setRangeEnd(String(segment.end_time))
         setSelectedCategoryId(segment.category_id)
+        setSegmentTitle(segment.title ?? '')
+        setSegmentDescription(segment.description ?? '')
+        setSegmentThumbnailReference(segment.thumbnail_reference ?? null)
+        setEditingSegmentId(segment.id)
     }
 
     async function removeSegment(segment: { id: string; video_upload_id: string }) {
@@ -220,7 +267,11 @@ export default function LocalVideosScreen() {
                 startTime: start,
                 endTime: end,
                 categoryId: selectedCategoryId,
+                title: segmentTitle,
+                description: segmentDescription,
+                thumbnailReference: segmentThumbnailReference,
             })
+            setEditingSegmentId(segment.id)
             showSnack('Segment updated.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not update segment.')
@@ -270,7 +321,7 @@ export default function LocalVideosScreen() {
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
                 <ThemedText variant="title">Local Videos</ThemedText>
                 <ThemedText variant="subheader" style={styles.intro}>
-                    Phase 1 test area. Videos stay on this device; only their local reference metadata is stored.
+                    Segment workspace. Videos stay on this device and act only as source references for segment playback.
                 </ThemedText>
                 <ThemedText variant="small">
                     Cloud metadata: {cloudUploadsQuery.isLoading ? 'checking...' : cloudUploadsQuery.error ? 'migration required' : `${cloudUploadsQuery.data?.length ?? 0} reference(s) synced`}
@@ -293,10 +344,11 @@ export default function LocalVideosScreen() {
                     return (
                         <View key={video.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <ThemedText variant="subheader" numberOfLines={2} style={styles.videoName}>
-                                {video.fileName ?? 'Unnamed video'}
+                                Source reference
                             </ThemedText>
                             <ThemedText variant="small">Status: {video.status}</ThemedText>
-                            <ThemedText variant="small">Asset ID: {video.assetId ?? 'Unavailable; URI fallback'}</ThemedText>
+                            <ThemedText variant="small">Source ID: {video.assetId ?? video.id}</ThemedText>
+                            <ThemedText variant="small">File: {video.fileName ?? 'Unknown file name'}</ThemedText>
                             <ThemedText variant="small">Duration: {formatDuration(video.duration)} · Size: {formatBytes(video.fileSize)}</ThemedText>
 
                             {video.status === 'AVAILABLE' && selected ? (
@@ -353,6 +405,36 @@ export default function LocalVideosScreen() {
                                         />
                                         <ThemedButton title="Add" onPress={() => void addCategory()} style={styles.addCategoryButton} />
                                     </View>
+                                    <ThemedText variant="small" style={styles.rangeLabel}>Learning item title</ThemedText>
+                                    <TextInput
+                                        value={segmentTitle}
+                                        onChangeText={setSegmentTitle}
+                                        placeholder="Optional custom segment title"
+                                        placeholderTextColor={colors.border}
+                                        style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                    />
+                                    <ThemedText variant="small" style={styles.rangeLabel}>Learning item description</ThemedText>
+                                    <TextInput
+                                        value={segmentDescription}
+                                        onChangeText={setSegmentDescription}
+                                        placeholder="Optional custom description"
+                                        placeholderTextColor={colors.border}
+                                        multiline
+                                        style={[styles.rangeInput, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                    />
+                                    <ThemedText variant="small" style={styles.rangeLabel}>Segment thumbnail</ThemedText>
+                                    <View style={styles.rangeInputs}>
+                                        <TextInput
+                                            value={segmentThumbnailTime}
+                                            onChangeText={(value) => setSegmentThumbnailTime(value.replace(/[^0-9.]/g, ''))}
+                                            keyboardType="decimal-pad"
+                                            placeholder="Frame time"
+                                            placeholderTextColor={colors.border}
+                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                        />
+                                        <ThemedButton title={segmentThumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail(video)} loading={segmentThumbnailLoading} style={styles.addCategoryButton} />
+                                    </View>
+                                    {segmentThumbnailReference ? <ExpoImage source={{ uri: segmentThumbnailReference }} style={styles.segmentThumbnailPreview} contentFit="cover" /> : null}
                                     <ThemedButton
                                         title={isCreatingSegment ? 'Saving segment...' : 'Save segment'}
                                         onPress={() => void saveSegment(video)}
@@ -365,13 +447,15 @@ export default function LocalVideosScreen() {
                                     ) : (segmentsQuery.data ?? []).map((segment) => (
                                         <View key={segment.id} style={styles.savedSegment}>
                                             <ThemedText variant="small">
-                                                {segment.start_time}s → {segment.end_time}s · {(categoriesQuery.data ?? []).find((category) => category.id === segment.category_id)?.name ?? 'Misc'} · synced
+                                                {(segment.title ?? '').trim() || ((categoriesQuery.data ?? []).find((category) => category.id === segment.category_id)?.name ?? 'Misc')} · {segment.start_time}s → {segment.end_time}s · synced
                                             </ThemedText>
+                                            {segment.description ? <ThemedText variant="small">{segment.description}</ThemedText> : null}
                                             <View style={styles.segmentActions}>
                                                 <ThemedButton title="Edit" variant="ghost" onPress={() => editSegment(segment)} style={styles.segmentActionButton} />
                                                 <ThemedButton title="Update" onPress={() => void updateSelectedSegment(segment)} loading={updateSegment.isPending} style={styles.segmentActionButton} />
                                                 <ThemedButton title="Delete" variant="warning" onPress={() => void removeSegment(segment)} loading={deleteSegment.isPending} style={styles.segmentActionButton} />
                                             </View>
+                                            {editingSegmentId === segment.id ? <ThemedText variant="small">Editing this segment with the form above.</ThemedText> : null}
                                         </View>
                                     ))}
                                     <ThemedText variant="small" style={styles.previewHint}>
@@ -464,6 +548,11 @@ const styles = StyleSheet.create({
         minHeight: 40,
         paddingHorizontal: 10,
     },
+    multilineInput: {
+        minHeight: 84,
+        textAlignVertical: 'top',
+        paddingTop: 10,
+    },
     categoryList: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -476,6 +565,12 @@ const styles = StyleSheet.create({
     },
     addCategoryButton: {
         minWidth: 70,
+    },
+    segmentThumbnailPreview: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        borderRadius: 6,
+        backgroundColor: '#000',
     },
     savedSegment: {
         gap: 6,

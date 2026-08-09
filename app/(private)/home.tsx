@@ -114,7 +114,7 @@ const Home = () => {
                         </ThemedText>
                         <ThemedButton
                             title="Go to your Workspace"
-                            onPress={() => router.push('/(private)/(dashboard)/your-roadmap')}
+                            onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
                             style={{ width: '100%', marginTop: 4 }}
                         />
                     </View>
@@ -147,7 +147,7 @@ const Home = () => {
                         <ThemedButton
                             title="Trial the Workspace"
                             leftIcon={<Ionicons name="compass" size={16} color={colors.onPrimary} style={{ marginRight: 8 }} />}
-                            onPress={() => router.push('/(private)/(dashboard)/your-roadmap')}
+                            onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
                             style={{ width: '86%', alignSelf: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}
                         />
                     </>
