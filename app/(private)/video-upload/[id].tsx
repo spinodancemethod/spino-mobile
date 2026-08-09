@@ -11,6 +11,8 @@ import { showSnack } from 'lib/snackbarService'
 import { useVideoSegments } from 'lib/hooks/useVideoSegments'
 import { useUpsertVideoUploadNote, useVideoUploadById, useVideoUploadNote } from 'lib/hooks/useVideoUploadDetails'
 import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
+import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
+import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
 
 export default function VideoUploadDetailScreen() {
     const { id, segmentId, startTime, endTime, category, title, description } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string; description?: string }>()
@@ -20,6 +22,8 @@ export default function VideoUploadDetailScreen() {
     const noteMutation = useUpsertVideoUploadNote()
     const segmentsQuery = useVideoSegments(id ?? null)
     const roadmapsQuery = useUserRoadmaps()
+    const completedSegmentsQuery = useCompletedSegmentIdsByUser()
+    const toggleSegmentCompletion = useToggleSegmentCompletion()
     const [noteText, setNoteText] = useState('')
 
     useEffect(() => {
@@ -39,6 +43,8 @@ export default function VideoUploadDetailScreen() {
     const segmentStart = Number(startTime)
     const segmentEnd = Number(endTime)
     const hasSegmentRange = !!segmentId && Number.isFinite(segmentStart) && Number.isFinite(segmentEnd) && segmentStart < segmentEnd
+    const activeSegmentId = typeof segmentId === 'string' && segmentId.length > 0 ? segmentId : null
+    const isComplete = activeSegmentId ? (completedSegmentsQuery.data ?? []).includes(activeSegmentId) : false
     const segmentTitle = (title ?? '').trim() || (category ?? 'Movement segment')
     const segmentDescription = (description ?? '').trim()
 
@@ -48,6 +54,19 @@ export default function VideoUploadDetailScreen() {
             showSnack('Note saved.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not save note.')
+        }
+    }
+
+    async function toggleCurrentSegmentCompletion() {
+        if (!activeSegmentId) {
+            showSnack('No segment selected for completion.')
+            return
+        }
+        try {
+            await toggleSegmentCompletion.mutateAsync({ segmentId: activeSegmentId, isComplete })
+            showSnack(isComplete ? 'Marked as in progress.' : 'Marked as complete.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not update completion.')
         }
     }
 
@@ -64,6 +83,15 @@ export default function VideoUploadDetailScreen() {
                     <ThemedText variant="small">Duration: {upload.duration_seconds == null ? 'Unknown' : `${Math.round(upload.duration_seconds)} seconds`}</ThemedText>
                     <ThemedText variant="small">Status: {upload.status}</ThemedText>
                 </View>
+
+                {activeSegmentId ? (
+                    <ThemedButton
+                        title={isComplete ? 'Mark as in progress' : 'Mark segment complete'}
+                        onPress={() => void toggleCurrentSegmentCompletion()}
+                        loading={toggleSegmentCompletion.isPending}
+                        style={styles.fullButton}
+                    />
+                ) : null}
 
                 {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
                     <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { router } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -52,6 +53,13 @@ export default function YourRoadmapsScreen() {
         router.push({ pathname: '/(private)/(dashboard)/user-roadmap', params: { roadmapId: roadmap.id } })
     }
 
+    function editRoadmap(roadmap: UserRoadmap) {
+        router.push({
+            pathname: '/(private)/(dashboard)/user-roadmap',
+            params: { roadmapId: roadmap.id, editRoadmap: '1' },
+        })
+    }
+
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container}>
@@ -78,14 +86,30 @@ export default function YourRoadmapsScreen() {
                         <ThemedText variant="small">Tap Create to add your first roadmap.</ThemedText>
                     </View>
                 ) : roadmapsQuery.data?.map((roadmap) => (
-                    <Pressable
+                    <View
                         key={roadmap.id}
                         style={[styles.roadmap, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={() => openRoadmap(roadmap)}
                     >
-                        <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
-                        {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
-                    </Pressable>
+                        <Pressable
+                            style={styles.roadmapContentPressable}
+                            onPress={() => openRoadmap(roadmap)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Open roadmap ${roadmap.name}`}
+                        >
+                            <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
+                            {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => editRoadmap(roadmap)}
+                            style={[styles.editRoadmapIconButton, styles.editRoadmapIconButtonOverlay]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Edit roadmap ${roadmap.name}`}
+                            hitSlop={10}
+                        >
+                            <Ionicons name="create-outline" size={18} color={colors.text} />
+                        </Pressable>
+                    </View>
                 ))}
             </ScrollView>
 
@@ -135,8 +159,11 @@ const styles = StyleSheet.create({
     container: { padding: 16, paddingBottom: 120, gap: 10 },
     headerRow: { marginBottom: 6 },
     intro: { color: '#64748b', marginTop: 2 },
-    roadmap: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 6 },
+    roadmap: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 6, position: 'relative' },
+    roadmapContentPressable: { gap: 6, paddingRight: 44, minHeight: 32, justifyContent: 'center' },
     roadmapTitle: { flex: 1 },
+    editRoadmapIconButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    editRoadmapIconButtonOverlay: { position: 'absolute', top: 10, right: 10, zIndex: 2, elevation: 2 },
     input: { borderWidth: 1, borderRadius: 6, minHeight: 44, paddingHorizontal: 10 },
     multiline: { minHeight: 76, paddingTop: 10, textAlignVertical: 'top' },
     fullButton: { width: '100%' },

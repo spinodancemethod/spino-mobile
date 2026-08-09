@@ -78,7 +78,9 @@ export type LocalVideoUpload = {
 export type VideoCategoryRecord = {
     id: string;
     user_id: string | null;
+    roadmap_id: string;
     name: string;
+    description: string | null;
     system_category: boolean;
     created_at: string;
     updated_at: string;

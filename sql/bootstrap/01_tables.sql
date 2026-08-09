@@ -133,7 +133,9 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
 CREATE TABLE IF NOT EXISTS public.video_categories (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users (id) ON DELETE CASCADE,
+  roadmap_id uuid NOT NULL REFERENCES public.user_roadmaps (id) ON DELETE CASCADE,
   name text NOT NULL,
+  description text,
   system_category boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -142,8 +144,15 @@ CREATE TABLE IF NOT EXISTS public.video_categories (
   CONSTRAINT video_categories_misc_reserved_check CHECK (system_category OR lower(trim(name)) <> 'misc')
 );
 
-INSERT INTO public.video_categories (user_id, name, system_category)
-VALUES (NULL, 'Misc', true)
+INSERT INTO public.video_categories (user_id, roadmap_id, name, system_category)
+SELECT NULL, ur.id, 'Misc', true
+FROM public.user_roadmaps ur
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.video_categories vc
+  WHERE vc.roadmap_id = ur.id
+    AND lower(trim(vc.name)) = 'misc'
+)
 ON CONFLICT DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS public.segments (
@@ -155,7 +164,7 @@ CREATE TABLE IF NOT EXISTS public.segments (
   end_time double precision NOT NULL,
   count_start integer,
   count_end integer,
-  category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE RESTRICT,
+  category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE CASCADE,
   title text,
   description text,
   thumbnail_reference text,
@@ -183,6 +192,23 @@ CREATE TABLE IF NOT EXISTS public.user_video_progress (
   CONSTRAINT user_video_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
   CONSTRAINT user_video_progress_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE,
   CONSTRAINT user_video_progress_status_check CHECK (
+    status IN ('not_started', 'in_progress', 'completed')
+  )
+);
+
+-- Stores per-user status for each uploaded segment in the category roadmap flow.
+CREATE TABLE IF NOT EXISTS public.user_segment_progress (
+  user_id uuid NOT NULL,
+  segment_id uuid NOT NULL,
+  status text NOT NULL DEFAULT 'not_started',
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT user_segment_progress_pkey PRIMARY KEY (user_id, segment_id),
+  CONSTRAINT user_segment_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
+  CONSTRAINT user_segment_progress_segment_id_fkey FOREIGN KEY (segment_id) REFERENCES public.segments (id) ON DELETE CASCADE,
+  CONSTRAINT user_segment_progress_status_check CHECK (
     status IN ('not_started', 'in_progress', 'completed')
   )
 );

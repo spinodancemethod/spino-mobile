@@ -28,6 +28,12 @@ CREATE INDEX IF NOT EXISTS user_video_progress_video_id_idx
 CREATE INDEX IF NOT EXISTS user_video_progress_user_status_idx
   ON public.user_video_progress (user_id, status);
 
+CREATE INDEX IF NOT EXISTS user_segment_progress_segment_id_idx
+  ON public.user_segment_progress (segment_id);
+
+CREATE INDEX IF NOT EXISTS user_segment_progress_user_status_idx
+  ON public.user_segment_progress (user_id, status);
+
 CREATE INDEX IF NOT EXISTS video_uploads_user_updated_idx
   ON public.video_uploads (user_id, updated_at DESC);
 
@@ -37,11 +43,8 @@ CREATE INDEX IF NOT EXISTS user_roadmaps_user_updated_idx
 CREATE INDEX IF NOT EXISTS video_uploads_roadmap_idx
   ON public.video_uploads (user_id, roadmap_id, updated_at DESC);
 
-CREATE UNIQUE INDEX IF NOT EXISTS video_categories_system_name_idx
-  ON public.video_categories (lower(name)) WHERE system_category = true;
-
-CREATE UNIQUE INDEX IF NOT EXISTS video_categories_user_name_idx
-  ON public.video_categories (user_id, lower(name)) WHERE system_category = false;
+CREATE UNIQUE INDEX IF NOT EXISTS video_categories_roadmap_name_idx
+  ON public.video_categories (roadmap_id, lower(name));
 
 CREATE INDEX IF NOT EXISTS segments_user_video_idx
   ON public.segments (user_id, video_upload_id, sequence, created_at);

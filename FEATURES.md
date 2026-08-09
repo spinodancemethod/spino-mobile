@@ -19,6 +19,15 @@
 
 ## Current Product (Google Play Runtime)
 
+- Switched the roadmap settings panel from an inline drawer to a modal opened by the floating bottom-right settings button, while keeping toggle and Edit roadmap controls intact.
+- Added a compact top drawer menu on the user roadmap that houses Show empty categories, Show completed, and an Edit roadmap action (opens the roadmap edit modal) to reduce persistent header clutter.
+- Restored roadmap completion controls for the segment-based roadmap flow: added Show empty categories and Show completed toggles, plus segment completion toggling directly on the video-upload detail page.
+- Fixed roadmap stale state after Add Video: segment create/update/delete now invalidates roadmap-segment queries so newly added items appear without manual page refresh.
+- Scoped video categories to individual roadmaps at both app and DB layers (schema, RLS, queries, and mutations), eliminating cross-roadmap category sharing.
+- Restored an Edit roadmap action on each roadmap tile in the roadmaps list, and replaced the single-roadmap header edit icon with a map icon that navigates back to Your Roadmaps.
+- Added optional category descriptions across roadmap/category flows, including DB schema support plus create/edit inputs in Add Video, Local Videos, and category management modals.
+- Added category-tile management on the user roadmap: tapping a category now opens a modal to rename or delete it, and delete flows warn that associated learning segments will be removed.
+- Updated category tiles on the user roadmap to show each category title in the center column (with wrapped long names) and use category-specific fallback thumbnail labels instead of a static "Roadmap" label.
 - Fixed standalone/test-build login hang by tightening auth deep-link detection to only process links with auth params/tokens and adding an 8-second timeout guard around auth-link session handling so the "Signing you in..." overlay cannot persist indefinitely.
 - Updated Your Roadmap vertical row ordering to follow `positions."order"`, so roadmap position rows render in the same sequence as the positions table.
 - Added `positions."order"` as a unique positive integer, backfilled existing rows from 1..N in table order, and wired position queries to sort by this column.

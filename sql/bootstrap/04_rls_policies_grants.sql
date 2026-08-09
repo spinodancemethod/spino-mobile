@@ -12,6 +12,7 @@ ALTER TABLE public.favourites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_video_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_segment_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.videos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.video_uploads ENABLE ROW LEVEL SECURITY;
@@ -233,6 +234,51 @@ BEGIN
       USING (auth.uid() = user_id);
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_segment_progress' AND policyname = 'user_segment_progress_select_own'
+  ) THEN
+    CREATE POLICY user_segment_progress_select_own
+      ON public.user_segment_progress
+      FOR SELECT
+      TO authenticated
+      USING (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_segment_progress' AND policyname = 'user_segment_progress_insert_own'
+  ) THEN
+    CREATE POLICY user_segment_progress_insert_own
+      ON public.user_segment_progress
+      FOR INSERT
+      TO authenticated
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_segment_progress' AND policyname = 'user_segment_progress_update_own'
+  ) THEN
+    CREATE POLICY user_segment_progress_update_own
+      ON public.user_segment_progress
+      FOR UPDATE
+      TO authenticated
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'user_segment_progress' AND policyname = 'user_segment_progress_delete_own'
+  ) THEN
+    CREATE POLICY user_segment_progress_delete_own
+      ON public.user_segment_progress
+      FOR DELETE
+      TO authenticated
+      USING (auth.uid() = user_id);
+  END IF;
+
   DROP POLICY IF EXISTS "Categories are viewable by everyone" ON public.positions;
   DROP POLICY IF EXISTS "public can read positions" ON public.positions;
 
@@ -349,20 +395,51 @@ DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_categories' AND policyname = 'video_categories_select_available') THEN
     CREATE POLICY video_categories_select_available ON public.video_categories FOR SELECT TO authenticated
-      USING (system_category = true OR auth.uid() = user_id);
+      USING (EXISTS (
+        SELECT 1 FROM public.user_roadmaps ur
+        WHERE ur.id = roadmap_id AND ur.user_id = auth.uid()
+      ));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_categories' AND policyname = 'video_categories_insert_own') THEN
     CREATE POLICY video_categories_insert_own ON public.video_categories FOR INSERT TO authenticated
-      WITH CHECK (system_category = false AND auth.uid() = user_id);
+      WITH CHECK (
+        system_category = false
+        AND auth.uid() = user_id
+        AND EXISTS (
+          SELECT 1 FROM public.user_roadmaps ur
+          WHERE ur.id = roadmap_id AND ur.user_id = auth.uid()
+        )
+      );
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_categories' AND policyname = 'video_categories_update_own') THEN
     CREATE POLICY video_categories_update_own ON public.video_categories FOR UPDATE TO authenticated
-      USING (system_category = false AND auth.uid() = user_id)
-      WITH CHECK (system_category = false AND auth.uid() = user_id);
+      USING (
+        system_category = false
+        AND auth.uid() = user_id
+        AND EXISTS (
+          SELECT 1 FROM public.user_roadmaps ur
+          WHERE ur.id = roadmap_id AND ur.user_id = auth.uid()
+        )
+      )
+      WITH CHECK (
+        system_category = false
+        AND auth.uid() = user_id
+        AND EXISTS (
+          SELECT 1 FROM public.user_roadmaps ur
+          WHERE ur.id = roadmap_id AND ur.user_id = auth.uid()
+        )
+      );
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'video_categories' AND policyname = 'video_categories_delete_own') THEN
     CREATE POLICY video_categories_delete_own ON public.video_categories FOR DELETE TO authenticated
-      USING (system_category = false AND auth.uid() = user_id);
+      USING (
+        system_category = false
+        AND auth.uid() = user_id
+        AND EXISTS (
+          SELECT 1 FROM public.user_roadmaps ur
+          WHERE ur.id = roadmap_id AND ur.user_id = auth.uid()
+        )
+      );
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'segments' AND policyname = 'segments_select_own') THEN
     CREATE POLICY segments_select_own ON public.segments FOR SELECT TO authenticated USING (auth.uid() = user_id);
@@ -370,16 +447,24 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'segments' AND policyname = 'segments_insert_own') THEN
     CREATE POLICY segments_insert_own ON public.segments FOR INSERT TO authenticated
       WITH CHECK (auth.uid() = user_id AND EXISTS (
-        SELECT 1 FROM public.video_uploads
-        WHERE video_uploads.id = video_upload_id AND video_uploads.user_id = auth.uid()
+        SELECT 1
+        FROM public.video_uploads
+        JOIN public.video_categories ON video_categories.id = category_id
+        WHERE video_uploads.id = video_upload_id
+          AND video_uploads.user_id = auth.uid()
+          AND video_categories.roadmap_id = video_uploads.roadmap_id
       ));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'segments' AND policyname = 'segments_update_own') THEN
     CREATE POLICY segments_update_own ON public.segments FOR UPDATE TO authenticated
       USING (auth.uid() = user_id)
       WITH CHECK (auth.uid() = user_id AND EXISTS (
-        SELECT 1 FROM public.video_uploads
-        WHERE video_uploads.id = video_upload_id AND video_uploads.user_id = auth.uid()
+        SELECT 1
+        FROM public.video_uploads
+        JOIN public.video_categories ON video_categories.id = category_id
+        WHERE video_uploads.id = video_upload_id
+          AND video_uploads.user_id = auth.uid()
+          AND video_categories.roadmap_id = video_uploads.roadmap_id
       ));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'segments' AND policyname = 'segments_delete_own') THEN
@@ -445,6 +530,10 @@ GRANT SELECT ON public.user_video_progress TO authenticated;
 GRANT INSERT ON public.user_video_progress TO authenticated;
 GRANT UPDATE ON public.user_video_progress TO authenticated;
 GRANT DELETE ON public.user_video_progress TO authenticated;
+GRANT SELECT ON public.user_segment_progress TO authenticated;
+GRANT INSERT ON public.user_segment_progress TO authenticated;
+GRANT UPDATE ON public.user_segment_progress TO authenticated;
+GRANT DELETE ON public.user_segment_progress TO authenticated;
 GRANT SELECT ON public.video_uploads TO authenticated;
 GRANT INSERT ON public.video_uploads TO authenticated;
 GRANT UPDATE ON public.video_uploads TO authenticated;

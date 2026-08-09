@@ -68,13 +68,17 @@ export default function LocalVideosScreen() {
     const { mutateAsync: deleteCloudVideoUpload } = useDeleteVideoUpload()
     const cloudUploadsQuery = useVideoUploads()
     const roadmapsQuery = useUserRoadmaps()
-    const categoriesQuery = useVideoCategories()
+    const activeRoadmapId = selectedVideoId
+        ? (cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.roadmap_id ?? null)
+        : (roadmapsQuery.data?.[0]?.id ?? null)
+    const categoriesQuery = useVideoCategories(activeRoadmapId)
     const createCategory = useCreateVideoCategory()
     const { mutateAsync: saveCloudSegment, isPending: isCreatingSegment } = useCreateVideoSegment()
     const updateSegment = useUpdateVideoSegment()
     const deleteSegment = useDeleteVideoSegment()
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [newCategoryDescription, setNewCategoryDescription] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
     const [segmentDescription, setSegmentDescription] = useState('')
     const [segmentThumbnailTime, setSegmentThumbnailTime] = useState('0')
@@ -191,15 +195,24 @@ export default function LocalVideosScreen() {
     }
 
     async function addCategory() {
+        if (!activeRoadmapId) {
+            showSnack('Create or choose a roadmap before adding a category.')
+            return
+        }
         const name = newCategoryName.trim()
         if (!name) {
             showSnack('Enter a category name.')
             return
         }
         try {
-            const category = await createCategory.mutateAsync(name)
+            const category = await createCategory.mutateAsync({
+                roadmapId: activeRoadmapId,
+                name,
+                description: newCategoryDescription,
+            })
             setSelectedCategoryId(category.id)
             setNewCategoryName('')
+            setNewCategoryDescription('')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not create category.')
         }
@@ -405,6 +418,14 @@ export default function LocalVideosScreen() {
                                         />
                                         <ThemedButton title="Add" onPress={() => void addCategory()} style={styles.addCategoryButton} />
                                     </View>
+                                    <TextInput
+                                        value={newCategoryDescription}
+                                        onChangeText={setNewCategoryDescription}
+                                        placeholder="Optional category description"
+                                        placeholderTextColor={colors.border}
+                                        multiline
+                                        style={[styles.rangeInput, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                    />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Learning item title</ThemedText>
                                     <TextInput
                                         value={segmentTitle}

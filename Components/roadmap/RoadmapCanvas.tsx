@@ -86,6 +86,11 @@ export function RoadmapCanvas({
     showCenterAddButton = false,
     onCenterAddPress,
 }: RoadmapCanvasProps) {
+    const getCategoryPlaceholderUrl = (label: string) => {
+        // Keep placeholder images meaningful when a custom preview thumbnail is missing.
+        return `https://placehold.co/320x180/fef3c7/92400e?text=${encodeURIComponent(label)}`
+    }
+
     const PositionVideoStack: React.FC<{ pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean }> = ({ pos, videos, showEmptyState }) => {
         const hasVisibleFreeVideos = (freeTierVideosByPosition.get(pos?.id)?.length ?? 0) > 0
         const hasRoadmapVideos = videos.length > 0
@@ -374,12 +379,16 @@ export function RoadmapCanvas({
                                             <ThemedText
                                                 variant="small"
                                                 style={{ ...styles.nodeText, ...styles.positionTitleText }}
-                                                numberOfLines={1}
+                                                numberOfLines={2}
                                             >
                                                 {position.name || position.title || 'Position'}
                                             </ThemedText>
                                             <ExpoImage
-                                                source={{ uri: position?.roadmap_preview_url ?? samplePositionPlaceholderUrl }}
+                                                source={{
+                                                    uri:
+                                                        position?.roadmap_preview_url
+                                                        ?? getCategoryPlaceholderUrl(position.name || position.title || 'Category'),
+                                                }}
                                                 style={styles.positionPlaceholderImage}
                                                 contentFit="cover"
                                             />

@@ -28,10 +28,10 @@ export default function AddVideoScreen() {
     const createSegment = useCreateVideoSegment()
     const createCategory = useCreateVideoCategory()
     const roadmapsQuery = useUserRoadmaps()
-    const categoriesQuery = useVideoCategories()
     const params = useLocalSearchParams<{ roadmapId?: string; categoryId?: string }>()
     const [selectedVideo, setSelectedVideo] = useState<LocalVideoUpload | null>(null)
     const [roadmapId, setRoadmapId] = useState('')
+    const categoriesQuery = useVideoCategories(roadmapId || null)
     const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(false)
     const [thumbnailTime, setThumbnailTime] = useState('0')
     const [thumbnailLoading, setThumbnailLoading] = useState(false)
@@ -42,6 +42,7 @@ export default function AddVideoScreen() {
     const [segmentTitle, setSegmentTitle] = useState('')
     const [segmentDescription, setSegmentDescription] = useState('')
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [newCategoryDescription, setNewCategoryDescription] = useState('')
 
     useEffect(() => {
         if (params.roadmapId) setRoadmapId(params.roadmapId)
@@ -182,15 +183,24 @@ export default function AddVideoScreen() {
     }
 
     async function addCategory() {
+        if (!roadmapId) {
+            showSnack('Select a roadmap before adding a category.')
+            return
+        }
         const name = newCategoryName.trim()
         if (!name) {
             showSnack('Enter a category name.')
             return
         }
         try {
-            const category = await createCategory.mutateAsync(name)
+            const category = await createCategory.mutateAsync({
+                roadmapId,
+                name,
+                description: newCategoryDescription,
+            })
             setCategoryId(category.id)
             setNewCategoryName('')
+            setNewCategoryDescription('')
             showSnack('Category created.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not create category.')
@@ -297,6 +307,14 @@ export default function AddVideoScreen() {
                                     style={styles.thumbnailButton}
                                 />
                             </View>
+                            <TextInput
+                                value={newCategoryDescription}
+                                onChangeText={setNewCategoryDescription}
+                                placeholder="Optional category description"
+                                placeholderTextColor={colors.border}
+                                multiline
+                                style={[styles.input, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                            />
                             <ThemedText variant="small" style={styles.label}>Choose thumbnail frame</ThemedText>
                             <ThemedText variant="small">Enter the video time in seconds, then choose the frame to show on your roadmap tile.</ThemedText>
                             <View style={styles.thumbnailControls}>
