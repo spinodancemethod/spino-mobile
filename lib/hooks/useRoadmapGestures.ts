@@ -33,6 +33,13 @@ export function useRoadmapGestures({
     const canvasRef = useRef<View>(null)
     const canvasOffset = useRef({ x: 0, y: 0 })
 
+    const resetViewport = useCallback((nextPanX: number, nextPanY: number, nextScale: number) => {
+        pan.setValue({ x: nextPanX, y: nextPanY })
+        scale.setValue(nextScale)
+        lastPan.current = { x: nextPanX, y: nextPanY }
+        lastScale.current = nextScale
+    }, [pan, scale])
+
     const onCanvasLayout = useCallback((_e: LayoutChangeEvent) => {
         canvasRef.current?.measureInWindow((x, y) => {
             canvasOffset.current = { x: x ?? 0, y: y ?? 0 }
@@ -144,11 +151,8 @@ export function useRoadmapGestures({
     ).current
 
     useEffect(() => {
-        pan.setValue({ x: defaultPanX, y: defaultPanY })
-        scale.setValue(defaultScale)
-        lastPan.current = { x: defaultPanX, y: defaultPanY }
-        lastScale.current = defaultScale
-    }, [defaultPanX, defaultPanY, defaultScale, pan, scale])
+        resetViewport(defaultPanX, defaultPanY, defaultScale)
+    }, [defaultPanX, defaultPanY, defaultScale, resetViewport])
 
     const setSurfaceHeight = useCallback((height: number) => {
         surfaceHeightRef.current = height
@@ -161,5 +165,6 @@ export function useRoadmapGestures({
         panHandlers: panResponder.panHandlers,
         scale,
         setSurfaceHeight,
+        resetViewport,
     }
 }

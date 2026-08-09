@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
@@ -26,8 +26,10 @@ const VIDEO_GAP = 12
 const POSITION_COLUMN_WIDTH = 180
 const ICON_SIZE = 18
 const ROW_GAP = 18
-const DEFAULT_SCALE = 0.5
-const INITIAL_VIEWPORT_WIDTH = Dimensions.get('window').width
+const DEFAULT_SCALE = 0.45
+const SURFACE_HORIZONTAL_PADDING = 24
+const DEFAULT_PAN_Y = 0
+const CATEGORIES_ANCHOR_VIEWPORT_X = 240
 const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Local+Video'
 const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Roadmap'
 
@@ -59,6 +61,7 @@ export default function UserRoadmapScreen() {
     const [showEmptyCategories, setShowEmptyCategories] = useState(true)
     const [showCompleted, setShowCompleted] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
+    const lastAnchoredRoadmapId = useRef<string | null>(null)
     const roadmapPosition = useMemo<RoadmapPosition[]>(() => {
         return (categoriesQuery.data ?? []).map((category) => ({
             id: category.id,
@@ -111,14 +114,18 @@ export default function UserRoadmapScreen() {
     }, [roadmapPosition, filteredVideosByCategory, showEmptyCategories])
     const emptyVideos = useMemo(() => new Map<string, RoadmapVideo[]>(), [])
     const [surfaceHeight, setSurfaceHeight] = useState(500)
-    const defaultPanX = (INITIAL_VIEWPORT_WIDTH / 2) - ((SURFACE_WIDTH / 2) * DEFAULT_SCALE)
-    const { canvasRef, onCanvasLayout, pan, panHandlers, scale, setSurfaceHeight: setGestureSurfaceHeight } = useRoadmapGestures({
+    const activeRoadmapId = roadmap?.id ?? null
+    // Anchor against the Categories card itself (root card in the middle lane).
+    // In this layout, that card starts at the surface's left padding and top edge.
+    const categoriesCardAnchorX = SURFACE_HORIZONTAL_PADDING
+    const defaultPanX = CATEGORIES_ANCHOR_VIEWPORT_X - (categoriesCardAnchorX * DEFAULT_SCALE)
+    const { canvasRef, onCanvasLayout, pan, panHandlers, scale, setSurfaceHeight: setGestureSurfaceHeight, resetViewport } = useRoadmapGestures({
         minScale: 0.2,
         maxScale: 3,
         defaultScale: DEFAULT_SCALE,
         surfaceWidth: SURFACE_WIDTH,
         defaultPanX,
-        defaultPanY: -300,
+        defaultPanY: DEFAULT_PAN_Y,
     })
 
     useEffect(() => {
@@ -141,6 +148,27 @@ export default function UserRoadmapScreen() {
         setManageModalOpen(true)
         setHasHandledInitialRoadmapEditRequest(true)
     }, [roadmap, editRoadmap, hasHandledInitialRoadmapEditRequest])
+
+    useEffect(() => {
+        if (!activeRoadmapId) return
+        if (categoriesQuery.isLoading || segmentsQuery.isLoading) return
+        if (lastAnchoredRoadmapId.current === activeRoadmapId) return
+
+        // Anchor after data resolves so each roadmap starts from the same
+        // Categories-card reference point regardless of item counts.
+        const frame = requestAnimationFrame(() => {
+            resetViewport(defaultPanX, DEFAULT_PAN_Y, DEFAULT_SCALE)
+            lastAnchoredRoadmapId.current = activeRoadmapId
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [
+        activeRoadmapId,
+        categoriesQuery.isLoading,
+        segmentsQuery.isLoading,
+        defaultPanX,
+        resetViewport,
+    ])
 
     function openManageModal() {
         if (!roadmap) return
