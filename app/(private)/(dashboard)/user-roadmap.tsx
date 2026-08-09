@@ -325,9 +325,6 @@ export default function UserRoadmapScreen() {
                     <ThemedText variant="title">{roadmap.name}</ThemedText>
                 </View>
             </View>
-            <View style={screenStyles.subheaderRow}>
-                <ThemedText variant="small">Segments are grouped by category. Source videos are references only.</ThemedText>
-            </View>
             <View style={screenStyles.canvasWrap}>
                 <RoadmapCanvas
                     styles={styles}

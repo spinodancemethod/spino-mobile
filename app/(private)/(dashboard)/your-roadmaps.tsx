@@ -99,16 +99,6 @@ export default function YourRoadmapsScreen() {
                             <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
                             {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
                         </Pressable>
-
-                        <Pressable
-                            onPress={() => editRoadmap(roadmap)}
-                            style={[styles.editRoadmapIconButton, styles.editRoadmapIconButtonOverlay]}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Edit roadmap ${roadmap.name}`}
-                            hitSlop={10}
-                        >
-                            <Ionicons name="create-outline" size={18} color={colors.text} />
-                        </Pressable>
                     </View>
                 ))}
             </ScrollView>
