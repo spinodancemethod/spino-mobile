@@ -392,7 +392,7 @@ export default function VideoUploadDetailScreen() {
                 </View>
 
                 {activeSegmentId ? (
-                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <View style={styles.sectionHeaderRow}>
                             <ThemedText variant="subheader">Category</ThemedText>
                             <Pressable
