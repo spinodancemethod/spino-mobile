@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Modal, PanResponder, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
+import { Ionicons } from '@expo/vector-icons'
 import ThemedText from 'Components/ThemedText'
 import { useTheme } from 'constants/useTheme'
 
@@ -8,51 +9,27 @@ type LocalSegmentPlayerProps = {
     source: string
     startTime?: number
     endTime?: number | null
-    tapToToggle?: boolean
-    showNativeControls?: boolean
-    showCustomControls?: boolean
-    speedOptions?: number[]
-    liveSeekWhileScrubbing?: boolean
-    liveSeekIntervalMs?: number
 }
 
-function formatTime(seconds: number) {
-    const safeSeconds = Math.max(0, Math.floor(seconds))
-    const minutes = Math.floor(safeSeconds / 60)
-    const remainder = safeSeconds % 60
-    return `${minutes}:${remainder.toString().padStart(2, '0')}`
-}
-
-export default function LocalSegmentPlayer({
-    source,
-    startTime = 0,
-    endTime = null,
-    tapToToggle = true,
-    showNativeControls = false,
-    showCustomControls = true,
-    speedOptions = [0.5, 1],
-    liveSeekWhileScrubbing = true,
-    liveSeekIntervalMs = 50,
-}: LocalSegmentPlayerProps) {
+export default function LocalSegmentPlayer({ source, startTime = 0, endTime = null }: LocalSegmentPlayerProps) {
     const { colors } = useTheme()
     const player = useVideoPlayer(source, (videoPlayer) => {
         videoPlayer.loop = false
         videoPlayer.muted = true
         videoPlayer.timeUpdateEventInterval = 0.1
     })
+    const [duration, setDuration] = useState(0)
+    const [currentTime, setCurrentTime] = useState(startTime)
+    const [scrubTime, setScrubTime] = useState(startTime)
     const [isPlaying, setIsPlaying] = useState(false)
     const [isMuted, setIsMuted] = useState(true)
     const [isFullscreen, setIsFullscreen] = useState(false)
-    const [currentTime, setCurrentTime] = useState(startTime)
-    const [duration, setDuration] = useState(0)
     const [speed, setSpeed] = useState(1)
     const [loop, setLoop] = useState(false)
     const [isScrubbing, setIsScrubbing] = useState(false)
     const [scrubWidth, setScrubWidth] = useState(0)
-    const [scrubTime, setScrubTime] = useState(startTime)
-    const wasPlayingBeforeScrubRef = useRef(false)
-    const scrubTimeRef = useRef(startTime)
-    const lastLiveSeekAtRef = useRef(0)
+    const [wasPlayingBeforeScrub, setWasPlayingBeforeScrub] = useState(false)
+    const lastScrubLocation = useRef<number | null>(null)
 
     useEffect(() => {
         const subscription = player.addListener('playingChange', ({ isPlaying: playing }) => setIsPlaying(playing))
@@ -68,10 +45,12 @@ export default function LocalSegmentPlayer({
 
     useEffect(() => {
         const subscription = player.addListener('timeUpdate', ({ currentTime: nextTime }) => {
+            if (!isScrubbing) {
+                setCurrentTime(nextTime)
+                setScrubTime(nextTime)
+            }
             const rangeEnd = endTime == null ? null : Math.min(endTime, duration || endTime)
-            if (!isScrubbing) setCurrentTime(nextTime)
-
-            if (rangeEnd != null && nextTime >= rangeEnd) {
+            if (!isScrubbing && rangeEnd != null && nextTime >= rangeEnd) {
                 player.pause()
                 player.currentTime = rangeEnd
                 if (loop) {
@@ -90,84 +69,50 @@ export default function LocalSegmentPlayer({
         setScrubTime(startTime)
     }, [endTime, player, source, startTime])
 
-    useEffect(() => {
-        if (!isScrubbing) setScrubTime(currentTime)
-    }, [currentTime, isScrubbing])
-
-    useEffect(() => {
-        scrubTimeRef.current = scrubTime
-    }, [scrubTime])
-
-    const playbackEnd = endTime ?? duration
     const seekMin = startTime
-    const seekMax = Math.max(seekMin, playbackEnd)
+    const seekMax = Math.max(seekMin, endTime ?? duration)
     const seekRange = Math.max(0, seekMax - seekMin)
     const activeTime = isScrubbing ? scrubTime : currentTime
-    const scrubProgress = seekRange > 0
+    const progress = seekRange > 0
         ? (Math.max(seekMin, Math.min(seekMax, activeTime)) - seekMin) / seekRange
         : 0
-    const displayedTime = Math.max(0, activeTime - seekMin)
 
-    function getTimeFromFraction(fraction: number) {
-        const clampedFraction = Math.max(0, Math.min(1, fraction))
-        return seekMin + seekRange * clampedFraction
+    function formatTime(seconds: number) {
+        const safeSeconds = Math.max(0, Math.round(seconds * 100) / 100)
+        const minutes = Math.floor(safeSeconds / 60)
+        const remainder = (safeSeconds % 60).toFixed(2).padStart(5, '0')
+        return `${minutes}:${remainder}`
     }
 
-    function applySeek(nextTime: number) {
-        const clampedTime = Math.max(seekMin, Math.min(seekMax, nextTime))
-        player.currentTime = clampedTime
-        setCurrentTime(clampedTime)
-        setScrubTime(clampedTime)
-        scrubTimeRef.current = clampedTime
-    }
-
-    function previewSeek(nextTime: number) {
-        const clampedTime = Math.max(seekMin, Math.min(seekMax, nextTime))
-        setScrubTime(clampedTime)
-        scrubTimeRef.current = clampedTime
-    }
-
-    function seekFromLocationX(locationX: number, shouldApply: boolean) {
+    function applyScrubLocation(locationX: number) {
         if (scrubWidth <= 0) return
-        const nextTime = getTimeFromFraction(locationX / scrubWidth)
-        if (shouldApply) {
-            applySeek(nextTime)
-            return
-        }
+        if (!Number.isFinite(locationX)) return
 
-        if (liveSeekWhileScrubbing) {
-            const now = Date.now()
-            if (now - lastLiveSeekAtRef.current >= Math.max(16, liveSeekIntervalMs)) {
-                applySeek(nextTime)
-                lastLiveSeekAtRef.current = now
-                return
-            }
-        }
-        previewSeek(nextTime)
+        // Ignore transient responder resets to zero during a drag unless the
+        // finger was already near the start of the track.
+        if (locationX === 0 && (lastScrubLocation.current ?? 0) > scrubWidth * 0.05) return
+
+        lastScrubLocation.current = Math.max(0, Math.min(scrubWidth, locationX))
+        const fraction = Math.max(0, Math.min(1, locationX / scrubWidth))
+        const nextTime = seekMin + seekRange * fraction
+        player.currentTime = nextTime
+        setCurrentTime(nextTime)
+        setScrubTime(nextTime)
     }
 
-    const scrubPanResponder = PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (event) => {
-            wasPlayingBeforeScrubRef.current = isPlaying
-            setIsScrubbing(true)
-            player.pause()
-            lastLiveSeekAtRef.current = 0
-            seekFromLocationX(event.nativeEvent.locationX, false)
-        },
-        onPanResponderMove: (event) => seekFromLocationX(event.nativeEvent.locationX, false),
-        onPanResponderRelease: () => {
-            applySeek(scrubTimeRef.current)
-            setIsScrubbing(false)
-            if (wasPlayingBeforeScrubRef.current) player.play()
-        },
-        onPanResponderTerminate: () => {
-            applySeek(scrubTimeRef.current)
-            setIsScrubbing(false)
-            if (wasPlayingBeforeScrubRef.current) player.play()
-        },
-    })
+    function beginScrub(locationX: number) {
+        setWasPlayingBeforeScrub(player.playing)
+        setIsScrubbing(true)
+        player.pause()
+        lastScrubLocation.current = null
+        applyScrubLocation(locationX)
+    }
+
+    function finishScrub() {
+        setIsScrubbing(false)
+        lastScrubLocation.current = null
+        if (wasPlayingBeforeScrub) player.play()
+    }
 
     function togglePlayback() {
         if (isPlaying) {
@@ -178,50 +123,52 @@ export default function LocalSegmentPlayer({
         player.play()
     }
 
-    function cycleSpeed() {
-        const validOptions = speedOptions.length > 0 ? speedOptions : [1]
-        const currentIndex = validOptions.findIndex((option) => option === speed)
-        const nextSpeed = validOptions[(currentIndex + 1 + validOptions.length) % validOptions.length]
-        setSpeed(nextSpeed)
-        player.playbackRate = nextSpeed
-    }
-
     function toggleSound() {
         const nextMuted = !isMuted
         player.muted = nextMuted
         setIsMuted(nextMuted)
     }
 
+    function cycleSpeed() {
+        const options = [0.5, 1]
+        const nextSpeed = options[(options.indexOf(speed) + 1) % options.length]
+        setSpeed(nextSpeed)
+        player.playbackRate = nextSpeed
+    }
+
     function renderControls() {
         return (
             <View style={[styles.controls, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.timelineRow}>
-                    <ThemedText variant="small">{formatTime(displayedTime)}</ThemedText>
+                <View style={styles.timeLabels}>
+                    <ThemedText variant="small">{formatTime(Math.max(0, activeTime - seekMin))}</ThemedText>
                     <ThemedText variant="small">{formatTime(seekRange)}</ThemedText>
                 </View>
                 <View
-                    style={[styles.scrubTrack, { backgroundColor: colors.border }]}
+                    style={[styles.scrubTouchArea, { backgroundColor: colors.border }]}
                     onLayout={(event) => setScrubWidth(event.nativeEvent.layout.width)}
-                    {...scrubPanResponder.panHandlers}
+                    onTouchStart={(event) => beginScrub(event.nativeEvent.locationX)}
+                    onTouchMove={(event) => applyScrubLocation(event.nativeEvent.locationX)}
+                    onTouchEnd={finishScrub}
+                    onTouchCancel={finishScrub}
                 >
-                    <View style={[styles.scrubProgress, { width: `${scrubProgress * 100}%`, backgroundColor: colors.primary }]} />
-                    <View style={[styles.scrubThumb, { left: `${scrubProgress * 100}%`, borderColor: colors.primary, backgroundColor: colors.card }]} />
+                    <View pointerEvents="none" style={[styles.scrubProgress, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
+                    <View pointerEvents="none" style={[styles.scrubThumb, { left: `${progress * 100}%`, backgroundColor: colors.card, borderColor: colors.primary }]} />
                 </View>
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity onPress={togglePlayback} style={[styles.playButton, { backgroundColor: colors.primary }]}>
-                        <ThemedText style={{ color: colors.onPrimary, fontWeight: '700' }}>{isPlaying ? 'Pause' : 'Play'}</ThemedText>
+                    <TouchableOpacity onPress={togglePlayback} style={[styles.playButton, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}>
+                        <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color={colors.onPrimary} />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={cycleSpeed} style={[styles.controlButton, { borderColor: colors.border }]}>
+                    <TouchableOpacity onPress={cycleSpeed} style={[styles.controlButton, { borderColor: colors.border }]} accessibilityRole="button" accessibilityLabel={`Playback speed ${speed} times`}>
                         <ThemedText variant="small">{speed}x</ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setLoop((value) => !value)} style={[styles.controlButton, { borderColor: loop ? colors.primary : colors.border }]}>
-                        <ThemedText variant="small">Loop</ThemedText>
+                    <TouchableOpacity onPress={() => setLoop((value) => !value)} style={[styles.controlButton, { borderColor: loop ? colors.primary : colors.border }]} accessibilityRole="button" accessibilityLabel={loop ? 'Disable loop' : 'Enable loop'}>
+                        <Ionicons name="repeat" size={18} color={loop ? colors.primary : colors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={toggleSound} style={[styles.controlButton, { borderColor: isMuted ? colors.border : colors.primary }]} accessibilityRole="button" accessibilityLabel={isMuted ? 'Turn sound on' : 'Turn sound off'}>
-                        <ThemedText variant="small">{isMuted ? 'Sound off' : 'Sound on'}</ThemedText>
+                        <Ionicons name={isMuted ? 'volume-mute-outline' : 'volume-high-outline'} size={18} color={isMuted ? colors.text : colors.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setIsFullscreen((value) => !value)} style={[styles.controlButton, { borderColor: colors.border }]} accessibilityRole="button" accessibilityLabel={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}>
-                        <ThemedText variant="small">{isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}</ThemedText>
+                        <Ionicons name={isFullscreen ? 'contract-outline' : 'expand-outline'} size={18} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -229,19 +176,19 @@ export default function LocalSegmentPlayer({
     }
 
     return (
-        <View>
+        <View style={styles.container}>
             {!isFullscreen ? (
-                <Pressable onPress={tapToToggle ? togglePlayback : undefined} style={styles.videoTouchSurface}>
-                    <VideoView player={player} style={styles.video} nativeControls={showNativeControls} contentFit="contain" fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} />
+                <Pressable onPress={togglePlayback}>
+                    <VideoView player={player} style={styles.video} nativeControls={false} contentFit="contain" fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} />
                 </Pressable>
             ) : null}
-            {!isFullscreen && showCustomControls ? renderControls() : null}
+            {!isFullscreen ? renderControls() : null}
             <Modal visible={isFullscreen} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setIsFullscreen(false)}>
                 <View style={styles.fullscreenContainer}>
-                    <Pressable onPress={tapToToggle ? togglePlayback : undefined} style={styles.fullscreenVideoTouchSurface}>
+                    <Pressable onPress={togglePlayback} style={styles.fullscreenVideoTouchSurface}>
                         <VideoView player={player} style={styles.fullscreenVideo} nativeControls={false} contentFit="contain" fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} />
                     </Pressable>
-                    {showCustomControls ? renderControls() : null}
+                    {renderControls()}
                 </View>
             </Modal>
         </View>
@@ -249,17 +196,17 @@ export default function LocalSegmentPlayer({
 }
 
 const styles = StyleSheet.create({
-    video: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000' },
-    videoTouchSurface: { width: '100%' },
-    fullscreenContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center' },
-    fullscreenVideoTouchSurface: { flex: 1 },
-    fullscreenVideo: { width: '100%', flex: 1 },
-    controls: { borderWidth: 1, borderTopWidth: 0, padding: 10, gap: 8 },
-    timelineRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    scrubTrack: { height: 20, borderRadius: 10, justifyContent: 'center', overflow: 'visible' },
+    container: { width: '100%', backgroundColor: '#000' },
+    video: { width: '100%', aspectRatio: 1, backgroundColor: '#000' },
+    fullscreenContainer: { flex: 1, backgroundColor: '#000' },
+    fullscreenVideoTouchSurface: { flex: 1, width: '100%', justifyContent: 'center' },
+    fullscreenVideo: { width: '100%', height: '100%' },
+    controls: { borderWidth: 1, borderTopWidth: 0, padding: 10, gap: 4 },
+    timeLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+    scrubTouchArea: { height: 28, borderRadius: 14, justifyContent: 'center', overflow: 'visible' },
     scrubProgress: { position: 'absolute', left: 0, height: 4, borderRadius: 2 },
-    scrubThumb: { position: 'absolute', marginLeft: -7, width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-    buttonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
-    controlButton: { borderWidth: 1, borderRadius: 6, minHeight: 36, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center' },
-    playButton: { borderRadius: 6, minHeight: 36, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' },
+    scrubThumb: { position: 'absolute', marginLeft: -8, width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+    buttonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, height: 36 },
+    controlButton: { flex: 1, minWidth: 0, borderWidth: 1, borderRadius: 6, height: 36, paddingHorizontal: 0, justifyContent: 'center', alignItems: 'center' },
+    playButton: { flex: 1, minWidth: 0, height: 36, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
 })
