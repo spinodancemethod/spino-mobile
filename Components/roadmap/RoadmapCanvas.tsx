@@ -442,7 +442,7 @@ export function RoadmapCanvas({
                     {roadmapPositions.length === 0 && (
                         <View style={styles.emptyRoadmapState}>
                             <ThemedText variant="subheader" style={styles.emptyRoadmapTitle}>No roadmap items yet</ThemedText>
-                            <ThemedText variant="small" style={styles.emptyRoadmapText}>Favourite videos to build your roadmap, or turn on "Show empty positions" to inspect gaps.</ThemedText>
+                            <ThemedText variant="small" style={styles.emptyRoadmapText}>Add segments to build your roadmap, or turn on "Show empty categories" to inspect gaps.</ThemedText>
                         </View>
                     )}
 

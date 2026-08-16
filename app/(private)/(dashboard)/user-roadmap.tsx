@@ -569,6 +569,188 @@ const screenStyles = StyleSheet.create({
     canvasWrap: {
         flex: 1,
     },
+    canvasOuter: {
+        flex: 1,
+        backgroundColor: 'transparent',
+    },
+    canvasInner: {
+        alignSelf: 'flex-start',
+    },
+    surface: {
+        width: SURFACE_WIDTH,
+        backgroundColor: 'transparent',
+        paddingHorizontal: 24,
+        paddingBottom: 48,
+    },
+    surfaceHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 18,
+    },
+    selectedVideosHeaderLeft: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        alignItems: 'flex-end',
+    },
+    selectedVideosHeaderRight: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        alignItems: 'flex-start',
+    },
+    selectedVideosHeaderText: {
+        color: '#475569',
+        fontWeight: '700',
+        paddingHorizontal: 40,
+    },
+    roadmapRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: ROW_GAP,
+    },
+    leftVideosColumn: {
+        flex: 1,
+        alignItems: 'flex-end',
+    },
+    positionColumn: {
+        width: POSITION_COLUMN_WIDTH,
+    },
+    rightVideosColumn: {
+        flex: 1,
+    },
+    connectorStub: {
+        width: 22,
+        height: 2,
+        marginHorizontal: 12,
+        backgroundColor: '#cbd5e1',
+    },
+    videoRow: {
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        alignItems: 'flex-start',
+    },
+    nodeText: {
+        color: '#0f172a',
+        fontWeight: '600',
+    },
+    leafBox: {
+        backgroundColor: '#f2f7e7',
+        borderRadius: 6,
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
+        elevation: 1,
+    },
+    lockedLeafBox: {
+        backgroundColor: '#e5e7eb',
+        borderWidth: 1,
+        borderColor: '#9ca3af',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyLeafButtonSlot: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyLeafButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        backgroundColor: '#64748b',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyLeafActionWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyLeafText: {
+        marginTop: 6,
+        color: '#64748b',
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    videoTileHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    videoTitleText: {
+        flex: 1,
+        fontWeight: '700',
+    },
+    videoGif: {
+        width: '100%',
+        aspectRatio: 1,
+        borderRadius: 6,
+        backgroundColor: '#dbe4ee',
+    },
+    videoNoteText: {
+        marginTop: 6,
+        color: '#334155',
+        lineHeight: 15,
+    },
+    positionDescriptionText: {
+        marginTop: 0,
+        marginBottom: 6,
+    },
+    rootBox: {
+        borderRadius: 6,
+        backgroundColor: '#e6dfd6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 2,
+        paddingHorizontal: 18,
+        paddingVertical: 16,
+    },
+    rootBoxStatic: {
+        width: POSITION_COLUMN_WIDTH,
+    },
+    rootText: {
+        color: '#111827',
+        fontWeight: '700',
+    },
+    positionBox: {
+        backgroundColor: '#fff7f9',
+        borderRadius: 8,
+        alignItems: 'stretch',
+        justifyContent: 'flex-start',
+        elevation: 2,
+    },
+    positionBoxStatic: {
+        height: VIDEO_H,
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+    },
+    positionTitleText: {
+        fontWeight: '700',
+        marginBottom: 6,
+        textAlign: 'left',
+    },
+    positionPlaceholderImage: {
+        width: '100%',
+        aspectRatio: 1,
+        borderRadius: 6,
+        backgroundColor: '#fde68a',
+    },
+    emptyRoadmapState: {
+        marginTop: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 24,
+        paddingHorizontal: 16,
+    },
+    emptyRoadmapTitle: {
+        marginBottom: 8,
+        color: '#0f172a',
+        fontWeight: '700',
+    },
+    emptyRoadmapText: {
+        color: '#64748b',
+        textAlign: 'center',
+        maxWidth: 420,
+    },
     headerTextWrap: {
         flex: 1,
     },
