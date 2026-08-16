@@ -75,7 +75,7 @@ export default function UserRoadmapScreen() {
             categoryVideos.push({
                 id: segment.id,
                 // Segment title should represent the learning item, not the category bucket.
-                title: segment.title ?? segment.video_name ?? null,
+                title: segment.video_name ?? segment.video_filename ?? segment.title ?? null,
                 note_text: segment.note_text,
                 thumbnail_url: segment.video_thumbnail,
                 video_upload_id: segment.video_upload_id,
