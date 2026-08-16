@@ -203,12 +203,24 @@ export default function AddVideoScreen() {
         }
     }
 
+    function returnToRoadmap() {
+        if (params.roadmapId) {
+            router.replace({
+                pathname: '/(private)/(dashboard)/user-roadmap',
+                params: { roadmapId: params.roadmapId },
+            })
+            return
+        }
+
+        router.back()
+    }
+
     return (
         <ThemedView style={{ flex: 1 }}>
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Pressable
-                        onPress={() => router.back()}
+                        onPress={returnToRoadmap}
                         style={({ pressed }) => [styles.backIconButton, pressed ? styles.backIconPressed : null]}
                         accessibilityRole="button"
                         accessibilityLabel="Back"
