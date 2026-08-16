@@ -27,6 +27,32 @@ export function useVideoUploadById(id?: string | null) {
     })
 }
 
+export function useUpdateVideoUploadTitle() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (input: { videoUploadId: string; customTitle: string | null }) => {
+            const userId = requireUserId(undefined, user?.id)
+            // Empty string clears the custom title so the UI falls back to the device filename.
+            const trimmed = input.customTitle?.trim() || null
+            const { data, error } = await supabase
+                .from('video_uploads')
+                .update({ custom_title: trimmed })
+                .eq('id', input.videoUploadId)
+                .eq('user_id', userId)
+                .select()
+                .single()
+            if (error) throw error
+            return data as VideoUploadRecord
+        },
+        onSuccess: (upload) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoUpload(upload.id, user?.id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
+            // Video titles surface on roadmap tiles too.
+            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+        },
+    })
+}
+
 export function useVideoUploadNote(id?: string | null) {
     const { user, loading } = useAuth()
     return useQuery({

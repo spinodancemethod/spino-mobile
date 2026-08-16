@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
   fallback_uri text,
   name text,
   filename text,
+  custom_title text,
   duration_seconds double precision,
   mime_type text,
   file_size_bytes bigint,
@@ -127,7 +128,8 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
   CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
-  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key)
+  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key),
+  CONSTRAINT video_uploads_custom_title_check CHECK (custom_title IS NULL OR length(trim(custom_title)) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS public.video_categories (

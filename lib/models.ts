@@ -42,6 +42,7 @@ export type VideoUploadRecord = {
     fallback_uri?: string | null;
     name?: string | null;
     filename?: string | null;
+    custom_title?: string | null;
     duration_seconds?: number | null;
     mime_type?: string | null;
     file_size_bytes?: number | null;

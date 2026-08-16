@@ -16,6 +16,7 @@
 - Added user-upload video detail pages with the existing native player pattern, metadata, saved segments, and upload-specific notes.
 - Changed user roadmap tiles to represent saved segments rather than whole source videos; opening a tile plays only its saved timestamp range.
 - Updated Add Video so a source reference cannot be saved alone: each submission requires a segment range, category, and selected thumbnail, then creates the video and segment metadata together.
+- Added a user-editable `custom_title` column on `video_uploads` with a Video Title section (edit modal) on the upload detail screen, falling back to the device filename when unset; roadmap tiles prefer the custom title too.
 
 ## Current Product (Google Play Runtime)
 
