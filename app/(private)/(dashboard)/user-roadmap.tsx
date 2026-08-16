@@ -427,14 +427,14 @@ export default function UserRoadmapScreen() {
                             value={roadmapName}
                             onChangeText={setRoadmapName}
                             placeholder="Roadmap name"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <TextInput
                             value={roadmapDescription}
                             onChangeText={setRoadmapDescription}
                             placeholder="Optional description"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             multiline
                             style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
@@ -469,14 +469,14 @@ export default function UserRoadmapScreen() {
                             value={newCategoryName}
                             onChangeText={setNewCategoryName}
                             placeholder="Category name"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <TextInput
                             value={newCategoryDescription}
                             onChangeText={setNewCategoryDescription}
                             placeholder="Optional category description"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             multiline
                             style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
@@ -504,14 +504,14 @@ export default function UserRoadmapScreen() {
                             value={editingCategoryName}
                             onChangeText={setEditingCategoryName}
                             placeholder="Category name"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <TextInput
                             value={editingCategoryDescription}
                             onChangeText={setEditingCategoryDescription}
                             placeholder="Optional category description"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             multiline
                             style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />

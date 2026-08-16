@@ -12,6 +12,7 @@ export const Colors = {
         card: '#1F1330',
         warning: '#FB7185',
         border: '#2F1B3A',
+        placeholder: '#e9e5f3',
     },
     light: {
         text: '#2B0B3A',
@@ -26,6 +27,7 @@ export const Colors = {
         card: '#FFFFFF',
         warning: '#E11D48',
         border: '#DDD6FE',
+        placeholder: '#6B5B80',
     },
 }
 

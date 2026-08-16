@@ -270,7 +270,7 @@ export default function AddVideoScreen() {
                                 value={segmentTitle}
                                 onChangeText={setSegmentTitle}
                                 placeholder="Optional learning item title"
-                                placeholderTextColor={colors.border}
+                                placeholderTextColor={colors.placeholder}
                                 style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                             />
                             <ThemedText variant="small" style={styles.label}>Segment category</ThemedText>
@@ -284,7 +284,7 @@ export default function AddVideoScreen() {
                                     value={newCategoryName}
                                     onChangeText={setNewCategoryName}
                                     placeholder="Add category"
-                                    placeholderTextColor={colors.border}
+                                    placeholderTextColor={colors.placeholder}
                                     style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                 />
                                 <ThemedButton
@@ -298,7 +298,7 @@ export default function AddVideoScreen() {
                                 value={newCategoryDescription}
                                 onChangeText={setNewCategoryDescription}
                                 placeholder="Optional category description"
-                                placeholderTextColor={colors.border}
+                                placeholderTextColor={colors.placeholder}
                                 multiline
                                 style={[styles.input, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                             />

@@ -368,7 +368,7 @@ export default function LocalVideosScreen() {
                                             onChangeText={(value) => setRangeStart(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="Start"
-                                            placeholderTextColor={colors.border}
+                                            placeholderTextColor={colors.placeholder}
                                             style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                         />
                                         <ThemedText variant="small">to</ThemedText>
@@ -377,7 +377,7 @@ export default function LocalVideosScreen() {
                                             onChangeText={(value) => setRangeEnd(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="End"
-                                            placeholderTextColor={colors.border}
+                                            placeholderTextColor={colors.placeholder}
                                             style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                         />
                                     </View>
@@ -408,7 +408,7 @@ export default function LocalVideosScreen() {
                                             value={newCategoryName}
                                             onChangeText={setNewCategoryName}
                                             placeholder="New category"
-                                            placeholderTextColor={colors.border}
+                                            placeholderTextColor={colors.placeholder}
                                             style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                         />
                                         <ThemedButton title="Add" onPress={() => void addCategory()} style={styles.addCategoryButton} />
@@ -417,7 +417,7 @@ export default function LocalVideosScreen() {
                                         value={newCategoryDescription}
                                         onChangeText={setNewCategoryDescription}
                                         placeholder="Optional category description"
-                                        placeholderTextColor={colors.border}
+                                        placeholderTextColor={colors.placeholder}
                                         multiline
                                         style={[styles.rangeInput, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                     />
@@ -426,7 +426,7 @@ export default function LocalVideosScreen() {
                                         value={segmentTitle}
                                         onChangeText={setSegmentTitle}
                                         placeholder="Optional custom segment title"
-                                        placeholderTextColor={colors.border}
+                                        placeholderTextColor={colors.placeholder}
                                         style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Segment thumbnail</ThemedText>
@@ -436,7 +436,7 @@ export default function LocalVideosScreen() {
                                             onChangeText={(value) => setSegmentThumbnailTime(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="Frame time"
-                                            placeholderTextColor={colors.border}
+                                            placeholderTextColor={colors.placeholder}
                                             style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
                                         />
                                         <ThemedButton title={segmentThumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail(video)} loading={segmentThumbnailLoading} style={styles.addCategoryButton} />

@@ -137,7 +137,7 @@ export default function VideoUploadDetailScreen() {
 
                 <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.sectionHeaderRow}>
-                        <ThemedText variant="subheader">Video Title</ThemedText>
+                        <ThemedText variant="subheader">Display Title</ThemedText>
                         <Pressable
                             onPress={openTitleEditor}
                             hitSlop={8}
@@ -184,7 +184,7 @@ export default function VideoUploadDetailScreen() {
                             onChangeText={setNoteText}
                             multiline
                             placeholder="What do you want to remember?"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[styles.notesInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <View style={styles.modalActions}>
@@ -206,7 +206,7 @@ export default function VideoUploadDetailScreen() {
                             value={titleText}
                             onChangeText={setTitleText}
                             placeholder="Name this video"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[styles.titleInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <View style={styles.modalActions}>

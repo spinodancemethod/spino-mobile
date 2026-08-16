@@ -120,14 +120,14 @@ export default function YourRoadmapsScreen() {
                             value={name}
                             onChangeText={setName}
                             placeholder="Roadmap name"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                         />
                         <TextInput
                             value={description}
                             onChangeText={setDescription}
                             placeholder="Optional description"
-                            placeholderTextColor={colors.border}
+                            placeholderTextColor={colors.placeholder}
                             style={[styles.input, styles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                             multiline
                         />
