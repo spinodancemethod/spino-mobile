@@ -48,7 +48,7 @@ export function useUpdateVideoUploadTitle() {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUpload(upload.id, user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
             // Video titles surface on roadmap tiles too.
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }
@@ -83,7 +83,7 @@ export function useUpsertVideoUploadNote() {
         onSuccess: (note) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploadNote(note.video_upload_id, user?.id) })
             // Notes are shown on roadmap tiles, so refresh segment-driven roadmap data too.
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }

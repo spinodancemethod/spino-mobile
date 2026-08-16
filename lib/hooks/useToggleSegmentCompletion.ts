@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from 'lib/auth'
 import { supabase } from '../supabase'
+import { queryKeys } from '../queryKeys'
 import { createIdsOnlyToggleMutationLifecycle, IdsOnlyToggleMutationContext } from './toggleMutationUtils'
 import { requireUserId, resolveUserId } from './userId'
 import { completedSegmentIdsQueryKey } from './useCompletedSegmentIdsByUser'
@@ -64,7 +65,7 @@ export function useToggleSegmentCompletion(userId?: string | null) {
         onSettled: () => {
             toggleLifecycle.onSettled()
             // Keep roadmap tiles fresh after toggling completion in detail view.
-            queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }

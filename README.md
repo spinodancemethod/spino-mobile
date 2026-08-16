@@ -4,7 +4,7 @@ This repository is a small Expo + React Native app (expo-router) focused on pers
 
 - Local video references and roadmap segments — choose videos from the device, organize timestamped segments into personal roadmaps, and play them with local media access.
 - Segment notes and completion — notes and progress are stored with local roadmap segments, not the removed legacy catalog.
-- Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, etc.
+- Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, and other active shared controls.
 - Data fetching with React Query — centralized `queryClient` with hooks under `lib/hooks/` for roadmaps, local video references, categories, segments, and segment notes.
 - Supabase integration — `lib/supabase.ts` configures the Supabase client for auth and DB access; session persistence is enabled for the RN client.
 - Dev conveniences — `EXPO_PUBLIC_DEV_USER_ID` / `DEV_USER_ID` support for local testing (dev fallback for auth during development).

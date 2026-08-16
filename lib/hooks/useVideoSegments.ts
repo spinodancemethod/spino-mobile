@@ -139,8 +139,8 @@ export function useUpdateVideoCategory() {
         },
         onSuccess: (category) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, category.roadmap_id) })
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
-            void queryClient.invalidateQueries({ queryKey: ['segments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.segments() })
         },
     })
 }
@@ -162,8 +162,8 @@ export function useDeleteVideoCategory() {
         },
         onSuccess: ({ roadmapId }) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, roadmapId) })
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
-            void queryClient.invalidateQueries({ queryKey: ['segments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.segments() })
         },
     })
 }
@@ -197,7 +197,7 @@ export function useCreateVideoSegment() {
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
             // Keep roadmap canvas in sync when returning from Add Video.
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }
@@ -229,7 +229,7 @@ export function useUpdateVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }
@@ -249,7 +249,7 @@ export function useDeleteVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
-            void queryClient.invalidateQueries({ queryKey: ['roadmapSegments'] })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
         },
     })
 }

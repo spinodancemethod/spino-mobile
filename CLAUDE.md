@@ -51,9 +51,9 @@ Copy `.env.example` and fill in:
 - `lib/entitlementGuards.ts` — pure helpers used by screens to decide redirect vs pending state
 
 **UI components**
-- `Components/` — themed primitives (`ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedFilter`, `ThemedSearch`)
+- `Components/` — themed primitives (`ThemedView`, `ThemedText`, `ThemedButton`, `ThemedSearch`)
 - `constants/ThemeProvider.tsx` + `constants/useTheme.ts` — light/dark theme context
-- `Components/CustomVideoPlayer.tsx` — video player component
+- `Components/LocalSegmentPlayer.tsx` — local segment playback component
 - `Components/Snackbar.tsx` + `lib/snackbarService.ts` — global imperative snackbar (`showSnack(message)`)
 
 **Database**
