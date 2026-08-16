@@ -20,7 +20,7 @@ export type UpdateSegmentInput = {
     videoUploadId: string
     startTime: number
     endTime: number
-    categoryId: string
+    categoryId?: string | null
     title?: string | null
     thumbnailReference?: string | null
 }
@@ -139,7 +139,7 @@ export function useUpdateVideoCategory() {
         },
         onSuccess: (category) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, category.roadmap_id) })
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments() })
         },
     })
@@ -162,7 +162,7 @@ export function useDeleteVideoCategory() {
         },
         onSuccess: ({ roadmapId }) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, roadmapId) })
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments() })
         },
     })
@@ -197,7 +197,7 @@ export function useCreateVideoSegment() {
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
             // Keep roadmap canvas in sync when returning from Add Video.
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }
@@ -210,16 +210,18 @@ export function useUpdateVideoSegment() {
             if (input.startTime < 0 || input.startTime >= input.endTime) {
                 throw new Error('Segment start time must be less than end time.')
             }
+            const updates: Record<string, unknown> = {
+                start_time: input.startTime,
+                end_time: input.endTime,
+                updated_at: new Date().toISOString(),
+            }
+            if (input.categoryId !== undefined) updates.category_id = input.categoryId
+            if (input.title !== undefined) updates.title = cleanOptionalText(input.title)
+            if (input.thumbnailReference !== undefined) updates.thumbnail_reference = cleanOptionalText(input.thumbnailReference)
+
             const { data, error } = await supabase
                 .from('segments')
-                .update({
-                    start_time: input.startTime,
-                    end_time: input.endTime,
-                    category_id: input.categoryId,
-                    title: cleanOptionalText(input.title),
-                    thumbnail_reference: cleanOptionalText(input.thumbnailReference),
-                    updated_at: new Date().toISOString(),
-                })
+                .update(updates)
                 .eq('id', input.id)
                 .eq('user_id', userId)
                 .select()
@@ -229,7 +231,7 @@ export function useUpdateVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }
@@ -249,7 +251,7 @@ export function useDeleteVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }

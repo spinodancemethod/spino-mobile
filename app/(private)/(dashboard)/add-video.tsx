@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     },
     thumbnailPreview: {
         width: '100%',
-        aspectRatio: 16 / 9,
+        aspectRatio: 1,
         borderRadius: 6,
         backgroundColor: '#000',
         marginTop: 6,

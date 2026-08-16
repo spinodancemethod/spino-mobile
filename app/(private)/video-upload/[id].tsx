@@ -6,12 +6,13 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
-import LocalSegmentPlayer from 'Components/LocalSegmentPlayer'
+import LocalSegmentPlayer from '../../../Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useUpdateVideoUploadTitle, useUpsertVideoUploadNote, useVideoUploadById, useVideoUploadNote } from 'lib/hooks/useVideoUploadDetails'
 import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
+import { useUpdateVideoSegment } from 'lib/hooks/useVideoSegments'
 
 export default function VideoUploadDetailScreen() {
     const { id, segmentId, startTime, endTime, category, title } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string }>()
@@ -20,12 +21,18 @@ export default function VideoUploadDetailScreen() {
     const noteQuery = useVideoUploadNote(id)
     const noteMutation = useUpsertVideoUploadNote()
     const titleMutation = useUpdateVideoUploadTitle()
+    const updateSegment = useUpdateVideoSegment()
     const completedSegmentsQuery = useCompletedSegmentIdsByUser()
     const toggleSegmentCompletion = useToggleSegmentCompletion()
     const [noteText, setNoteText] = useState('')
     const [noteEditorOpen, setNoteEditorOpen] = useState(false)
     const [titleText, setTitleText] = useState('')
     const [titleEditorOpen, setTitleEditorOpen] = useState(false)
+    const [segmentStartText, setSegmentStartText] = useState(startTime ?? '')
+    const [segmentEndText, setSegmentEndText] = useState(endTime ?? '')
+    const [segmentStartDraft, setSegmentStartDraft] = useState(startTime ?? '')
+    const [segmentEndDraft, setSegmentEndDraft] = useState(endTime ?? '')
+    const [segmentEditorOpen, setSegmentEditorOpen] = useState(false)
 
     useEffect(() => {
         setNoteText(noteQuery.data?.note_text ?? '')
@@ -34,6 +41,13 @@ export default function VideoUploadDetailScreen() {
     useEffect(() => {
         setTitleText(uploadQuery.data?.custom_title ?? '')
     }, [uploadQuery.data?.custom_title])
+
+    useEffect(() => {
+        setSegmentStartText(startTime ?? '')
+        setSegmentEndText(endTime ?? '')
+        setSegmentStartDraft(startTime ?? '')
+        setSegmentEndDraft(endTime ?? '')
+    }, [endTime, startTime])
 
     if (uploadQuery.isLoading) {
         return <ThemedView style={styles.centered}><ActivityIndicator /><ThemedText>Loading video...</ThemedText></ThemedView>
@@ -44,8 +58,8 @@ export default function VideoUploadDetailScreen() {
     }
 
     const upload = uploadQuery.data
-    const segmentStart = Number(startTime)
-    const segmentEnd = Number(endTime)
+    const segmentStart = Number(segmentStartText)
+    const segmentEnd = Number(segmentEndText)
     const hasSegmentRange = !!segmentId && Number.isFinite(segmentStart) && Number.isFinite(segmentEnd) && segmentStart < segmentEnd
     const activeSegmentId = typeof segmentId === 'string' && segmentId.length > 0 ? segmentId : null
     const isComplete = activeSegmentId ? (completedSegmentsQuery.data ?? []).includes(activeSegmentId) : false
@@ -71,6 +85,44 @@ export default function VideoUploadDetailScreen() {
     function closeTitleEditor() {
         if (titleMutation.isPending) return
         setTitleEditorOpen(false)
+    }
+
+    function openSegmentEditor() {
+        setSegmentStartDraft(segmentStartText)
+        setSegmentEndDraft(segmentEndText)
+        setSegmentEditorOpen(true)
+    }
+
+    function closeSegmentEditor() {
+        if (updateSegment.isPending) return
+        setSegmentEditorOpen(false)
+    }
+
+    async function saveSegmentRange() {
+        const nextStart = Number(segmentStartDraft)
+        const nextEnd = Number(segmentEndDraft)
+        if (!activeSegmentId) {
+            showSnack('Segment details are unavailable for editing.')
+            return
+        }
+        if (!Number.isFinite(nextStart) || !Number.isFinite(nextEnd) || nextStart < 0 || nextStart >= nextEnd) {
+            showSnack('Enter a valid range where start is less than end.')
+            return
+        }
+        try {
+            await updateSegment.mutateAsync({
+                id: activeSegmentId,
+                videoUploadId: upload.id,
+                startTime: nextStart,
+                endTime: nextEnd,
+            })
+            setSegmentStartText(String(nextStart))
+            setSegmentEndText(String(nextEnd))
+            setSegmentEditorOpen(false)
+            showSnack('Segment range updated.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not update segment range.')
+        }
     }
 
     async function saveNote() {
@@ -170,6 +222,24 @@ export default function VideoUploadDetailScreen() {
                         <ThemedText variant="small" style={{ color: colors.border }}>No notes yet.</ThemedText>
                     )}
                 </View>
+
+                {activeSegmentId ? (
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={styles.sectionHeaderRow}>
+                            <ThemedText variant="subheader">Segment Range</ThemedText>
+                            <Pressable
+                                onPress={openSegmentEditor}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Edit segment range"
+                                style={[styles.editIconButton, { borderColor: colors.border }]}
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        <ThemedText style={styles.noteBody}>{segmentStartText}s to {segmentEndText}s</ThemedText>
+                    </View>
+                ) : null}
             </ScrollView>
 
             <Modal visible={noteEditorOpen} transparent animationType="fade" onRequestClose={closeNoteEditor}>
@@ -216,6 +286,40 @@ export default function VideoUploadDetailScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            <Modal visible={segmentEditorOpen} transparent animationType="fade" onRequestClose={closeSegmentEditor}>
+                <Pressable style={styles.modalOverlay} onPress={closeSegmentEditor}>
+                    <Pressable
+                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                    >
+                        <ThemedText variant="subheader">Edit Segment Range</ThemedText>
+                        <View style={styles.rangeInputs}>
+                            <TextInput
+                                value={segmentStartDraft}
+                                onChangeText={(value) => setSegmentStartDraft(value.replace(/[^0-9.]/g, ''))}
+                                keyboardType="decimal-pad"
+                                placeholder="Start"
+                                placeholderTextColor={colors.placeholder}
+                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            />
+                            <ThemedText variant="small">to</ThemedText>
+                            <TextInput
+                                value={segmentEndDraft}
+                                onChangeText={(value) => setSegmentEndDraft(value.replace(/[^0-9.]/g, ''))}
+                                keyboardType="decimal-pad"
+                                placeholder="End"
+                                placeholderTextColor={colors.placeholder}
+                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            />
+                        </View>
+                        <View style={styles.modalActions}>
+                            <ThemedButton title="Cancel" variant="ghost" onPress={closeSegmentEditor} style={styles.modalActionButton} />
+                            <ThemedButton title="Save" onPress={() => void saveSegmentRange()} loading={updateSegment.isPending} style={styles.modalActionButton} />
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </ThemedView>
     )
 }
@@ -249,6 +353,8 @@ const styles = StyleSheet.create({
     noteBody: { lineHeight: 20 },
     notesInput: { minHeight: 120, borderWidth: 1, borderRadius: 6, padding: 10, textAlignVertical: 'top' },
     titleInput: { borderWidth: 1, borderRadius: 6, padding: 10 },
+    rangeInputs: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    rangeInput: { flex: 1, borderWidth: 1, borderRadius: 6, padding: 10 },
     fullButton: { width: '100%' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.45)', justifyContent: 'center', padding: 16 },
     modalCard: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 12 },

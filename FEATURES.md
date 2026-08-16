@@ -25,6 +25,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Added segment range editing on video reference pages, allowing users to update a selected segment's start and end times with validation and immediate playback refresh.
+
 - Local segment player controls were simplified by removing +/- seek buttons and limiting playback speed options to 0.5x and 1x.
 - Local segment scrubber now supports live frame updates while dragging, with throttled seeking to keep scrubbing smooth.
 - Local segment player now includes a scrub bar (tap or drag) for quick seeking within the active segment range.

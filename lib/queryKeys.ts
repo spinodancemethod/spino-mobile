@@ -8,6 +8,7 @@ export const queryKeys = {
     userRoadmaps: (userId?: string | null) => ['userRoadmaps', userId ?? null] as const,
     videoUpload: (id?: string | null, userId?: string | null) => ['videoUpload', id ?? null, userId ?? null] as const,
     videoUploadNote: (id?: string | null, userId?: string | null) => ['videoUploadNote', id ?? null, userId ?? null] as const,
+    roadmapSegmentsRoot: () => ['roadmapSegments'] as const,
     roadmapSegments: (roadmapId?: string | null, userId?: string | null) => ['roadmapSegments', roadmapId ?? null, userId ?? null] as const,
 };
 
