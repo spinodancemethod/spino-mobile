@@ -29,7 +29,7 @@ function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): Loc
         height: record.height ?? null,
         creationTime: record.creation_time ? new Date(record.creation_time).getTime() : null,
         rangeStart: 0,
-        rangeEnd: Math.min(record.duration_seconds ?? 10, 10),
+        rangeEnd: record.duration_seconds ?? 10,
         thumbnailReference: record.thumbnail_reference ?? null,
         status: record.status,
         updatedAt: record.updated_at,
@@ -45,15 +45,8 @@ async function resolveStatus(uri: string): Promise<LocalVideoStatus> {
     }
 }
 
-function formatBytes(size: number | null) {
-    if (!size) return 'Unknown size'
-    if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function formatDuration(duration: number | null) {
-    if (duration == null) return 'Unknown duration'
-    return `${Math.round(duration)} seconds`
+function formatTimestamp(value: number) {
+    return value.toFixed(2)
 }
 
 export default function LocalVideosScreen() {
@@ -62,8 +55,8 @@ export default function LocalVideosScreen() {
     const [loading, setLoading] = useState(true)
     const [picking, setPicking] = useState(false)
     const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null)
-    const [rangeStart, setRangeStart] = useState('0')
-    const [rangeEnd, setRangeEnd] = useState('10')
+    const [rangeStart, setRangeStart] = useState('0.00')
+    const [rangeEnd, setRangeEnd] = useState('10.00')
     const { mutateAsync: syncVideoUpload } = useSyncVideoUpload()
     const { mutateAsync: deleteCloudVideoUpload } = useDeleteVideoUpload()
     const cloudUploadsQuery = useVideoUploads()
@@ -80,7 +73,7 @@ export default function LocalVideosScreen() {
     const [newCategoryName, setNewCategoryName] = useState('')
     const [newCategoryDescription, setNewCategoryDescription] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
-    const [segmentThumbnailTime, setSegmentThumbnailTime] = useState('0')
+    const [segmentThumbnailTime, setSegmentThumbnailTime] = useState('0.00')
     const [segmentThumbnailReference, setSegmentThumbnailReference] = useState<string | null>(null)
     const [segmentThumbnailLoading, setSegmentThumbnailLoading] = useState(false)
     const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null)
@@ -112,19 +105,20 @@ export default function LocalVideosScreen() {
             if (result.canceled) return
 
             const asset = result.assets[0]
+            const durationSeconds = asset.duration == null ? null : asset.duration / 1000
             const video: LocalVideoUpload = {
                 id: replacementFor?.id ?? `${asset.assetId ?? asset.uri}-${Date.now()}`,
                 assetId: asset.assetId ?? null,
                 uri: asset.uri,
                 fileName: asset.fileName ?? asset.uri.split('/').pop() ?? null,
                 mimeType: asset.mimeType ?? 'video/*',
-                duration: asset.duration ?? null,
+                duration: durationSeconds,
                 fileSize: asset.fileSize ?? null,
                 width: asset.width ?? null,
                 height: asset.height ?? null,
                 creationTime: null,
                 rangeStart: replacementFor?.rangeStart ?? 0,
-                rangeEnd: replacementFor?.rangeEnd ?? Math.min(asset.duration ?? 10, 10),
+                rangeEnd: replacementFor?.rangeEnd ?? durationSeconds ?? 10,
                 thumbnailReference: replacementFor?.thumbnailReference ?? null,
                 status: 'AVAILABLE',
                 updatedAt: new Date().toISOString(),
@@ -157,14 +151,14 @@ export default function LocalVideosScreen() {
             return
         }
 
-        setRangeStart(String(start))
-        setRangeEnd(String(end))
+        setRangeStart(formatTimestamp(start))
+        setRangeEnd(formatTimestamp(end))
         showSnack('Timestamp range ready to save as a segment.')
     }
 
     function openPreview(video: LocalVideoUpload) {
-        setRangeStart(String(video.rangeStart))
-        setRangeEnd(String(video.rangeEnd))
+        setRangeStart(formatTimestamp(video.rangeStart))
+        setRangeEnd(formatTimestamp(video.rangeEnd))
         setSegmentTitle('')
         setSegmentThumbnailReference(video.thumbnailReference ?? null)
         setEditingSegmentId(null)
@@ -233,6 +227,7 @@ export default function LocalVideosScreen() {
                 videoUploadId: cloudVideo.id,
                 startTime: start,
                 endTime: end,
+                durationSeconds: video.duration,
                 categoryId: selectedCategoryId,
                 title: segmentTitle,
                 thumbnailReference: segmentThumbnailReference,
@@ -245,8 +240,8 @@ export default function LocalVideosScreen() {
     }
 
     function editSegment(segment: SegmentRecord) {
-        setRangeStart(String(segment.start_time))
-        setRangeEnd(String(segment.end_time))
+        setRangeStart(formatTimestamp(segment.start_time))
+        setRangeEnd(formatTimestamp(segment.end_time))
         setSelectedCategoryId(segment.category_id)
         setSegmentTitle(segment.title ?? '')
         setSegmentThumbnailReference(segment.thumbnail_reference ?? null)
@@ -275,6 +270,7 @@ export default function LocalVideosScreen() {
                 videoUploadId: segment.video_upload_id,
                 startTime: start,
                 endTime: end,
+                durationSeconds: videos.find((video) => video.id === selectedVideoId)?.duration,
                 categoryId: selectedCategoryId,
                 title: segmentTitle,
                 thumbnailReference: segmentThumbnailReference,
@@ -326,7 +322,7 @@ export default function LocalVideosScreen() {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                 <ThemedText variant="title">Local Videos</ThemedText>
                 <ThemedText variant="subheader" style={styles.intro}>
                     Segment workspace. Videos stay on this device and act only as source references for segment playback.
@@ -355,10 +351,6 @@ export default function LocalVideosScreen() {
                                 Source reference
                             </ThemedText>
                             <ThemedText variant="small">Status: {video.status}</ThemedText>
-                            <ThemedText variant="small">Source ID: {video.assetId ?? video.id}</ThemedText>
-                            <ThemedText variant="small">File: {video.fileName ?? 'Unknown file name'}</ThemedText>
-                            <ThemedText variant="small">Duration: {formatDuration(video.duration)} · Size: {formatBytes(video.fileSize)}</ThemedText>
-
                             {video.status === 'AVAILABLE' && selected ? (
                                 <View style={styles.playerBlock}>
                                     <ThemedText variant="small" style={styles.rangeLabel}>Preview timestamp range (seconds)</ThemedText>

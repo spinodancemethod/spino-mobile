@@ -48,7 +48,7 @@ export function useUpdateVideoUploadTitle() {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUpload(upload.id, user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
             // Video titles surface on roadmap tiles too.
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }

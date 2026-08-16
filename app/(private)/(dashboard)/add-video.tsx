@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
+import LocalSegmentPlayer from '../../../Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useDeleteVideoUpload, useSyncVideoUpload } from 'lib/hooks/useVideoUploads'
@@ -16,9 +17,8 @@ import { useCreateVideoCategory, useCreateVideoSegment, useVideoCategories } fro
 import type { LocalVideoUpload } from 'lib/models'
 import { useLocalSearchParams } from 'expo-router'
 
-function formatDuration(duration: number | null) {
-    if (duration == null) return 'Unknown duration'
-    return `${Math.round(duration)} seconds`
+function formatTimestamp(value: number) {
+    return value.toFixed(2)
 }
 
 export default function AddVideoScreen() {
@@ -33,11 +33,11 @@ export default function AddVideoScreen() {
     const [roadmapId, setRoadmapId] = useState('')
     const categoriesQuery = useVideoCategories(roadmapId || null)
     const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(false)
-    const [thumbnailTime, setThumbnailTime] = useState('0')
+    const [thumbnailTime, setThumbnailTime] = useState('0.00')
     const [thumbnailLoading, setThumbnailLoading] = useState(false)
     const [picking, setPicking] = useState(false)
-    const [segmentStart, setSegmentStart] = useState('0')
-    const [segmentEnd, setSegmentEnd] = useState('10')
+    const [segmentStart, setSegmentStart] = useState('0.00')
+    const [segmentEnd, setSegmentEnd] = useState('10.00')
     const [categoryId, setCategoryId] = useState('')
     const [segmentTitle, setSegmentTitle] = useState('')
     const [newCategoryName, setNewCategoryName] = useState('')
@@ -76,26 +76,27 @@ export default function AddVideoScreen() {
             if (result.canceled) return
 
             const asset = result.assets[0]
+            const durationSeconds = asset.duration == null ? null : asset.duration / 1000
             const nextVideo: LocalVideoUpload = {
                 id: `${asset.assetId ?? asset.uri}-${Date.now()}`,
                 assetId: asset.assetId ?? null,
                 uri: asset.uri,
                 fileName: asset.fileName ?? asset.uri.split('/').pop() ?? null,
                 mimeType: asset.mimeType ?? 'video/*',
-                duration: asset.duration ?? null,
+                duration: durationSeconds,
                 fileSize: asset.fileSize ?? null,
                 width: asset.width ?? null,
                 height: asset.height ?? null,
                 creationTime: null,
                 rangeStart: 0,
-                rangeEnd: Math.min(asset.duration ?? 10, 10),
+                rangeEnd: durationSeconds ?? 10,
                 thumbnailReference: null,
                 status: 'AVAILABLE',
                 updatedAt: new Date().toISOString(),
             }
             setSelectedVideo(nextVideo)
-            setSegmentStart('0')
-            setSegmentEnd(String(Math.min(asset.duration ?? 10, 10)))
+            setSegmentStart('0.00')
+            setSegmentEnd(formatTimestamp(durationSeconds ?? 10))
             setSegmentTitle('')
             if (!params.categoryId) {
                 setCategoryId(categoriesQuery.data?.find((category) => category.system_category && category.name.toLowerCase() === 'misc')?.id ?? '')
@@ -163,6 +164,7 @@ export default function AddVideoScreen() {
                 videoUploadId: savedUpload.id,
                 startTime: start,
                 endTime: end,
+                durationSeconds: selectedVideo.duration,
                 categoryId,
                 title: segmentTitle,
                 thumbnailReference: selectedVideo.thumbnailReference,
@@ -217,7 +219,7 @@ export default function AddVideoScreen() {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                 <View style={styles.titleRow}>
                     <Pressable
                         onPress={returnToRoadmap}
@@ -268,15 +270,17 @@ export default function AddVideoScreen() {
                     {selectedVideo ? (
                         <View style={[styles.selectedVideo, { borderColor: colors.border }]}>
                             <ThemedText variant="subheader" numberOfLines={2}>Source video selected</ThemedText>
-                            <ThemedText variant="small">Duration: {formatDuration(selectedVideo.duration)}</ThemedText>
-                            <ThemedText variant="small">Source ID: {selectedVideo.assetId ?? selectedVideo.id}</ThemedText>
-                            <ThemedText variant="small">File: {selectedVideo.fileName ?? 'Unknown file name'}</ThemedText>
                             <ThemedText variant="small" style={styles.label}>Segment range (seconds)</ThemedText>
                             <View style={styles.thumbnailControls}>
                                 <TextInput value={segmentStart} onChangeText={(value) => setSegmentStart(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]} />
                                 <ThemedText variant="small">to</ThemedText>
                                 <TextInput value={segmentEnd} onChangeText={(value) => setSegmentEnd(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]} />
                             </View>
+                            <LocalSegmentPlayer
+                                source={selectedVideo.uri}
+                                startTime={Number(segmentStart) || 0}
+                                endTime={Number(segmentEnd) > Number(segmentStart) ? Number(segmentEnd) : null}
+                            />
                             <ThemedText variant="small" style={styles.label}>Segment title</ThemedText>
                             <TextInput
                                 value={segmentTitle}

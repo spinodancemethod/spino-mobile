@@ -25,6 +25,24 @@
 
 ## Current Product (Google Play Runtime)
 
+- Fixed media-library duration handling by converting millisecond video metadata to seconds before creating segment ranges and player previews.
+
+- Updated the reusable segment player to display decimal seconds and preserve parent-page scrolling while retaining tap-to-play behavior.
+
+- Corrected segment player time-bar labels to show source-video timestamps and enabled nested scrolling around embedded players in video-entry screens.
+
+- Added a live segment video preview to Add Video so users can play the selected source range before adding it to a roadmap.
+
+- Simplified video segment entry by hiding source metadata and showing timestamp defaults with two decimal places for precise editing.
+
+- Updated new segment range defaults to use the full source-video duration instead of a 10-second cap when duration metadata is available.
+
+- Added a confirmed delete action below video segment metadata so users can remove an individual segment from the roadmap without deleting the source video.
+
+- Added segment thumbnail editing on video reference details, allowing users to choose and save a new square frame from the segment's local video range.
+
+- Added category management to video reference details, allowing users to view a segment's category, move it to another category, or duplicate it into another category.
+
 - Added segment range editing on video reference pages, allowing users to update a selected segment's start and end times with validation and immediate playback refresh.
 
 - Local segment player controls were simplified by removing +/- seek buttons and limiting playback speed options to 0.5x and 1x.

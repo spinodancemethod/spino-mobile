@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Image as ExpoImage } from 'expo-image'
+import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
@@ -12,7 +13,7 @@ import { showSnack } from 'lib/snackbarService'
 import { useUpdateVideoUploadTitle, useUpsertVideoUploadNote, useVideoUploadById, useVideoUploadNote } from 'lib/hooks/useVideoUploadDetails'
 import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
-import { useUpdateVideoSegment } from 'lib/hooks/useVideoSegments'
+import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoCategories, useVideoSegments, validateSegmentRange } from 'lib/hooks/useVideoSegments'
 
 export default function VideoUploadDetailScreen() {
     const { id, segmentId, startTime, endTime, category, title } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string }>()
@@ -22,6 +23,10 @@ export default function VideoUploadDetailScreen() {
     const noteMutation = useUpsertVideoUploadNote()
     const titleMutation = useUpdateVideoUploadTitle()
     const updateSegment = useUpdateVideoSegment()
+    const createSegment = useCreateVideoSegment()
+    const deleteSegment = useDeleteVideoSegment()
+    const segmentsQuery = useVideoSegments(id ?? null)
+    const categoriesQuery = useVideoCategories(uploadQuery.data?.roadmap_id)
     const completedSegmentsQuery = useCompletedSegmentIdsByUser()
     const toggleSegmentCompletion = useToggleSegmentCompletion()
     const [noteText, setNoteText] = useState('')
@@ -33,6 +38,13 @@ export default function VideoUploadDetailScreen() {
     const [segmentStartDraft, setSegmentStartDraft] = useState(startTime ?? '')
     const [segmentEndDraft, setSegmentEndDraft] = useState(endTime ?? '')
     const [segmentEditorOpen, setSegmentEditorOpen] = useState(false)
+    const [categoryEditorOpen, setCategoryEditorOpen] = useState(false)
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
+    const [thumbnailEditorOpen, setThumbnailEditorOpen] = useState(false)
+    const [thumbnailTime, setThumbnailTime] = useState(startTime ?? '0')
+    const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null)
+    const [thumbnailLoading, setThumbnailLoading] = useState(false)
+    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
 
     useEffect(() => {
         setNoteText(noteQuery.data?.note_text ?? '')
@@ -48,6 +60,19 @@ export default function VideoUploadDetailScreen() {
         setSegmentStartDraft(startTime ?? '')
         setSegmentEndDraft(endTime ?? '')
     }, [endTime, startTime])
+
+    const activeSegment = segmentsQuery.data?.find((segment) => segment.id === segmentId) ?? null
+    const currentCategoryId = activeSegment?.category_id ?? null
+    const currentCategoryName = categoriesQuery.data?.find((item) => item.id === currentCategoryId)?.name ?? category ?? 'Uncategorized'
+
+    useEffect(() => {
+        setSelectedCategoryId(currentCategoryId)
+    }, [currentCategoryId])
+
+    useEffect(() => {
+        setThumbnailTime(startTime ?? '0')
+        setThumbnailPreview(activeSegment?.thumbnail_reference ?? null)
+    }, [activeSegment?.thumbnail_reference, startTime])
 
     if (uploadQuery.isLoading) {
         return <ThemedView style={styles.centered}><ActivityIndicator /><ThemedText>Loading video...</ThemedText></ThemedView>
@@ -98,6 +123,143 @@ export default function VideoUploadDetailScreen() {
         setSegmentEditorOpen(false)
     }
 
+    function openCategoryEditor() {
+        setSelectedCategoryId(currentCategoryId)
+        setCategoryEditorOpen(true)
+    }
+
+    function closeCategoryEditor() {
+        if (updateSegment.isPending || createSegment.isPending) return
+        setCategoryEditorOpen(false)
+    }
+
+    function openThumbnailEditor() {
+        setThumbnailTime(String(activeSegment?.start_time ?? segmentStart))
+        setThumbnailPreview(activeSegment?.thumbnail_reference ?? null)
+        setThumbnailEditorOpen(true)
+    }
+
+    function closeThumbnailEditor() {
+        if (thumbnailLoading || updateSegment.isPending) return
+        setThumbnailEditorOpen(false)
+    }
+
+    function closeDeleteConfirmation() {
+        if (deleteSegment.isPending) return
+        setDeleteConfirmationOpen(false)
+    }
+
+    async function deleteCurrentSegment() {
+        if (!activeSegmentId) {
+            showSnack('No segment selected to delete.')
+            return
+        }
+        try {
+            await deleteSegment.mutateAsync({ id: activeSegmentId, video_upload_id: upload.id })
+            setDeleteConfirmationOpen(false)
+            showSnack('Segment deleted from the roadmap.')
+            router.back()
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not delete the segment.')
+        }
+    }
+
+    async function generateSegmentThumbnail() {
+        if (!upload.fallback_uri) {
+            showSnack('The local video is unavailable for thumbnail generation.')
+            return
+        }
+        const seconds = Number(thumbnailTime)
+        const rangeStart = activeSegment?.start_time ?? segmentStart
+        const rangeEnd = activeSegment?.end_time ?? segmentEnd
+        if (!Number.isFinite(seconds) || seconds < rangeStart || seconds > rangeEnd) {
+            showSnack(`Enter a thumbnail time between ${rangeStart} and ${rangeEnd} seconds.`)
+            return
+        }
+
+        setThumbnailLoading(true)
+        try {
+            const result = await VideoThumbnails.getThumbnailAsync(upload.fallback_uri, { time: Math.round(seconds * 1000) })
+            setThumbnailPreview(result.uri)
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not generate a thumbnail from this video.')
+        } finally {
+            setThumbnailLoading(false)
+        }
+    }
+
+    async function saveSegmentThumbnail() {
+        if (!activeSegment || !thumbnailPreview) {
+            showSnack('Choose a thumbnail frame first.')
+            return
+        }
+        try {
+            await updateSegment.mutateAsync({
+                id: activeSegment.id,
+                videoUploadId: upload.id,
+                startTime: activeSegment.start_time,
+                endTime: activeSegment.end_time,
+                durationSeconds: upload.duration_seconds,
+                thumbnailReference: thumbnailPreview,
+            })
+            setThumbnailEditorOpen(false)
+            showSnack('Segment thumbnail updated.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not update segment thumbnail.')
+        }
+    }
+
+    async function changeSegmentCategory() {
+        if (!activeSegmentId || !selectedCategoryId || selectedCategoryId === currentCategoryId) {
+            showSnack('Choose a different category to move this segment.')
+            return
+        }
+        try {
+            await updateSegment.mutateAsync({
+                id: activeSegmentId,
+                videoUploadId: upload.id,
+                startTime: activeSegment?.start_time ?? segmentStart,
+                endTime: activeSegment?.end_time ?? segmentEnd,
+                categoryId: selectedCategoryId,
+                durationSeconds: upload.duration_seconds,
+            })
+            setCategoryEditorOpen(false)
+            showSnack('Segment category updated.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not update segment category.')
+        }
+    }
+
+    async function duplicateSegmentToCategory() {
+        if (!selectedCategoryId) {
+            showSnack('Choose a category for the duplicate.')
+            return
+        }
+        if (selectedCategoryId === currentCategoryId) {
+            showSnack('Choose a different category for the duplicate.')
+            return
+        }
+        if (!activeSegment) {
+            showSnack('Segment details are still loading.')
+            return
+        }
+        try {
+            await createSegment.mutateAsync({
+                videoUploadId: upload.id,
+                startTime: activeSegment.start_time,
+                endTime: activeSegment.end_time,
+                durationSeconds: upload.duration_seconds,
+                categoryId: selectedCategoryId,
+                title: activeSegment.title,
+                thumbnailReference: activeSegment.thumbnail_reference,
+            })
+            setCategoryEditorOpen(false)
+            showSnack('Segment duplicated.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not duplicate segment.')
+        }
+    }
+
     async function saveSegmentRange() {
         const nextStart = Number(segmentStartDraft)
         const nextEnd = Number(segmentEndDraft)
@@ -109,12 +271,18 @@ export default function VideoUploadDetailScreen() {
             showSnack('Enter a valid range where start is less than end.')
             return
         }
+        const validationError = validateSegmentRange(nextStart, nextEnd, upload.duration_seconds)
+        if (validationError) {
+            showSnack(validationError)
+            return
+        }
         try {
             await updateSegment.mutateAsync({
                 id: activeSegmentId,
                 videoUploadId: upload.id,
                 startTime: nextStart,
                 endTime: nextEnd,
+                durationSeconds: upload.duration_seconds,
             })
             setSegmentStartText(String(nextStart))
             setSegmentEndText(String(nextEnd))
@@ -177,16 +345,6 @@ export default function VideoUploadDetailScreen() {
                     ) : null}
                 </View>
 
-                {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
-                    <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
-                ) : (
-                    <View style={[styles.unavailable, { borderColor: colors.border }]}>
-                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
-                        <ThemedText variant="subheader">Video unavailable on this device</ThemedText>
-                        <ThemedButton title="Choose replacement video" onPress={() => router.push('/local-videos')} style={styles.fullButton} />
-                    </View>
-                )}
-
                 <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.sectionHeaderRow}>
                         <ThemedText variant="subheader">Display Title</ThemedText>
@@ -239,6 +397,65 @@ export default function VideoUploadDetailScreen() {
                         </View>
                         <ThemedText style={styles.noteBody}>{segmentStartText}s to {segmentEndText}s</ThemedText>
                     </View>
+                ) : null}
+
+                {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
+                    <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
+                ) : (
+                    <View style={[styles.unavailable, { borderColor: colors.border }]}>
+                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
+                        <ThemedText variant="subheader">Video unavailable on this device</ThemedText>
+                        <ThemedButton title="Choose replacement video" onPress={() => router.push('/local-videos')} style={styles.fullButton} />
+                    </View>
+                )}
+
+                {activeSegmentId ? (
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={styles.sectionHeaderRow}>
+                            <ThemedText variant="subheader">Category</ThemedText>
+                            <Pressable
+                                onPress={openCategoryEditor}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Change or duplicate segment category"
+                                style={[styles.editIconButton, { borderColor: colors.border }]}
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        <ThemedText style={styles.noteBody}>{currentCategoryName}</ThemedText>
+                    </View>
+                ) : null}
+
+                {activeSegmentId ? (
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={styles.sectionHeaderRow}>
+                            <ThemedText variant="subheader">Thumbnail</ThemedText>
+                            <Pressable
+                                onPress={openThumbnailEditor}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Change segment thumbnail"
+                                style={[styles.editIconButton, { borderColor: colors.border }]}
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        {activeSegment?.thumbnail_reference ? (
+                            <ExpoImage source={{ uri: activeSegment.thumbnail_reference }} style={styles.segmentThumbnail} contentFit="cover" />
+                        ) : (
+                            <ThemedText variant="small" style={{ color: colors.border }}>No thumbnail selected.</ThemedText>
+                        )}
+                    </View>
+                ) : null}
+
+                {activeSegmentId ? (
+                    <ThemedButton
+                        title="Delete segment from roadmap"
+                        variant="warning"
+                        onPress={() => setDeleteConfirmationOpen(true)}
+                        style={styles.fullButton}
+                    />
                 ) : null}
             </ScrollView>
 
@@ -320,6 +537,81 @@ export default function VideoUploadDetailScreen() {
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            <Modal visible={categoryEditorOpen} transparent animationType="fade" onRequestClose={closeCategoryEditor}>
+                <Pressable style={styles.modalOverlay} onPress={closeCategoryEditor}>
+                    <Pressable
+                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                    >
+                        <ThemedText variant="subheader">Manage Category</ThemedText>
+                        <ThemedText variant="small">Current category: {currentCategoryName}</ThemedText>
+                        <View style={styles.categoryOptions}>
+                            {(categoriesQuery.data ?? []).map((item) => (
+                                <Pressable
+                                    key={item.id}
+                                    onPress={() => setSelectedCategoryId(item.id)}
+                                    style={[
+                                        styles.categoryOption,
+                                        { borderColor: selectedCategoryId === item.id ? colors.primary : colors.border, backgroundColor: selectedCategoryId === item.id ? colors.background : colors.card },
+                                    ]}
+                                >
+                                    <ThemedText>{item.name}</ThemedText>
+                                </Pressable>
+                            ))}
+                        </View>
+                        <View style={styles.modalActions}>
+                            <ThemedButton title="Cancel" variant="ghost" onPress={closeCategoryEditor} style={styles.modalActionButton} />
+                            <ThemedButton title="Move here" onPress={() => void changeSegmentCategory()} loading={updateSegment.isPending} style={styles.modalActionButton} />
+                        </View>
+                        <ThemedButton title="Duplicate here" variant="ghost" onPress={() => void duplicateSegmentToCategory()} loading={createSegment.isPending} style={styles.fullButton} />
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal visible={thumbnailEditorOpen} transparent animationType="fade" onRequestClose={closeThumbnailEditor}>
+                <Pressable style={styles.modalOverlay} onPress={closeThumbnailEditor}>
+                    <Pressable
+                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                    >
+                        <ThemedText variant="subheader">Edit Thumbnail</ThemedText>
+                        {thumbnailPreview ? <ExpoImage source={{ uri: thumbnailPreview }} style={styles.segmentThumbnail} contentFit="cover" /> : null}
+                        <ThemedText variant="small">Choose a frame between {activeSegment?.start_time ?? segmentStart} and {activeSegment?.end_time ?? segmentEnd} seconds.</ThemedText>
+                        <View style={styles.thumbnailControls}>
+                            <TextInput
+                                value={thumbnailTime}
+                                onChangeText={(value) => setThumbnailTime(value.replace(/[^0-9.]/g, ''))}
+                                keyboardType="decimal-pad"
+                                placeholder="Frame time"
+                                placeholderTextColor={colors.placeholder}
+                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            />
+                            <ThemedButton title={thumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail()} loading={thumbnailLoading} style={styles.thumbnailButton} />
+                        </View>
+                        <View style={styles.modalActions}>
+                            <ThemedButton title="Cancel" variant="ghost" onPress={closeThumbnailEditor} style={styles.modalActionButton} />
+                            <ThemedButton title="Save" onPress={() => void saveSegmentThumbnail()} loading={updateSegment.isPending} style={styles.modalActionButton} />
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            <Modal visible={deleteConfirmationOpen} transparent animationType="fade" onRequestClose={closeDeleteConfirmation}>
+                <Pressable style={styles.modalOverlay} onPress={closeDeleteConfirmation}>
+                    <Pressable
+                        style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={(event) => event.stopPropagation()}
+                    >
+                        <ThemedText variant="subheader">Delete segment?</ThemedText>
+                        <ThemedText>This removes this segment from the roadmap. The source video and other segments will remain.</ThemedText>
+                        <View style={styles.modalActions}>
+                            <ThemedButton title="Cancel" variant="ghost" onPress={closeDeleteConfirmation} style={styles.modalActionButton} />
+                            <ThemedButton title="Delete" variant="warning" onPress={() => void deleteCurrentSegment()} loading={deleteSegment.isPending} style={styles.modalActionButton} />
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </ThemedView>
     )
 }
@@ -355,6 +647,11 @@ const styles = StyleSheet.create({
     titleInput: { borderWidth: 1, borderRadius: 6, padding: 10 },
     rangeInputs: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     rangeInput: { flex: 1, borderWidth: 1, borderRadius: 6, padding: 10 },
+    thumbnailControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    thumbnailButton: { minWidth: 120 },
+    segmentThumbnail: { width: '100%', aspectRatio: 1, borderRadius: 6, backgroundColor: '#000' },
+    categoryOptions: { gap: 8 },
+    categoryOption: { borderWidth: 1, borderRadius: 6, padding: 10 },
     fullButton: { width: '100%' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.45)', justifyContent: 'center', padding: 16 },
     modalCard: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 12 },

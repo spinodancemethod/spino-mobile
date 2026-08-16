@@ -6,10 +6,13 @@ import { queryKeys } from '../queryKeys'
 import { requireUserId } from './userId'
 import type { SegmentRecord, VideoCategoryRecord } from '../models'
 
+const MAX_SEGMENT_TIME_WITHOUT_DURATION = 24 * 60 * 60
+
 export type CreateSegmentInput = {
     videoUploadId: string
     startTime: number
     endTime: number
+    durationSeconds?: number | null
     categoryId: string
     title?: string | null
     thumbnailReference?: string | null
@@ -20,6 +23,7 @@ export type UpdateSegmentInput = {
     videoUploadId: string
     startTime: number
     endTime: number
+    durationSeconds?: number | null
     categoryId?: string | null
     title?: string | null
     thumbnailReference?: string | null
@@ -35,6 +39,22 @@ function cleanOptionalText(value?: string | null): string | null {
     if (value == null) return null
     const trimmed = value.trim()
     return trimmed.length > 0 ? trimmed : null
+}
+
+export function validateSegmentRange(startTime: number, endTime: number, durationSeconds?: number | null): string | null {
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || startTime < 0 || startTime >= endTime) {
+        return 'Enter a valid segment range where start is less than end.'
+    }
+
+    const hasDuration = Number.isFinite(durationSeconds) && (durationSeconds ?? 0) > 0
+    const maximumEndTime = hasDuration ? durationSeconds! : MAX_SEGMENT_TIME_WITHOUT_DURATION
+    if (endTime > maximumEndTime) {
+        return hasDuration
+            ? `Segment end time cannot exceed the video duration of ${maximumEndTime} seconds.`
+            : 'Segment times cannot exceed 24 hours when video duration is unavailable.'
+    }
+
+    return null
 }
 
 async function fetchCategories(roadmapId: string): Promise<VideoCategoryRecord[]> {
@@ -173,9 +193,8 @@ export function useCreateVideoSegment() {
     return useMutation({
         mutationFn: async (input: CreateSegmentInput) => {
             const userId = requireUserId(undefined, user?.id)
-            if (input.startTime < 0 || input.startTime >= input.endTime) {
-                throw new Error('Segment start time must be less than end time.')
-            }
+            const validationError = validateSegmentRange(input.startTime, input.endTime, input.durationSeconds)
+            if (validationError) throw new Error(validationError)
             const { data, error } = await supabase
                 .from('segments')
                 .insert({
@@ -207,9 +226,8 @@ export function useUpdateVideoSegment() {
     return useMutation({
         mutationFn: async (input: UpdateSegmentInput) => {
             const userId = requireUserId(undefined, user?.id)
-            if (input.startTime < 0 || input.startTime >= input.endTime) {
-                throw new Error('Segment start time must be less than end time.')
-            }
+            const validationError = validateSegmentRange(input.startTime, input.endTime, input.durationSeconds)
+            if (validationError) throw new Error(validationError)
             const updates: Record<string, unknown> = {
                 start_time: input.startTime,
                 end_time: input.endTime,

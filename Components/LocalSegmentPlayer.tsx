@@ -30,6 +30,8 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
     const [scrubWidth, setScrubWidth] = useState(0)
     const [wasPlayingBeforeScrub, setWasPlayingBeforeScrub] = useState(false)
     const lastScrubLocation = useRef<number | null>(null)
+    const videoTouchStart = useRef({ x: 0, y: 0 })
+    const videoTouchMoved = useRef(false)
 
     useEffect(() => {
         const subscription = player.addListener('playingChange', ({ isPlaying: playing }) => setIsPlaying(playing))
@@ -77,11 +79,9 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
         ? (Math.max(seekMin, Math.min(seekMax, activeTime)) - seekMin) / seekRange
         : 0
 
-    function formatTime(seconds: number) {
+    function formatSeconds(seconds: number) {
         const safeSeconds = Math.max(0, Math.round(seconds * 100) / 100)
-        const minutes = Math.floor(safeSeconds / 60)
-        const remainder = (safeSeconds % 60).toFixed(2).padStart(5, '0')
-        return `${minutes}:${remainder}`
+        return `${safeSeconds.toFixed(2)}s`
     }
 
     function applyScrubLocation(locationX: number) {
@@ -123,6 +123,21 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
         player.play()
     }
 
+    function beginVideoTouch(event: { nativeEvent: { locationX: number; locationY: number } }) {
+        videoTouchStart.current = { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY }
+        videoTouchMoved.current = false
+    }
+
+    function trackVideoTouch(event: { nativeEvent: { locationX: number; locationY: number } }) {
+        const deltaX = event.nativeEvent.locationX - videoTouchStart.current.x
+        const deltaY = event.nativeEvent.locationY - videoTouchStart.current.y
+        if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) videoTouchMoved.current = true
+    }
+
+    function finishVideoTouch() {
+        if (!videoTouchMoved.current) togglePlayback()
+    }
+
     function toggleSound() {
         const nextMuted = !isMuted
         player.muted = nextMuted
@@ -140,8 +155,8 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
         return (
             <View style={[styles.controls, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.timeLabels}>
-                    <ThemedText variant="small">{formatTime(Math.max(0, activeTime - seekMin))}</ThemedText>
-                    <ThemedText variant="small">{formatTime(seekRange)}</ThemedText>
+                    <ThemedText variant="small">{formatSeconds(Math.max(seekMin, activeTime))}</ThemedText>
+                    <ThemedText variant="small">{formatSeconds(seekMax)}</ThemedText>
                 </View>
                 <View
                     style={[styles.scrubTouchArea, { backgroundColor: colors.border }]}
@@ -178,9 +193,9 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
     return (
         <View style={styles.container}>
             {!isFullscreen ? (
-                <Pressable onPress={togglePlayback}>
+                <View onTouchStart={beginVideoTouch} onTouchMove={trackVideoTouch} onTouchEnd={finishVideoTouch}>
                     <VideoView player={player} style={styles.video} nativeControls={false} contentFit="contain" fullscreenOptions={{ enable: false }} allowsPictureInPicture={false} />
-                </Pressable>
+                </View>
             ) : null}
             {!isFullscreen ? renderControls() : null}
             <Modal visible={isFullscreen} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setIsFullscreen(false)}>
