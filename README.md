@@ -1,27 +1,25 @@
 ## Current features
 
-This repository is a small Expo + React Native app (expo-router) focused on a video library with practice tooling. Current implemented features:
+This repository is a small Expo + React Native app (expo-router) focused on personal local-video roadmaps and practice tooling. Current implemented features:
 
-- Video library and detail pages — browse videos, view metadata and play back media. See `app/` and `app/(private)/video/[id].tsx`.
-- Notes (CRUD) on videos — per-user notes stored in `public.notes` with a composite primary key `(user_id, video_id)`. UI: read-only note area and an edit modal (editable TextInput) on the video page. Hooks: `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`.
-- Favourites and deck features — per-user favourites and deck management via `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useToggleFavourite.ts`, `lib/hooks/useToggleDeck.ts`.
-- Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedStar`, etc.
-- Position/category filtering — `usePositions` and `ThemedFilter` support selecting categories to drive video queries.
-- Data fetching with React Query — centralized `queryClient` with hooks under `lib/hooks/` (`useVideos`, `usePositions`, `useNoteByUserAndVideo`, etc.), including optimistic updates patterns used by toggle mutations.
+- Local video references and roadmap segments — choose videos from the device, organize timestamped segments into personal roadmaps, and play them with local media access.
+- Segment notes and completion — notes and progress are stored with local roadmap segments, not the removed legacy catalog.
+- Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, etc.
+- Data fetching with React Query — centralized `queryClient` with hooks under `lib/hooks/` for roadmaps, local video references, categories, segments, and segment notes.
 - Supabase integration — `lib/supabase.ts` configures the Supabase client for auth and DB access; session persistence is enabled for the RN client.
 - Dev conveniences — `EXPO_PUBLIC_DEV_USER_ID` / `DEV_USER_ID` support for local testing (dev fallback for auth during development).
 
 Quick files of interest
 
-- Screens: `app/`, `app/(private)/video/[id].tsx` (video page)
-- Hooks: `lib/hooks/useVideos.ts`, `lib/hooks/usePositions.ts`, `lib/hooks/useFavouritesByUser.ts`, `lib/hooks/useNoteByUserAndVideo.ts`, `lib/hooks/useUpsertNote.ts`
+- Screens: `app/`, `app/(private)/(dashboard)/user-roadmap.tsx`, `app/(private)/video-upload/[id].tsx`
+- Hooks: `lib/hooks/useUserRoadmaps.ts`, `lib/hooks/useVideoUploads.ts`, `lib/hooks/useVideoSegments.ts`, `lib/hooks/useVideoUploadDetails.ts`
 - Supabase / SQL: `lib/supabase.ts`, `sql/bootstrap/`
 
 Developer notes
 
 - To run locally, provide your Supabase URL and publishable key via Expo environment variables (e.g. `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). See `lib/supabase.ts` for usage.
 - Copy `.env.example` and fill all required Expo public variables for your environment.
-- Apply the `sql/bootstrap/` files in order on a fresh database so notes/video entitlement policies and billing telemetry tables are created consistently.
+- Apply the `sql/bootstrap/` files in order on a fresh database so roadmap, segment, and billing telemetry tables are created consistently.
 - For full schema bootstrap on a fresh Supabase project, run the files in `sql/bootstrap/` in this order:
 	1. `sql/bootstrap/00_extensions.sql`
 	2. `sql/bootstrap/01_tables.sql`

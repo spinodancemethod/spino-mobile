@@ -120,14 +120,9 @@ function EntitlementCacheGuard() {
         // On paid -> free transitions, drop cached paid payloads immediately
         // and refetch user-visible collections under current RLS.
         if (previous === true && isSubscribed === false) {
-            queryClient.removeQueries({ queryKey: ['video'] });
-            queryClient.removeQueries({ queryKey: ['videos'] });
-            queryClient.removeQueries({ queryKey: ['videosByIds'] });
-
             void Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['favourites', user.id] }),
-                queryClient.invalidateQueries({ queryKey: ['deck', user.id] }),
-                queryClient.invalidateQueries({ queryKey: ['positions'] }),
+                queryClient.invalidateQueries({ queryKey: ['videoUploads', user.id] }),
+                queryClient.invalidateQueries({ queryKey: ['userRoadmaps', user.id] }),
             ]);
         }
 

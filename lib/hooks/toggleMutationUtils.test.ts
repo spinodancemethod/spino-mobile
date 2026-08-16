@@ -3,7 +3,6 @@ import { QueryClient } from '@tanstack/react-query';
 import {
     computeNextToggledIds,
     createIdsOnlyToggleMutationLifecycle,
-    isVideosByIdsQueryForIds,
 } from './toggleMutationUtils';
 
 describe('computeNextToggledIds', () => {
@@ -17,17 +16,6 @@ describe('computeNextToggledIds', () => {
         const { exists, next } = computeNextToggledIds(['a', 'b', 'c'], 'b');
         expect(exists).toBe(true);
         expect(next).toEqual(['a', 'c']);
-    });
-});
-
-describe('isVideosByIdsQueryForIds', () => {
-    it('matches videosByIds query key with same ids', () => {
-        expect(isVideosByIdsQueryForIds(['videosByIds', ['a', 'b']], ['a', 'b'])).toBe(true);
-    });
-
-    it('returns false for different ids or non videosByIds keys', () => {
-        expect(isVideosByIdsQueryForIds(['videosByIds', ['a', 'c']], ['a', 'b'])).toBe(false);
-        expect(isVideosByIdsQueryForIds(['favourites', ['a', 'b']], ['a', 'b'])).toBe(false);
     });
 });
 

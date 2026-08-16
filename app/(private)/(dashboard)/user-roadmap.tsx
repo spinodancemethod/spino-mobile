@@ -7,7 +7,6 @@ import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { RoadmapCanvas } from 'Components/roadmap/RoadmapCanvas'
 import { RoadmapPosition, RoadmapVideo } from 'Components/roadmap/types'
-import { styles } from './your-roadmap'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
 import { useDeleteUserRoadmap, useUpdateUserRoadmap, useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
 import { useRoadmapSegments } from 'lib/hooks/useRoadmapSegments'
@@ -327,7 +326,7 @@ export default function UserRoadmapScreen() {
             </View>
             <View style={screenStyles.canvasWrap}>
                 <RoadmapCanvas
-                    styles={styles}
+                    styles={screenStyles}
                     canvasRef={canvasRef}
                     onCanvasLayout={(event) => { onCanvasLayout(event); setSurfaceHeight(Math.max(500, event.nativeEvent.layout.height)) }}
                     panHandlers={panHandlers}

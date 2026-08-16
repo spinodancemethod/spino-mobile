@@ -73,10 +73,6 @@ export default function DashboardLayout() {
                     }}
                 />
                 <Tabs.Screen name="user-roadmap" options={{ href: null }} />
-                <Tabs.Screen name="your-roadmap" options={{ href: null }} />
-                <Tabs.Screen name="library" options={{ href: null }} />
-                <Tabs.Screen name="positions" options={{ href: null }} />
-                <Tabs.Screen name="position-list" options={{ href: null }} />
             </Tabs>
         </>
     )

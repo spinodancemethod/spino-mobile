@@ -179,14 +179,6 @@ export default function AccountPage() {
                     />
                 ) : null}
 
-                {user?.email === 'spino@spino.com' ? (
-                    <ThemedButton
-                        title="Upload Video (Admin)"
-                        onPress={() => router.push('/admin/upload-video')}
-                        style={{ width: '100%', marginTop: 8 }}
-                    />
-                ) : null}
-
                 <ThemedButton
                     title="Test Local Videos"
                     variant="ghost"

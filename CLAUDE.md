@@ -30,13 +30,12 @@ Copy `.env.example` and fill in:
 - `app/_layout.tsx` — root layout: wraps the app in `QueryClientProvider`, `ThemeProvider`, `AuthProvider`, `ErrorBoundary`, `GestureHandlerRootView`, and `Snackbar`. Also mounts `RevenueCatBootstrap` (initializes RevenueCat SDK and syncs entitlement cache on login) and `EntitlementCacheGuard` (flushes video cache on paid→free transition).
 - `app/(auth)/` — unauthenticated screens (login, signup, password reset)
 - `app/(private)/_layout.tsx` — auth gate: redirects to `/login` if no user, email verification gate, then renders `AppContent`
-- `app/(private)/(dashboard)/` — main tab navigation (library, positions, roadmap, etc.)
-- `app/(private)/video/[id].tsx` — video detail/player page
-- `app/(private)/position/[id].tsx` — position detail page
+ `app/(private)/(dashboard)/` — main tab navigation for roadmaps and local video references
+ `app/(private)/video-upload/[id].tsx` — local video reference detail/player page
 
-**Data layer**
+ `app/_layout.tsx` — root layout: wraps the app in `QueryClientProvider`, `ThemeProvider`, `AuthProvider`, `ErrorBoundary`, `GestureHandlerRootView`, and `Snackbar`. Also mounts `RevenueCatBootstrap` and the entitlement cache guard.
 - `lib/supabase.ts` — Supabase client with chunked SecureStore session persistence (handles iOS SecureStore 2KB limit by splitting large tokens into chunks)
-- `lib/auth.tsx` — `AuthProvider` / `useAuth` hook (Supabase auth session state)
+ `lib/models.ts` — shared TypeScript types for roadmaps, local video references, categories, and segments
 - `lib/hooks/` — all React Query hooks. All network requests go here, not inline in components
 - `lib/queryKeys.ts` — centralized query key definitions; keep in sync with `queryClient.invalidateQueries` calls when mutating
 - `lib/queryClient.ts` — shared `QueryClient` instance
@@ -52,7 +51,7 @@ Copy `.env.example` and fill in:
 - `lib/entitlementGuards.ts` — pure helpers used by screens to decide redirect vs pending state
 
 **UI components**
-- `Components/` — themed primitives (`ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedStar`, `ThemedFilter`, `ThemedSearch`)
+- `Components/` — themed primitives (`ThemedView`, `ThemedText`, `ThemedButton`, `ThemedPill`, `ThemedLike`, `ThemedFilter`, `ThemedSearch`)
 - `constants/ThemeProvider.tsx` + `constants/useTheme.ts` — light/dark theme context
 - `Components/CustomVideoPlayer.tsx` — video player component
 - `Components/Snackbar.tsx` + `lib/snackbarService.ts` — global imperative snackbar (`showSnack(message)`)
@@ -66,5 +65,4 @@ Copy `.env.example` and fill in:
 - All network requests use TanStack Query and live in `lib/hooks/`
 - Add a brief entry to `FEATURES.md` for each feature added
 - Include code comments to explain non-obvious behavior (can be removed later)
-- `DECK_LIMIT = 3` (see `constants/Config.ts`) — hard cap on deck items per user
 - Run `npm run typecheck && npm test` before releasing

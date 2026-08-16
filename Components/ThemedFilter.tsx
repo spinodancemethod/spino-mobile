@@ -40,7 +40,7 @@ const ThemedFilter: React.FC<Props> = ({ selected, setSelected, items, placehold
                             </View>
                         ) : ((items ?? []).length === 0 ? (
                             <View style={[styles.filterButton, { padding: 16 }]}>
-                                <Text style={styles.small}>No positions</Text>
+                                <Text style={styles.small}>No options</Text>
                             </View>
                         ) : (
                             (items ?? []).map((c) => {

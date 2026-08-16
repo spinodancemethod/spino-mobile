@@ -1,5 +1,10 @@
 # Features
 
+## Cleanup
+
+- Removed the deprecated On Deck UI, client code, and fresh-bootstrap schema. Added an explicit migration to remove the persisted table, RPC, sequence, RLS policies, and grants from existing databases; apply it only after confirming the old data is no longer needed.
+- Removed the admin catalog upload flow and legacy catalog system: routes, video/position/favourite/note hooks, old completion state, catalog models, bootstrap tables and policies, and obsolete seed/test files. Added `20260816_remove_legacy_catalog.sql`; it removes the old database objects but does not delete storage objects automatically.
+
 ## Dance Memory MVP
 
 - Refocused capture/edit flows so videos are treated as source-reference IDs while segment metadata (title, description, thumbnail, range) is the primary authored content.

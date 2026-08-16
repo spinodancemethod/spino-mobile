@@ -6,7 +6,7 @@ Purpose
 Big picture (read these files first)
 - Runtime: Expo + React Native (TypeScript). Main app code: `app/` and feature screens under `app/(dashboard)/`.
 - Theming: `constants/ThemeProvider.tsx` + `constants/useTheme.ts` + `constants/Colors.tsx`. UI primitives (`ThemedText`, `ThemedView`) read theme via `useTheme()` — prefer them over raw Views/Text for color correctness.
-- Data layer: React Query hooks live in `lib/hooks/` (notably `useVideos`, `usePositions`, `useFavouritesByUser`, `useToggleFavourite`). Supabase client config: `lib/supabase.ts` and `lib/api/`.
+- Data layer: React Query hooks live in `lib/hooks/` (notably `useUserRoadmaps`, `useVideoUploads`, and `useVideoSegments`). Supabase client config: `lib/supabase.ts` and `lib/api/`.
 
 What to change and what to avoid
 - Small, scoped edits only. If you must refactor, open a PR with a short design note.
