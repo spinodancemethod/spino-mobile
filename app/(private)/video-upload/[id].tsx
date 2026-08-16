@@ -345,6 +345,16 @@ export default function VideoUploadDetailScreen() {
                     ) : null}
                 </View>
 
+                {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
+                    <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
+                ) : (
+                    <View style={[styles.unavailable, { borderColor: colors.border }]}>
+                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
+                        <ThemedText variant="subheader">Video unavailable on this device</ThemedText>
+                        <ThemedButton title="Choose replacement video" onPress={() => router.push('/local-videos')} style={styles.fullButton} />
+                    </View>
+                )}
+
                 <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.sectionHeaderRow}>
                         <ThemedText variant="subheader">Display Title</ThemedText>
@@ -382,6 +392,24 @@ export default function VideoUploadDetailScreen() {
                 </View>
 
                 {activeSegmentId ? (
+                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+                        <View style={styles.sectionHeaderRow}>
+                            <ThemedText variant="subheader">Category</ThemedText>
+                            <Pressable
+                                onPress={openCategoryEditor}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Change or duplicate segment category"
+                                style={[styles.editIconButton, { borderColor: colors.border }]}
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        <ThemedText style={styles.noteBody}>{currentCategoryName}</ThemedText>
+                    </View>
+                ) : null}
+
+                {activeSegmentId ? (
                     <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <View style={styles.sectionHeaderRow}>
                             <ThemedText variant="subheader">Segment Range</ThemedText>
@@ -396,34 +424,6 @@ export default function VideoUploadDetailScreen() {
                             </Pressable>
                         </View>
                         <ThemedText style={styles.noteBody}>{segmentStartText}s to {segmentEndText}s</ThemedText>
-                    </View>
-                ) : null}
-
-                {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
-                    <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
-                ) : (
-                    <View style={[styles.unavailable, { borderColor: colors.border }]}>
-                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
-                        <ThemedText variant="subheader">Video unavailable on this device</ThemedText>
-                        <ThemedButton title="Choose replacement video" onPress={() => router.push('/local-videos')} style={styles.fullButton} />
-                    </View>
-                )}
-
-                {activeSegmentId ? (
-                    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <View style={styles.sectionHeaderRow}>
-                            <ThemedText variant="subheader">Category</ThemedText>
-                            <Pressable
-                                onPress={openCategoryEditor}
-                                hitSlop={8}
-                                accessibilityRole="button"
-                                accessibilityLabel="Change or duplicate segment category"
-                                style={[styles.editIconButton, { borderColor: colors.border }]}
-                            >
-                                <Ionicons name="create-outline" size={18} color={colors.text} />
-                            </Pressable>
-                        </View>
-                        <ThemedText style={styles.noteBody}>{currentCategoryName}</ThemedText>
                     </View>
                 ) : null}
 
