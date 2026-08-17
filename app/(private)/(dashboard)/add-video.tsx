@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
+import ThemedInput from 'Components/ThemedInput'
 import LocalSegmentPlayer from '../../../Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
@@ -273,9 +274,9 @@ export default function AddVideoScreen() {
                             <ThemedText variant="subheader" numberOfLines={2}>Source video selected</ThemedText>
                             <ThemedText variant="small" style={styles.label}>Segment range (seconds)</ThemedText>
                             <View style={styles.thumbnailControls}>
-                                <TextInput value={segmentStart} onChangeText={(value) => setSegmentStart(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]} />
+                                <ThemedInput value={segmentStart} onChangeText={(value) => setSegmentStart(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={styles.thumbnailInput} />
                                 <ThemedText variant="small">to</ThemedText>
-                                <TextInput value={segmentEnd} onChangeText={(value) => setSegmentEnd(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]} />
+                                <ThemedInput value={segmentEnd} onChangeText={(value) => setSegmentEnd(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" style={styles.thumbnailInput} />
                             </View>
                             <LocalSegmentPlayer
                                 source={selectedVideo.uri}
@@ -283,12 +284,11 @@ export default function AddVideoScreen() {
                                 endTime={Number(segmentEnd) > Number(segmentStart) ? Number(segmentEnd) : null}
                             />
                             <ThemedText variant="small" style={styles.label}>Segment title</ThemedText>
-                            <TextInput
+                            <ThemedInput
                                 value={segmentTitle}
                                 onChangeText={setSegmentTitle}
                                 placeholder="Optional learning item title"
-                                placeholderTextColor={colors.placeholder}
-                                style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                style={styles.input}
                             />
                             <ThemedText variant="small" style={styles.label}>Segment category</ThemedText>
                             <View style={styles.styleList}>
@@ -297,12 +297,11 @@ export default function AddVideoScreen() {
                                 ))}
                             </View>
                             <View style={styles.thumbnailControls}>
-                                <TextInput
+                                <ThemedInput
                                     value={newCategoryName}
                                     onChangeText={setNewCategoryName}
                                     placeholder="Add category"
-                                    placeholderTextColor={colors.placeholder}
-                                    style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                    style={styles.thumbnailInput}
                                 />
                                 <ThemedButton
                                     title={createCategory.isPending ? 'Adding...' : 'Add'}
@@ -311,22 +310,21 @@ export default function AddVideoScreen() {
                                     style={styles.thumbnailButton}
                                 />
                             </View>
-                            <TextInput
+                            <ThemedInput
                                 value={newCategoryDescription}
                                 onChangeText={setNewCategoryDescription}
                                 placeholder="Optional category description"
-                                placeholderTextColor={colors.placeholder}
                                 multiline
-                                style={[styles.input, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                style={[styles.input, styles.multilineInput]}
                             />
                             <ThemedText variant="small" style={styles.label}>Choose thumbnail frame</ThemedText>
                             <ThemedText variant="small">Enter the video time in seconds, then choose the frame to show on your roadmap tile.</ThemedText>
                             <View style={styles.thumbnailControls}>
-                                <TextInput
+                                <ThemedInput
                                     value={thumbnailTime}
                                     onChangeText={(value) => setThumbnailTime(value.replace(/[^0-9.]/g, ''))}
                                     keyboardType="decimal-pad"
-                                    style={[styles.thumbnailInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                    style={styles.thumbnailInput}
                                 />
                                 <ThemedButton title={thumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateThumbnail()} loading={thumbnailLoading} style={styles.thumbnailButton} />
                             </View>

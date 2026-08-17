@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
+import ThemedInput from 'Components/ThemedInput'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import {
@@ -116,19 +117,17 @@ export default function YourRoadmapsScreen() {
                 <Pressable style={styles.modalBackdrop} onPress={() => setCreateModalOpen(false)}>
                     <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ThemedText variant="subheader" style={styles.modalTitle}>Create roadmap</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={name}
                             onChangeText={setName}
                             placeholder="Roadmap name"
-                            placeholderTextColor={colors.placeholder}
-                            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={styles.input}
                         />
-                        <TextInput
+                        <ThemedInput
                             value={description}
                             onChangeText={setDescription}
                             placeholder="Optional description"
-                            placeholderTextColor={colors.placeholder}
-                            style={[styles.input, styles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[styles.input, styles.multiline]}
                             multiline
                         />
                         <ThemedButton

@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
 import { router } from 'expo-router'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
-import LocalSegmentPlayer from 'Components/LocalSegmentPlayer'
+import ThemedInput from 'Components/ThemedInput'
+import LocalSegmentPlayer from '../../Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCategories'
@@ -237,22 +238,20 @@ export default function LocalVideosScreen() {
                                 <View style={styles.playerBlock}>
                                     <ThemedText variant="small" style={styles.rangeLabel}>Preview timestamp range (seconds)</ThemedText>
                                     <View style={styles.rangeInputs}>
-                                        <TextInput
+                                        <ThemedInput
                                             value={rangeStart}
                                             onChangeText={(value) => setRangeStart(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="Start"
-                                            placeholderTextColor={colors.placeholder}
-                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                            style={styles.rangeInput}
                                         />
                                         <ThemedText variant="small">to</ThemedText>
-                                        <TextInput
+                                        <ThemedInput
                                             value={rangeEnd}
                                             onChangeText={(value) => setRangeEnd(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="End"
-                                            placeholderTextColor={colors.placeholder}
-                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                            style={styles.rangeInput}
                                         />
                                     </View>
                                     <LocalSegmentPlayer
@@ -278,40 +277,36 @@ export default function LocalVideosScreen() {
                                         ))}
                                     </View>
                                     <View style={styles.rangeInputs}>
-                                        <TextInput
+                                        <ThemedInput
                                             value={newCategoryName}
                                             onChangeText={setNewCategoryName}
                                             placeholder="New category"
-                                            placeholderTextColor={colors.placeholder}
-                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                            style={styles.rangeInput}
                                         />
                                         <ThemedButton title="Add" onPress={() => void addCategory()} style={styles.addCategoryButton} />
                                     </View>
-                                    <TextInput
+                                    <ThemedInput
                                         value={newCategoryDescription}
                                         onChangeText={setNewCategoryDescription}
                                         placeholder="Optional category description"
-                                        placeholderTextColor={colors.placeholder}
                                         multiline
-                                        style={[styles.rangeInput, styles.multilineInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                        style={[styles.rangeInput, styles.multilineInput]}
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Learning item title</ThemedText>
-                                    <TextInput
+                                    <ThemedInput
                                         value={segmentTitle}
                                         onChangeText={setSegmentTitle}
                                         placeholder="Optional custom segment title"
-                                        placeholderTextColor={colors.placeholder}
-                                        style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                        style={styles.rangeInput}
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Segment thumbnail</ThemedText>
                                     <View style={styles.rangeInputs}>
-                                        <TextInput
+                                        <ThemedInput
                                             value={segmentThumbnailTime}
                                             onChangeText={(value) => setSegmentThumbnailTime(value.replace(/[^0-9.]/g, ''))}
                                             keyboardType="decimal-pad"
                                             placeholder="Frame time"
-                                            placeholderTextColor={colors.placeholder}
-                                            style={[styles.rangeInput, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+                                            style={styles.rangeInput}
                                         />
                                         <ThemedButton title={segmentThumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail(video)} loading={segmentThumbnailLoading} style={styles.addCategoryButton} />
                                     </View>

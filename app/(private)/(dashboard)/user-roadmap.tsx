@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native'
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
+import ThemedInput from 'Components/ThemedInput'
 import { RoadmapCanvas } from 'Components/roadmap/RoadmapCanvas'
 import { RoadmapPosition } from 'Components/roadmap/types'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
@@ -377,20 +378,18 @@ export default function UserRoadmapScreen() {
                 <Pressable style={screenStyles.modalBackdrop} onPress={() => setManageModalOpen(false)}>
                     <View style={[screenStyles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ThemedText variant="subheader" style={screenStyles.modalTitle}>Manage roadmap</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={roadmapName}
                             onChangeText={setRoadmapName}
                             placeholder="Roadmap name"
-                            placeholderTextColor={colors.placeholder}
-                            style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={screenStyles.input}
                         />
-                        <TextInput
+                        <ThemedInput
                             value={roadmapDescription}
                             onChangeText={setRoadmapDescription}
                             placeholder="Optional description"
-                            placeholderTextColor={colors.placeholder}
                             multiline
-                            style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[screenStyles.input, screenStyles.multiline]}
                         />
                         <ThemedButton
                             title={updateRoadmap.isPending ? 'Saving...' : 'Save changes'}
@@ -419,20 +418,18 @@ export default function UserRoadmapScreen() {
                 <Pressable style={screenStyles.modalBackdrop} onPress={() => setAddCategoryModalOpen(false)}>
                     <View style={[screenStyles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ThemedText variant="subheader" style={screenStyles.modalTitle}>Add category</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={newCategoryName}
                             onChangeText={setNewCategoryName}
                             placeholder="Category name"
-                            placeholderTextColor={colors.placeholder}
-                            style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={screenStyles.input}
                         />
-                        <TextInput
+                        <ThemedInput
                             value={newCategoryDescription}
                             onChangeText={setNewCategoryDescription}
                             placeholder="Optional category description"
-                            placeholderTextColor={colors.placeholder}
                             multiline
-                            style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[screenStyles.input, screenStyles.multiline]}
                         />
                         <ThemedButton
                             title={createCategory.isPending ? 'Creating...' : 'Create category'}
@@ -454,20 +451,18 @@ export default function UserRoadmapScreen() {
                 <Pressable style={screenStyles.modalBackdrop} onPress={() => setManageCategoryModalOpen(false)}>
                     <View style={[screenStyles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ThemedText variant="subheader" style={screenStyles.modalTitle}>Manage category</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={editingCategoryName}
                             onChangeText={setEditingCategoryName}
                             placeholder="Category name"
-                            placeholderTextColor={colors.placeholder}
-                            style={[screenStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={screenStyles.input}
                         />
-                        <TextInput
+                        <ThemedInput
                             value={editingCategoryDescription}
                             onChangeText={setEditingCategoryDescription}
                             placeholder="Optional category description"
-                            placeholderTextColor={colors.placeholder}
                             multiline
-                            style={[screenStyles.input, screenStyles.multiline, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={[screenStyles.input, screenStyles.multiline]}
                         />
                         <ThemedButton
                             title={updateCategory.isPending ? 'Saving...' : 'Save category'}

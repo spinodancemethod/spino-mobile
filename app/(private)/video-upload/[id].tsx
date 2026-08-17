@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Image as ExpoImage } from 'expo-image'
 import * as VideoThumbnails from 'expo-video-thumbnails'
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
+import ThemedInput from 'Components/ThemedInput'
 import LocalSegmentPlayer from '../../../Components/LocalSegmentPlayer'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
@@ -388,7 +389,7 @@ export default function VideoUploadDetailScreen() {
                     {(noteQuery.data?.note_text ?? '').trim().length > 0 ? (
                         <ThemedText style={styles.noteBody}>{noteQuery.data?.note_text}</ThemedText>
                     ) : (
-                        <ThemedText variant="small" style={{ color: colors.border }}>No notes yet.</ThemedText>
+                        <ThemedText variant="small" style={styles.noteBody} >No notes yet.</ThemedText>
                     )}
                 </View>
 
@@ -467,13 +468,12 @@ export default function VideoUploadDetailScreen() {
                         onPress={(event) => event.stopPropagation()}
                     >
                         <ThemedText variant="subheader">Edit Note</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={noteText}
                             onChangeText={setNoteText}
                             multiline
                             placeholder="What do you want to remember?"
-                            placeholderTextColor={colors.placeholder}
-                            style={[styles.notesInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={styles.notesInput}
                         />
                         <View style={styles.modalActions}>
                             <ThemedButton title="Cancel" variant="ghost" onPress={closeNoteEditor} style={styles.modalActionButton} />
@@ -490,12 +490,11 @@ export default function VideoUploadDetailScreen() {
                         onPress={(event) => event.stopPropagation()}
                     >
                         <ThemedText variant="subheader">Edit Video Title</ThemedText>
-                        <TextInput
+                        <ThemedInput
                             value={titleText}
                             onChangeText={setTitleText}
                             placeholder="Name this video"
-                            placeholderTextColor={colors.placeholder}
-                            style={[styles.titleInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                            style={styles.titleInput}
                         />
                         <View style={styles.modalActions}>
                             <ThemedButton title="Cancel" variant="ghost" onPress={closeTitleEditor} style={styles.modalActionButton} />
@@ -513,22 +512,20 @@ export default function VideoUploadDetailScreen() {
                     >
                         <ThemedText variant="subheader">Edit Segment Range</ThemedText>
                         <View style={styles.rangeInputs}>
-                            <TextInput
+                            <ThemedInput
                                 value={segmentStartDraft}
                                 onChangeText={(value) => setSegmentStartDraft(value.replace(/[^0-9.]/g, ''))}
                                 keyboardType="decimal-pad"
                                 placeholder="Start"
-                                placeholderTextColor={colors.placeholder}
-                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                                style={styles.rangeInput}
                             />
                             <ThemedText variant="small">to</ThemedText>
-                            <TextInput
+                            <ThemedInput
                                 value={segmentEndDraft}
                                 onChangeText={(value) => setSegmentEndDraft(value.replace(/[^0-9.]/g, ''))}
                                 keyboardType="decimal-pad"
                                 placeholder="End"
-                                placeholderTextColor={colors.placeholder}
-                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                                style={styles.rangeInput}
                             />
                         </View>
                         <View style={styles.modalActions}>
@@ -580,13 +577,12 @@ export default function VideoUploadDetailScreen() {
                         {thumbnailPreview ? <ExpoImage source={{ uri: thumbnailPreview }} style={styles.segmentThumbnail} contentFit="cover" /> : null}
                         <ThemedText variant="small">Choose a frame between {activeSegment?.start_time ?? segmentStart} and {activeSegment?.end_time ?? segmentEnd} seconds.</ThemedText>
                         <View style={styles.thumbnailControls}>
-                            <TextInput
+                            <ThemedInput
                                 value={thumbnailTime}
                                 onChangeText={(value) => setThumbnailTime(value.replace(/[^0-9.]/g, ''))}
                                 keyboardType="decimal-pad"
                                 placeholder="Frame time"
-                                placeholderTextColor={colors.placeholder}
-                                style={[styles.rangeInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                                style={styles.rangeInput}
                             />
                             <ThemedButton title={thumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail()} loading={thumbnailLoading} style={styles.thumbnailButton} />
                         </View>
