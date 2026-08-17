@@ -2,7 +2,6 @@ import React from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View, Platform } from 'react-native';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
@@ -10,11 +9,8 @@ import { useTheme } from 'constants/useTheme';
 import { useAccountDetails } from 'lib/hooks/useAccountDetails';
 import {
     hasRevenueCatEntitlement,
-    restoreRevenueCatPurchases,
 } from 'lib/billing/revenuecat';
-import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
-import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
-import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
+import { useRestoreRevenueCatPurchases } from 'lib/hooks/useBilling';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
 
@@ -44,23 +40,15 @@ function formatSubscriptionStatus(status: string | null) {
 
 export default function AccountPage() {
     const { colors } = useTheme();
-    const queryClient = useQueryClient();
     const accountQuery = useAccountDetails();
     const { user } = useAuth();
-    const [isRestoringPurchases, setIsRestoringPurchases] = React.useState(false);
+    const restorePurchases = useRestoreRevenueCatPurchases(user?.id);
 
     const account = accountQuery.data ?? null;
 
     async function handleRestorePurchases() {
         try {
-            setIsRestoringPurchases(true);
-            const customerInfo = await restoreRevenueCatPurchases();
-
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(account?.userId) }),
-                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(account?.userId) }),
-                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(account?.userId) }),
-            ]);
+            const customerInfo = await restorePurchases.mutateAsync();
 
             if (hasRevenueCatEntitlement(customerInfo)) {
                 showSnack('Purchases restored successfully.');
@@ -70,7 +58,6 @@ export default function AccountPage() {
         } catch (error: any) {
             showSnack(error?.message ?? 'Failed to restore purchases.');
         } finally {
-            setIsRestoringPurchases(false);
         }
     }
 
@@ -164,11 +151,11 @@ export default function AccountPage() {
                 </View>
 
                 <ThemedButton
-                    title={isRestoringPurchases ? 'Restoring purchases...' : 'Restore purchases'}
+                    title={restorePurchases.isPending ? 'Restoring purchases...' : 'Restore purchases'}
                     variant="ghost"
                     onPress={handleRestorePurchases}
                     style={{ width: '100%', marginTop: 8 }}
-                    disabled={isRestoringPurchases}
+                    disabled={restorePurchases.isPending}
                 />
                 {account.hasActiveSubscription ? (
                     <ThemedButton

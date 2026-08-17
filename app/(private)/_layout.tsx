@@ -1,13 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import AppContent from './AppContent';
-import { useAuth, signOut } from 'lib/auth';
+import { useAuth, refreshCurrentUser, signOut } from 'lib/auth';
 import { ActivityIndicator } from 'react-native';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import Spacer from 'Components/Spacer';
 import { router, usePathname } from 'expo-router';
-import { supabase } from 'lib/supabase';
 import { showSnack } from 'lib/snackbarService';
 
 const RootLayout = () => {
@@ -35,7 +34,7 @@ const RootLayout = () => {
         if (pathname !== '/home') {
             router.replace('/home');
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading, user]);
 
     if (loading) {
@@ -58,8 +57,8 @@ const RootLayout = () => {
     if (!emailConfirmed) {
         const onCheck = async () => {
             try {
-                const { data } = await supabase.auth.getSession();
-                const confirmed = Boolean((data?.session?.user as any)?.email_confirmed_at);
+                const refreshedUser = await refreshCurrentUser();
+                const confirmed = Boolean((refreshedUser as any)?.email_confirmed_at);
                 if (confirmed) {
                     showSnack('Email confirmed — thanks!');
                     router.replace('/home');
@@ -78,7 +77,7 @@ const RootLayout = () => {
                 <Spacer />
                 <ThemedButton title="I confirmed — check again" onPress={onCheck} />
                 <Spacer />
-                <ThemedButton title="Sign out" variant="ghost" onPress={async () => { await signOut(); router.replace('/login'); }} />
+                <ThemedButton title="Sign out" variant="ghost" onPress={signOut} />
             </ThemedView>
         );
     }

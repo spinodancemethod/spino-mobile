@@ -93,12 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
             }
 
-            // navigate on important transitions
             if (event === 'SIGNED_OUT') {
                 void clearRevenueCatAppUser().catch(() => {
-                    // Ignore sign-out cleanup failures; auth navigation should still proceed.
+                    // Ignore sign-out cleanup failures; auth state remains authoritative.
                 });
-                router.replace('/login');
             }
             if (event === 'PASSWORD_RECOVERY') {
                 pendingRecoveryRef.current = false;
@@ -111,12 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     router.replace('/reset-password');
                     return;
                 }
-                // Navigate to home on explicit sign-in. This fires only on actual
-                // sign-in actions, not on session restoration from storage, so it's
-                // safe to navigate here. Without this, a React state flush race on
-                // the private layout can redirect the user back to /login immediately
-                // after a successful login.
-                router.replace('/home');
             }
         });
 
@@ -254,6 +246,17 @@ export async function signOut() {
         });
         return { error: e };
     }
+}
+
+export async function refreshCurrentUser() {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session?.user ?? null;
+}
+
+export async function requestPasswordReset(email: string, redirectTo: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
 }
 
 export async function signIn(email: string, password: string) {

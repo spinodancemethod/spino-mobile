@@ -7,7 +7,7 @@ import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import ThemedSearch from 'Components/ThemedSearch';
 import Spacer from 'Components/Spacer';
-import { supabase } from 'lib/supabase';
+import { requestPasswordReset } from 'lib/auth';
 import { showSnack } from 'lib/snackbarService';
 import { useTheme } from 'constants/useTheme';
 
@@ -42,15 +42,9 @@ export default function ForgotPassword() {
         setLoading(true);
         try {
             const redirectTo = getResetRedirectTo();
-            const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo,
-            });
-            if (error) {
-                showSnack(error.message);
-            } else {
-                showSnack('If the email exists, a reset link has been sent.');
-                router.push('/login');
-            }
+            await requestPasswordReset(email, redirectTo);
+            showSnack('If the email exists, a reset link has been sent.');
+            router.push('/login');
         } catch (e: any) {
             showSnack(e?.message ?? 'Reset failed');
         } finally {

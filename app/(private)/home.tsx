@@ -10,9 +10,7 @@ import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus'
 import { useEffect, useMemo } from 'react'
 import { useAuth } from 'lib/auth'
 import { useQueryClient } from '@tanstack/react-query'
-import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus'
-import { entitlementQueryKey } from 'lib/hooks/useEntitlement'
-import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails'
+import { invalidateBillingQueries } from 'lib/hooks/useBilling'
 
 const Home = () => {
     const { colors } = useTheme()
@@ -37,11 +35,7 @@ const Home = () => {
         }
 
         const refreshQueries = () => {
-            void Promise.all([
-                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user.id) }),
-                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user.id) }),
-                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user.id) }),
-            ])
+            void invalidateBillingQueries(queryClient, user.id)
         }
 
         // Kick once immediately, then briefly poll while webhook-driven DB updates settle.

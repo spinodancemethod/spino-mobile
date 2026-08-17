@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PurchasesPackage } from 'react-native-purchases';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
@@ -9,15 +8,9 @@ import ThemedButton from 'Components/ThemedButton';
 import { useTheme } from 'constants/useTheme';
 import { showSnack } from 'lib/snackbarService';
 import { useAuth } from 'lib/auth';
-import {
-    getRevenueCatOfferingsSnapshot,
-    hasRevenueCatEntitlement,
-    purchaseRevenueCatPackage,
-} from 'lib/billing/revenuecat';
+import { hasRevenueCatEntitlement } from 'lib/billing/revenuecat';
+import { usePurchaseRevenueCatPackage, useRevenueCatOfferings } from 'lib/hooks/useBilling';
 import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
-import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
-import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
-import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
 import { reportAppError, reportAppEvent } from 'lib/observability';
 
 type Plan = {
@@ -78,15 +71,10 @@ function isExpectedTestStorePurchaseFailure(error: unknown) {
 export default function Subscribe() {
     const { colors } = useTheme();
     const { user } = useAuth();
-    const queryClient = useQueryClient();
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const subscriptionStatus = useSubscriptionStatus();
 
-    const offeringsQuery = useQuery({
-        queryKey: ['revenuecatOffering', 'subscribe'],
-        queryFn: getRevenueCatOfferingsSnapshot,
-        staleTime: 1000 * 60,
-    });
+    const offeringsQuery = useRevenueCatOfferings();
 
     const plans = useMemo<Plan[]>(() => {
         const packages = offeringsQuery.data?.currentOffering?.availablePackages ?? [];
@@ -114,9 +102,7 @@ export default function Subscribe() {
         });
     }, [plans]);
 
-    const purchaseMutation = useMutation({
-        mutationFn: purchaseRevenueCatPackage,
-    });
+    const purchaseMutation = usePurchaseRevenueCatPackage(user?.id);
 
     const selectedPlanData = useMemo(
         () => plans.find((plan) => plan.id === selectedPlan) ?? plans[0] ?? null,
@@ -163,12 +149,6 @@ export default function Subscribe() {
 
         try {
             const customerInfo = await purchaseMutation.mutateAsync(selectedPlanData.packageData);
-
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(user?.id) }),
-                queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(user?.id) }),
-                queryClient.invalidateQueries({ queryKey: entitlementQueryKey(user?.id) }),
-            ]);
 
             if (!hasRevenueCatEntitlement(customerInfo)) {
                 showSnack('Purchase completed but access is not active yet. Please refresh in a few moments.');

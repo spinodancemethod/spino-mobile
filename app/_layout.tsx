@@ -18,10 +18,8 @@ import {
 } from 'lib/billing/revenuecat';
 import Snackbar from 'Components/Snackbar';
 import { showSnack } from 'lib/snackbarService';
-import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
-import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
-import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { useEntitlement } from 'lib/hooks/useEntitlement';
+import { invalidateBillingQueries } from 'lib/hooks/useBilling';
 
 function validateStartupEnv() {
     // Supabase backend for user auth and entitlements
@@ -82,11 +80,7 @@ function RevenueCatBootstrap() {
                 }
 
                 unsubscribeCustomerInfoListener = await addRevenueCatCustomerInfoUpdateListener(() => {
-                    void Promise.all([
-                        queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(userId) }),
-                        queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(userId) }),
-                        queryClient.invalidateQueries({ queryKey: entitlementQueryKey(userId) }),
-                    ]);
+                    void invalidateBillingQueries(queryClient, userId);
                 });
             } catch {
                 // Ignore sync bootstrap errors; manual refresh paths still work.

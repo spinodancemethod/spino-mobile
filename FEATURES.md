@@ -25,6 +25,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Centralized auth route state and RevenueCat purchase, restore, and cache invalidation flows behind shared service and hook boundaries.
+
 - Fixed media-library duration handling by converting millisecond video metadata to seconds before creating segment ranges and player previews.
 
 - Updated the reusable segment player to display decimal seconds and preserve parent-page scrolling while retaining tap-to-play behavior.
