@@ -27,9 +27,9 @@ export default function Login() {
         if (!ok) return;
         setLoading(true);
         try {
-            await signIn(email, password);
-            // Navigation to /home is handled by onAuthStateChange('SIGNED_IN') in auth.tsx.
-            // Doing it here too races with the private layout's user-null guard on Android.
+            const result = await signIn(email, password);
+            // The auth listener updates context, but it cannot leave the active auth route.
+            if (!result?.error) router.replace('/home');
         } finally {
             setLoading(false);
         }

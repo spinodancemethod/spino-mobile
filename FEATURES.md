@@ -25,6 +25,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Fixed successful password login in release builds to explicitly navigate from the auth route to Home after Supabase accepts the credentials.
+
 - Standardized app form fields with a shared themed input so borders use the theme border color and placeholders use the theme placeholder color consistently.
 
 - Split video category and segment data hooks, and extracted local-video library and roadmap view-model workflows from their route screens.
