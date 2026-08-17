@@ -25,7 +25,7 @@
 
 ## Current Product (Google Play Runtime)
 
-- Fixed successful password login in release builds to explicitly navigate from the auth route to Home after Supabase accepts the credentials.
+- Fixed successful password login in release builds by routing from the concrete `/login` path only after the Supabase user state commits, preventing an unauthenticated-layout redirect race.
 
 - Standardized app form fields with a shared themed input so borders use the theme border color and placeholders use the theme placeholder color consistently.
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Slot } from 'expo-router';
+import { Slot, router, usePathname } from 'expo-router';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
@@ -132,6 +132,26 @@ function EntitlementCacheGuard() {
     return null;
 }
 
+function AuthRouteRedirect() {
+    const { user, loading } = useAuth();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        if (loading || !user) {
+            return;
+        }
+
+        // Wait for AuthProvider state to commit before entering the private group.
+        // This prevents the private layout from seeing the stale signed-out state
+        // and returning a successful password login to the login screen.
+        if (pathname === '/login') {
+            router.replace('/home');
+        }
+    }, [loading, pathname, user]);
+
+    return null;
+}
+
 export default function RootLayout() {
     const [ready, setReady] = useState(false);
 
@@ -176,6 +196,7 @@ export default function RootLayout() {
                         <AuthProvider>
                             <RevenueCatBootstrap />
                             <EntitlementCacheGuard />
+                            <AuthRouteRedirect />
                             <Slot />
                             <Snackbar />
                         </AuthProvider>

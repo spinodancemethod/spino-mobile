@@ -27,9 +27,8 @@ export default function Login() {
         if (!ok) return;
         setLoading(true);
         try {
-            const result = await signIn(email, password);
-            // The auth listener updates context, but it cannot leave the active auth route.
-            if (!result?.error) router.replace('/home');
+            await signIn(email, password);
+            // AuthRouteRedirect navigates once the signed-in user state is committed.
         } finally {
             setLoading(false);
         }
