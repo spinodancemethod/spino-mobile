@@ -67,7 +67,7 @@ export default function YourRoadmapsScreen() {
                 <View style={styles.headerRow}>
                     <View>
                         <ThemedText variant="title">Your Roadmaps</ThemedText>
-                        <ThemedText variant="small" style={styles.intro}>Choose a roadmap to continue.</ThemedText>
+                        <ThemedText variant="small" style={styles.intro}>Choose/create a roadmap to continue.</ThemedText>
                     </View>
                 </View>
 
