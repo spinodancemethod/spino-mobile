@@ -67,11 +67,11 @@ const Home = () => {
                 {/* Hero block */}
                 <View style={{ backgroundColor: colors.primary, padding: 24, borderRadius: 14, marginTop: insets.top + 12, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}>
                     <ThemedText variant="title" style={{ marginBottom: 12, color: colors.onPrimary, fontSize: 36, fontWeight: '800', letterSpacing: 0.2, lineHeight: 44 }}>
-                        Welcome
+                        Your dance workspace
                     </ThemedText>
 
                     <ThemedText variant="subheader" style={{ marginBottom: 6, color: colors.onPrimary, fontSize: 18, fontWeight: '600', lineHeight: 26 }}>
-                        Bachata can get complicated real fast. Simplifying the basics is the best way to build a solid foundation so you can focus more on movement QUALITY and less on remembering the moves.
+                        Keep your class videos, movement ideas, and practice notes organized in one place.
                     </ThemedText>
                 </View>
                 {/* Keep subscription status and CTA grouped in one card so the state is visually clear. */}
@@ -104,7 +104,7 @@ const Home = () => {
                         }}
                     >
                         <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
-                            You are Subscribed!
+                            Your workspace is ready
                         </ThemedText>
                         <ThemedButton
                             title="Go to your Workspace"
@@ -128,7 +128,7 @@ const Home = () => {
                         >
                             {/* Keep purchase CTA visible for users who have not activated a subscription. */}
                             <ThemedText variant="subheader" style={{ marginBottom: 10, fontSize: 18, lineHeight: 26, fontWeight: '700', textAlign: 'center' }}>
-                                Unlock your full roadmap
+                                Organize your dance learnings
                             </ThemedText>
                             <ThemedButton
                                 title="Subscribe"
@@ -139,7 +139,7 @@ const Home = () => {
 
                         {/* Keep workspace quick-link outside the subscribe card container. */}
                         <ThemedButton
-                            title="Trial the Workspace"
+                            title="Open your Workspace"
                             leftIcon={<Ionicons name="compass" size={16} color={colors.onPrimary} style={{ marginRight: 8 }} />}
                             onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
                             style={{ width: '86%', alignSelf: 'center', marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}
@@ -149,37 +149,37 @@ const Home = () => {
 
                 {/* Supporting copy — larger, increased line-height for readability */}
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    It's much easier to remember moves from positions. If you have 3 positions each with 3 variations you are able to perform 9 different combos. That is the idea.
+                    Turn class recordings into useful references. Save the moments worth revisiting and group them into roadmaps you can actually use.
                 </ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    Pick a position, pick 3 variations, learn them, and master them on your social night out. After each night, add notes — what works, what doesn't — and repeat for new positions/variations.
+                    Break routines into timestamped segments, add your own notes, and keep related movements together by roadmap or category.
                 </ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    Soon, you will see your dancing transformed. You can focus more on connecting with your partner, and quality movements as your brain will be freed from memorizing routines.
+                    Open a reference when you need it, review a short section, and mark the pieces you want to revisit at your next practice or social.
                 </ThemedText>
 
                 <View style={{ backgroundColor: colors.primary, padding: 24, borderRadius: 14, marginTop: insets.top + 12, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8, elevation: 4 }}>
                     <ThemedText variant="subheader" style={{ marginBottom: 6, color: colors.onPrimary, fontSize: 18, fontWeight: '600', lineHeight: 26 }}>
-                        Why this conventional approach to learning is flawed.
+                        Built for the way dancers collect ideas
                     </ThemedText>
                 </View>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    How many classes have you been to and recorded videos only to find it near impossible to remember when you need to?
+                    Class recordings are useful when you can find the exact moment you want to practice.
                 </ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    How many times do you start a routine learnt in class, only to then find it doesnt go with the music but you feel the only way out is to complete the sequence?
+                    Keep movements as flexible references instead of being tied to one long routine.
                 </ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    How many times are classes randomly created with no progression or structure, leaving you with no clear path to improvement?
+                    Build your own structure around the skills, combinations, and ideas you are working on now.
                 </ThemedText>
 
                 <ThemedText variant="subheader" style={{ marginBottom: 12, fontSize: 18, lineHeight: 26 }}>
-                    When leaders stand infront of followers, the ability to ACCESS our archives of classes reduces dramatically. In these states, the most effective approach is to have small bite sized chunks which we can recall with ease.
+                    Small, searchable segments make your archive easier to use when you are dancing, practicing, or planning what to work on next.
                 </ThemedText>
             </ScrollView>
         </ThemedView>
