@@ -8,6 +8,7 @@
 
 ## Dance Memory MVP
 
+- Added a crop-style segment range editor with draggable start/end handles and in-range play/pause preview when editing an existing local video segment.
 - Refocused capture/edit flows so videos are treated as source-reference IDs while segment metadata (title, description, thumbnail, range) is the primary authored content.
 - Wired the segment editor UI so users can create and update learning-item title, description, and thumbnail override metadata across Add Video, Local Videos, and roadmap detail flows.
 - Upgraded roadmap segments into customizable learning items with per-segment title, description, and thumbnail metadata (with video-level thumbnail fallback).

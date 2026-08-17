@@ -115,8 +115,8 @@ export default function VideoUploadDetailScreen() {
     }
 
     function openSegmentEditor() {
-        setSegmentStartDraft(segmentStartText)
-        setSegmentEndDraft(segmentEndText)
+        setSegmentStartDraft(String(activeSegment?.start_time ?? segmentStart))
+        setSegmentEndDraft(String(activeSegment?.end_time ?? segmentEnd))
         setSegmentEditorOpen(true)
     }
 
@@ -347,7 +347,7 @@ export default function VideoUploadDetailScreen() {
                     ) : null}
                 </View>
 
-                {upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
+                {!segmentEditorOpen && upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
                     <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
                 ) : (
                     <View style={[styles.unavailable, { borderColor: colors.border }]}>
@@ -511,6 +511,19 @@ export default function VideoUploadDetailScreen() {
                         onPress={(event) => event.stopPropagation()}
                     >
                         <ThemedText variant="subheader">Edit Segment Range</ThemedText>
+                        {upload.fallback_uri && upload.status === 'AVAILABLE' && Number.isFinite(Number(segmentStartDraft)) && Number.isFinite(Number(segmentEndDraft)) ? (
+                            <LocalSegmentPlayer
+                                source={upload.fallback_uri}
+                                startTime={Number(segmentStartDraft)}
+                                endTime={Number(segmentEndDraft)}
+                                editableRange
+                                enableFullscreen={false}
+                                onRangeChange={(nextStart, nextEnd) => {
+                                    setSegmentStartDraft(nextStart.toFixed(2))
+                                    setSegmentEndDraft(nextEnd.toFixed(2))
+                                }}
+                            />
+                        ) : null}
                         <View style={styles.rangeInputs}>
                             <ThemedInput
                                 value={segmentStartDraft}
