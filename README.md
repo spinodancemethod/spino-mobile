@@ -36,7 +36,7 @@ After deploying, monitor app health and billing:
 
 - **Observability Guide:** See [OBSERVABILITY.md](OBSERVABILITY.md) for detailed monitoring queries and runbook (error rates, request volumes, billing events, client error logs).
 - **First week after launch:**
-  - Monitor `billing_events` for verification errors (target: < 5 per 10 min).
+	- Monitor RevenueCat webhook errors and unusual `billing_events` volume (see [OBSERVABILITY.md](OBSERVABILITY.md)).
   - Monitor `client_error_logs` grouped by context (targeting zero auth/billing errors).
   - Check app crash logs in Supabase console.
 - **Ongoing:**
