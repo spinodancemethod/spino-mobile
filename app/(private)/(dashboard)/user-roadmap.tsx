@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, TextInput, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -6,16 +6,15 @@ import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import { RoadmapCanvas } from 'Components/roadmap/RoadmapCanvas'
-import { RoadmapPosition, RoadmapVideo } from 'Components/roadmap/types'
+import { RoadmapPosition } from 'Components/roadmap/types'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
 import { useDeleteUserRoadmap, useUpdateUserRoadmap, useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
-import { useRoadmapSegments } from 'lib/hooks/useRoadmapSegments'
-import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoSegments'
+import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory } from 'lib/hooks/useVideoCategories'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { VideoCategoryRecord } from 'lib/models'
-import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
+import { useUserRoadmapViewModel } from 'lib/hooks/useUserRoadmapViewModel'
 
 const SURFACE_WIDTH = 1800
 const VIDEO_W = 170
@@ -42,9 +41,17 @@ export default function UserRoadmapScreen() {
     const updateCategory = useUpdateVideoCategory()
     const deleteCategory = useDeleteVideoCategory()
     const roadmap = roadmapsQuery.data?.find((item) => item.id === roadmapId) ?? roadmapsQuery.data?.[0]
-    const segmentsQuery = useRoadmapSegments(roadmap?.id)
-    const categoriesQuery = useVideoCategories(roadmap?.id)
-    const completedSegmentsQuery = useCompletedSegmentIdsByUser()
+    const [showEmptyCategories, setShowEmptyCategories] = useState(true)
+    const [showCompleted, setShowCompleted] = useState(true)
+    const {
+        segmentsQuery,
+        categoriesQuery,
+        completedSegmentsQuery,
+        categoryRows,
+        filteredVideosByCategory,
+        completedSegmentIdSet,
+        emptyVideos,
+    } = useUserRoadmapViewModel(roadmap?.id, showEmptyCategories, showCompleted)
     const toggleSegmentCompletion = useToggleSegmentCompletion()
     const [manageModalOpen, setManageModalOpen] = useState(false)
     const [addCategoryModalOpen, setAddCategoryModalOpen] = useState(false)
@@ -57,61 +64,8 @@ export default function UserRoadmapScreen() {
     const [editingCategoryName, setEditingCategoryName] = useState('')
     const [editingCategoryDescription, setEditingCategoryDescription] = useState('')
     const [hasHandledInitialRoadmapEditRequest, setHasHandledInitialRoadmapEditRequest] = useState(false)
-    const [showEmptyCategories, setShowEmptyCategories] = useState(true)
-    const [showCompleted, setShowCompleted] = useState(true)
     const [drawerOpen, setDrawerOpen] = useState(false)
     const lastAnchoredRoadmapId = useRef<string | null>(null)
-    const roadmapPosition = useMemo<RoadmapPosition[]>(() => {
-        return (categoriesQuery.data ?? []).map((category) => ({
-            id: category.id,
-            name: category.name,
-            description: category.description ?? null,
-        }))
-    }, [categoriesQuery.data])
-    const videosByCategory = useMemo(() => {
-        const grouped = new Map<string, RoadmapVideo[]>()
-        for (const segment of segmentsQuery.data ?? []) {
-            const categoryVideos = grouped.get(segment.category_id) ?? []
-            categoryVideos.push({
-                id: segment.id,
-                // Segment title should represent the learning item, not the category bucket.
-                title: segment.video_name ?? segment.video_filename ?? segment.title ?? null,
-                note_text: segment.note_text,
-                thumbnail_url: segment.video_thumbnail,
-                video_upload_id: segment.video_upload_id,
-                start_time: segment.start_time,
-                end_time: segment.end_time,
-                category_name: segment.category_name,
-            })
-            grouped.set(segment.category_id, categoryVideos)
-        }
-        return grouped
-    }, [segmentsQuery.data])
-    const completedSegmentIdSet = useMemo(
-        () => new Set(completedSegmentsQuery.data ?? []),
-        [completedSegmentsQuery.data]
-    )
-    const filteredVideosByCategory = useMemo(() => {
-        if (showCompleted) return videosByCategory
-
-        const filtered = new Map<string, RoadmapVideo[]>()
-        for (const [categoryId, videos] of videosByCategory.entries()) {
-            filtered.set(
-                categoryId,
-                videos.filter((video) => !video?.id || !completedSegmentIdSet.has(video.id))
-            )
-        }
-        return filtered
-    }, [videosByCategory, showCompleted, completedSegmentIdSet])
-    const categoryRows = useMemo(() => {
-        if (roadmapPosition.length > 0) {
-            if (showEmptyCategories) return roadmapPosition
-            return roadmapPosition.filter((category) => (filteredVideosByCategory.get(category.id)?.length ?? 0) > 0)
-        }
-        // Fallback for transitional states where categories are not loaded yet.
-        return Array.from(filteredVideosByCategory.keys()).map((id) => ({ id, name: 'Category' }))
-    }, [roadmapPosition, filteredVideosByCategory, showEmptyCategories])
-    const emptyVideos = useMemo(() => new Map<string, RoadmapVideo[]>(), [])
     const [surfaceHeight, setSurfaceHeight] = useState(500)
     const activeRoadmapId = roadmap?.id ?? null
     // Anchor against the Categories card itself (root card in the middle lane).

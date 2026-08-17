@@ -13,7 +13,8 @@ import { showSnack } from 'lib/snackbarService'
 import { useUpdateVideoUploadTitle, useUpsertVideoUploadNote, useVideoUploadById, useVideoUploadNote } from 'lib/hooks/useVideoUploadDetails'
 import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsByUser'
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
-import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoCategories, useVideoSegments, validateSegmentRange } from 'lib/hooks/useVideoSegments'
+import { useVideoCategories } from 'lib/hooks/useVideoCategories'
+import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoSegments, validateSegmentRange } from 'lib/hooks/useSegments'
 
 export default function VideoUploadDetailScreen() {
     const { id, segmentId, startTime, endTime, category, title } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string }>()

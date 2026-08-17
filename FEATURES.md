@@ -25,6 +25,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Split video category and segment data hooks, and extracted local-video library and roadmap view-model workflows from their route screens.
+
 - Centralized auth route state and RevenueCat purchase, restore, and cache invalidation flows behind shared service and hook boundaries.
 
 - Fixed media-library duration handling by converting millisecond video metadata to seconds before creating segment ranges and player previews.
