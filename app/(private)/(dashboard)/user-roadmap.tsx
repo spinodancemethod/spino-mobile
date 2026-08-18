@@ -283,7 +283,8 @@ export default function UserRoadmapScreen() {
                 <RoadmapCanvas
                     styles={screenStyles}
                     canvasRef={canvasRef}
-                    onCanvasLayout={(event) => { onCanvasLayout(event); setSurfaceHeight(Math.max(500, event.nativeEvent.layout.height)) }}
+                    onCanvasLayout={onCanvasLayout}
+                    onSurfaceLayout={(event) => setSurfaceHeight(Math.max(500, event.nativeEvent.layout.height))}
                     panHandlers={panHandlers}
                     pan={pan}
                     scale={scale}

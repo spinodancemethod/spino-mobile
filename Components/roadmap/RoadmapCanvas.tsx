@@ -9,6 +9,7 @@ type RoadmapCanvasProps = {
     styles: any;
     canvasRef: React.RefObject<View | null>;
     onCanvasLayout: (_event: LayoutChangeEvent) => void;
+    onSurfaceLayout?: (_event: LayoutChangeEvent) => void;
     panHandlers: PanResponderInstance['panHandlers'];
     pan: Animated.ValueXY;
     scale: Animated.Value;
@@ -51,6 +52,7 @@ export function RoadmapCanvas({
     styles,
     canvasRef,
     onCanvasLayout,
+    onSurfaceLayout,
     panHandlers,
     pan,
     scale,
@@ -334,6 +336,7 @@ export function RoadmapCanvas({
     return (
         <View ref={canvasRef} onLayout={onCanvasLayout} style={styles.canvasOuter} {...panHandlers}>
             <Animated.View
+                onLayout={onSurfaceLayout}
                 style={[
                     styles.canvasInner,
                     { width: surfaceWidth, minHeight: estimatedSurfaceHeight },
