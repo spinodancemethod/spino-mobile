@@ -27,8 +27,8 @@ const ICON_SIZE = 18
 const ROW_GAP = 18
 const DEFAULT_SCALE = 0.45
 const SURFACE_HORIZONTAL_PADDING = 24
-const DEFAULT_PAN_Y = 0
 const CATEGORIES_ANCHOR_VIEWPORT_X = 240
+const CATEGORIES_ANCHOR_VIEWPORT_Y = 24
 const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Local+Video'
 const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Roadmap'
 
@@ -73,13 +73,16 @@ export default function UserRoadmapScreen() {
     // In this layout, that card starts at the surface's left padding and top edge.
     const categoriesCardAnchorX = SURFACE_HORIZONTAL_PADDING
     const defaultPanX = CATEGORIES_ANCHOR_VIEWPORT_X - (categoriesCardAnchorX * DEFAULT_SCALE)
+    // The scale transform pivots around the surface's own center, so the initial
+    // pan must offset that pivot to land the surface top near the viewport top.
+    const defaultPanY = CATEGORIES_ANCHOR_VIEWPORT_Y - (surfaceHeight / 2) * (1 - DEFAULT_SCALE)
     const { canvasRef, onCanvasLayout, pan, panHandlers, scale, setSurfaceHeight: setGestureSurfaceHeight, resetViewport } = useRoadmapGestures({
         minScale: 0.2,
         maxScale: 3,
         defaultScale: DEFAULT_SCALE,
         surfaceWidth: SURFACE_WIDTH,
         defaultPanX,
-        defaultPanY: DEFAULT_PAN_Y,
+        defaultPanY,
     })
 
     useEffect(() => {
@@ -111,7 +114,7 @@ export default function UserRoadmapScreen() {
         // Anchor after data resolves so each roadmap starts from the same
         // Categories-card reference point regardless of item counts.
         const frame = requestAnimationFrame(() => {
-            resetViewport(defaultPanX, DEFAULT_PAN_Y, DEFAULT_SCALE)
+            resetViewport(defaultPanX, defaultPanY, DEFAULT_SCALE)
             lastAnchoredRoadmapId.current = activeRoadmapId
         })
 
@@ -121,6 +124,7 @@ export default function UserRoadmapScreen() {
         categoriesQuery.isLoading,
         segmentsQuery.isLoading,
         defaultPanX,
+        defaultPanY,
         resetViewport,
     ])
 
