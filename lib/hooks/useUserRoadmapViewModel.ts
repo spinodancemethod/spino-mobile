@@ -27,7 +27,7 @@ export function useUserRoadmapViewModel(
             const categoryVideos = grouped.get(segment.category_id) ?? []
             categoryVideos.push({
                 id: segment.id,
-                title: segment.video_name ?? segment.video_filename ?? segment.title ?? null,
+                title: (segment.title?.trim() || segment.video_name) ?? segment.video_filename ?? null,
                 note_text: segment.note_text,
                 thumbnail_url: segment.video_thumbnail,
                 video_upload_id: segment.video_upload_id,

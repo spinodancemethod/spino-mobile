@@ -15,6 +15,7 @@ export type CreateSegmentInput = {
     durationSeconds?: number | null
     categoryId: string
     title?: string | null
+    userNotes?: string | null
     thumbnailReference?: string | null
 }
 
@@ -26,6 +27,7 @@ export type UpdateSegmentInput = {
     durationSeconds?: number | null
     categoryId?: string | null
     title?: string | null
+    userNotes?: string | null
     thumbnailReference?: string | null
 }
 
@@ -88,6 +90,7 @@ export function useCreateVideoSegment() {
                     end_time: input.endTime,
                     category_id: input.categoryId,
                     title: cleanOptionalText(input.title),
+                    user_notes: cleanOptionalText(input.userNotes),
                     thumbnail_reference: cleanOptionalText(input.thumbnailReference),
                     user_confirmed: true,
                     ai_generated: false,
@@ -118,6 +121,7 @@ export function useUpdateVideoSegment() {
             }
             if (input.categoryId !== undefined) updates.category_id = input.categoryId
             if (input.title !== undefined) updates.title = cleanOptionalText(input.title)
+            if (input.userNotes !== undefined) updates.user_notes = cleanOptionalText(input.userNotes)
             if (input.thumbnailReference !== undefined) updates.thumbnail_reference = cleanOptionalText(input.thumbnailReference)
 
             const { data, error } = await supabase
