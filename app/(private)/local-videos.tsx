@@ -13,6 +13,8 @@ import { showSnack } from 'lib/snackbarService'
 import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCategories'
 import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoSegments } from 'lib/hooks/useSegments'
 import { useLocalVideoLibrary } from 'lib/hooks/useLocalVideoLibrary'
+import { useRelinkVideoUpload } from 'lib/hooks/useRelinkVideoUpload'
+import { useVideoRelinkRecommendations } from 'lib/hooks/useVideoRelinkRecommendations'
 import type { LocalVideoUpload, SegmentRecord } from 'lib/models'
 
 function formatTimestamp(value: number) {
@@ -32,6 +34,8 @@ export default function LocalVideosScreen() {
         confirmRemove,
         loading,
     } = useLocalVideoLibrary()
+    const relinkVideoUpload = useRelinkVideoUpload()
+    const recommendationsMutation = useVideoRelinkRecommendations()
     const [rangeStart, setRangeStart] = useState('0.00')
     const [rangeEnd, setRangeEnd] = useState('10.00')
     const activeRoadmapId = selectedVideoId
@@ -54,6 +58,32 @@ export default function LocalVideosScreen() {
         ? cloudUploadsQuery.data?.find((item) => item.local_reference_key === selectedVideoId)?.id ?? null
         : null
     const segmentsQuery = useVideoSegments(selectedCloudVideoId)
+    const missingUploadRecords = (cloudUploadsQuery.data ?? []).filter((record) => (
+        videos.find((video) => video.id === record.local_reference_key)?.status === 'NEEDS_RELINK'
+    ))
+
+    async function findRecommendedVideos() {
+        try {
+            const recommendations = await recommendationsMutation.mutateAsync(missingUploadRecords)
+            const matchCount = Object.values(recommendations).reduce((total, candidates) => total + candidates.length, 0)
+            showSnack(matchCount > 0 ? `${matchCount} matching local ${matchCount === 1 ? 'video was' : 'videos were'} found.` : 'No matching videos were found on this device.')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not scan this device for matching videos.')
+        }
+    }
+
+    async function restoreRecommendedVideo(video: LocalVideoUpload, candidateIndex: number) {
+        const videoUpload = cloudUploadsQuery.data?.find((record) => record.local_reference_key === video.id)
+        const candidate = videoUpload ? recommendationsMutation.data?.[videoUpload.id]?.[candidateIndex] : null
+        if (!videoUpload || !candidate) return
+        try {
+            await relinkVideoUpload.mutateAsync({ videoUpload, candidate })
+            const segmentCount = video.segmentCount ?? 0
+            showSnack(`${video.originalFilename ?? video.fileName ?? 'Video'} restored. ${segmentCount} ${segmentCount === 1 ? 'segment is' : 'segments are'} available again.`)
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not restore this video.')
+        }
+    }
 
     async function saveRange(video: LocalVideoUpload) {
         const start = Number(rangeStart)
@@ -221,6 +251,17 @@ export default function LocalVideosScreen() {
                     style={styles.fullButton}
                 />
 
+                {missingUploadRecords.length > 0 ? (
+                    <ThemedButton
+                        title={recommendationsMutation.isPending ? 'Scanning device videos...' : 'Find matching videos'}
+                        variant="ghost"
+                        onPress={() => void findRecommendedVideos()}
+                        loading={recommendationsMutation.isPending}
+                        disabled={picking || relinkVideoUpload.isPending}
+                        style={styles.fullButton}
+                    />
+                ) : null}
+
                 {videos.length === 0 ? (
                     <View style={[styles.emptyState, { borderColor: colors.border }]}>
                         <ThemedText variant="subheader">No local video references yet.</ThemedText>
@@ -228,12 +269,38 @@ export default function LocalVideosScreen() {
                     </View>
                 ) : videos.map((video) => {
                     const selected = selectedVideoId === video.id
+                    const cloudVideo = cloudUploadsQuery.data?.find((record) => record.local_reference_key === video.id)
+                    const recommendations = cloudVideo ? recommendationsMutation.data?.[cloudVideo.id] ?? [] : []
                     return (
                         <View key={video.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <ThemedText variant="subheader" numberOfLines={2} style={styles.videoName}>
-                                Source reference
+                                {video.originalFilename ?? video.fileName ?? 'Untitled source video'}
                             </ThemedText>
-                            <ThemedText variant="small">Status: {video.status}</ThemedText>
+                            <ThemedText variant="small">{video.segmentCount ?? 0} {(video.segmentCount ?? 0) === 1 ? 'segment' : 'segments'}</ThemedText>
+                            <ThemedText variant="small">
+                                {video.status === 'NEEDS_RELINK'
+                                    ? 'Video not found on this device'
+                                    : video.status === 'AVAILABLE'
+                                        ? 'Available on this device'
+                                        : 'Checking local video availability...'}
+                            </ThemedText>
+                            {video.status === 'NEEDS_RELINK' && recommendations.length > 0 ? (
+                                <View style={[styles.recommendations, { borderColor: colors.border }]}>
+                                    <ThemedText variant="small" style={styles.rangeLabel}>
+                                        {recommendations.length === 1 ? 'Recommended match' : `${recommendations.length} matching videos`}
+                                    </ThemedText>
+                                    {recommendations.map((candidate, index) => (
+                                        <ThemedButton
+                                            key={candidate.assetId}
+                                            title={recommendations.length === 1 ? `Restore ${candidate.filename}` : `Restore ${candidate.filename}`}
+                                            variant="ghost"
+                                            onPress={() => void restoreRecommendedVideo(video, index)}
+                                            disabled={relinkVideoUpload.isPending}
+                                            style={styles.actionButton}
+                                        />
+                                    ))}
+                                </View>
+                            ) : null}
                             {video.status === 'AVAILABLE' && selected ? (
                                 <View style={styles.playerBlock}>
                                     <ThemedText variant="small" style={styles.rangeLabel}>Preview timestamp range (seconds)</ThemedText>
@@ -349,7 +416,7 @@ export default function LocalVideosScreen() {
                                     />
                                 ) : null}
                                 <ThemedButton
-                                    title="Replace video"
+                                    title="Relink video"
                                     variant="ghost"
                                     onPress={() => void pickVideo(video)}
                                     disabled={picking}
@@ -464,6 +531,12 @@ const styles = StyleSheet.create({
     actions: {
         gap: 8,
         marginTop: 6,
+    },
+    recommendations: {
+        borderTopWidth: 1,
+        gap: 6,
+        marginTop: 4,
+        paddingTop: 8,
     },
     actionButton: {
         width: '100%',

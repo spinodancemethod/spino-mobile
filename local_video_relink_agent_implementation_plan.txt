@@ -1,0 +1,603 @@
+Local Video Relink & Recovery — Agent Implementation Plan
+Overall objective
+
+Implement local video recovery so that users can move to a new device or restore the app without losing existing video segments.
+
+Core architectural rule
+
+video_upload.id is the permanent identity of a video.
+
+local_file_reference is only the location of its current local copy.
+
+Never create a new video_upload just because the local file moved.
+
+Phase 1 — Understand the existing implementation
+Task 1.1 — Inspect the existing video/segment architecture
+
+Find and document:
+
+video_upload model/schema
+segment model/schema
+segment.video_upload_id relationship
+Existing video import/upload flow
+Existing local file storage mechanism
+Existing video metadata extraction
+Existing video/file deletion handling
+Existing database migrations
+Existing tests around videos and segments
+Done when
+
+The agent can identify:
+
+video_upload
+    ↓
+segment.video_upload_id
+    ↓
+local video file
+
+and knows exactly where the current implementation assumes that the local file always exists.
+
+Do not implement anything yet.
+
+Phase 2 — Database changes
+Task 2.1 — Add video metadata fields
+
+Add the required fields to video_upload:
+
+id
+local_file_reference
+original_filename
+file_size
+duration
+content_hash
+
+Reuse existing fields where they already exist rather than duplicating them.
+
+Requirements
+id must remain stable.
+content_hash represents the original video content.
+original_filename must not change when a user relinks a renamed file.
+local_file_reference may change during relinking.
+Done when
+
+Database migration/schema is implemented and existing data can still load.
+
+Task 2.2 — Verify migration safety
+
+Test the migration against existing video records.
+
+Verify:
+
+Existing videos aren't lost.
+Existing segments aren't changed.
+segment.video_upload_id values remain unchanged.
+Existing video IDs remain unchanged.
+Existing local references continue working.
+Done when
+
+There is an automated migration/regression test demonstrating that existing data survives the schema change.
+
+Phase 3 — Capture and persist metadata
+Task 3.1 — Populate original filename
+
+When a video is initially imported, store:
+
+original_filename
+
+This represents the filename at the time the video was originally imported.
+
+It must not be overwritten when the file is later relinked.
+
+Done when
+
+A newly imported video has the expected original filename.
+
+Task 3.2 — Populate file size and duration
+
+When importing a video, store:
+
+file_size
+duration
+
+Use the existing media/file metadata functionality if available.
+
+Done when
+
+Newly imported videos have reliable size and duration values.
+
+Task 3.3 — Calculate and store SHA-256
+
+When a video is initially imported:
+
+Read the original video.
+Calculate SHA-256.
+Store the hash in content_hash.
+
+Do not upload the video just to calculate the hash.
+
+Done when
+
+Two identical files produce the same hash and different content produces different hashes.
+
+Add unit tests for the hashing utility.
+
+Phase 4 — Introduce VideoAssetResolver
+Task 4.1 — Create the resolver
+
+Create:
+
+VideoAssetResolver
+
+Its job is to translate:
+
+video_upload.id
+        ↓
+local asset
+
+The rest of the application should no longer need to directly interpret local_file_reference.
+
+Task 4.2 — Implement basic resolution
+
+The resolver should determine:
+
+local_file_reference exists
+    → AVAILABLE
+
+local_file_reference missing/invalid
+    → NEEDS_RELINK
+
+Don't implement automatic matching yet.
+
+Keep this task deliberately simple.
+
+Done when
+
+Existing callers can ask the resolver for the local asset and receive a predictable result.
+
+Task 4.3 — Update consumers to use the resolver
+
+Find code that currently does things like:
+
+video.local_file_reference
+
+and directly opens the file.
+
+Move that behavior behind VideoAssetResolver.
+
+The goal is:
+
+Segment
+   ↓
+video_upload.id
+   ↓
+VideoAssetResolver
+   ↓
+Local asset / NEEDS_RELINK
+Done when
+
+The rest of the application doesn't need to know how local video paths are resolved.
+
+Phase 5 — Detect missing videos
+Task 5.1 — Detect invalid local references
+
+When an existing video is accessed, detect when:
+
+file doesn't exist;
+file can't be accessed;
+reference is stale;
+local storage no longer contains the file.
+
+Return:
+
+NEEDS_RELINK
+
+instead of throwing an unhandled error.
+
+Task 5.2 — Preserve segments when media is missing
+
+This is a critical task.
+
+When the local file disappears:
+
+video_upload → remains
+segments → remain
+video_upload.id → remains unchanged
+segment.video_upload_id → remains unchanged
+
+Only local availability changes.
+
+Test
+
+Create:
+
+Video A
+ ├── Segment 1
+ ├── Segment 2
+ └── Segment 3
+
+Delete the local file.
+
+Verify all three segments still exist.
+
+Phase 6 — Manual relinking
+Task 6.1 — Add candidate validation
+
+Given a user-selected local video:
+
+Perform checks in this order:
+
+Candidate selected
+      ↓
+File accessible?
+      ↓
+File size matches?
+      ↓
+Duration matches?
+      ↓
+SHA-256 matches?
+
+Filename is not required to match.
+
+Task 6.2 — Implement hash verification
+
+Create a function along the lines of:
+
+verifyCandidate(videoUpload, localFile)
+
+It should only return success when the candidate's content hash matches video_upload.content_hash.
+
+Important
+
+These must all fail:
+
+same filename
+same size
+different content
+same filename
+same size
+same duration
+different content
+
+Only the matching hash establishes identity.
+
+Task 6.3 — Implement successful relink
+
+On successful verification:
+
+local_file_reference = new local location
+
+Do not:
+
+create new video_upload
+change video_upload.id
+change segments
+change segment.video_upload_id
+Done when
+
+The existing video resolves to the new local file and all existing segments work again.
+
+Task 6.4 — Make relinking atomic
+
+The database update should happen only after validation succeeds.
+
+If the update fails:
+
+Don't report success.
+Don't modify segment relationships.
+Don't change the video ID.
+Leave the video recoverable.
+
+Add a test that deliberately makes the database update fail.
+
+Phase 7 — Recovery UI
+Task 7.1 — Create the recovery screen
+
+Add:
+
+Recover / Relink Videos
+
+Show:
+
+Original filename
+Number of segments
+Current status
+Relink action
+
+Example:
+
+Holiday.mp4
+14 segments
+Video not found on this device
+
+[Relink Video]
+Task 7.2 — Implement manual selection
+
+When the user presses:
+
+Relink Video
+
+open the device's video/file picker.
+
+Pass the selected file to the relinking logic.
+
+The UI should not implement hash/file validation itself.
+
+It should call the appropriate service/resolver.
+
+Task 7.3 — Display validation failures
+
+Show a useful error when the selected file isn't the original video.
+
+For example:
+
+This video doesn't match Holiday.mp4.
+Please select the original video.
+
+Don't expose unnecessary technical details such as the SHA-256 value.
+
+Task 7.4 — Display successful recovery
+
+After successful database update:
+
+✓ Holiday.mp4 restored
+14 segments are available again.
+
+Only display this after the operation has actually succeeded.
+
+Phase 8 — Automatic matching
+
+Do this after manual relinking works.
+
+Task 8.1 — Build candidate discovery
+
+Scan available local videos.
+
+Use cheap metadata to narrow candidates:
+
+file size
+    ↓
+duration
+    ↓
+filename
+
+Don't calculate SHA-256 for every video unless necessary.
+
+Task 8.2 — Hash candidate files
+
+Calculate SHA-256 only for promising candidates.
+
+Compare against:
+
+video_upload.content_hash
+
+Accept only an exact hash match.
+
+Task 8.3 — Handle duplicate candidates
+
+If multiple local files have the same matching hash:
+
+choose deterministic behavior, or
+ask the user to choose.
+
+Never randomly choose a candidate.
+
+Add a test for this.
+
+Task 8.4 — Test automatic matching efficiency
+
+Create a test library containing many unrelated videos.
+
+Verify:
+
+candidates are filtered before hashing;
+the correct video is found;
+incorrect videos aren't accepted;
+unnecessary hashing is avoided.
+
+Instrument the hashing function if necessary so the test can count hash operations.
+
+Phase 9 — Device migration / restore
+Task 9.1 — Test the complete migration scenario
+
+Automate:
+
+Device A
+    ↓
+Import video
+    ↓
+Create segments
+    ↓
+Save cloud data
+    ↓
+Device B
+    ↓
+Restore cloud data
+    ↓
+Local video doesn't exist
+    ↓
+Video = NEEDS_RELINK
+    ↓
+Segments still exist
+    ↓
+Select local copy
+    ↓
+Hash matches
+    ↓
+Relink
+    ↓
+Segments available
+Most important assertions
+
+Before relink:
+
+video_upload.id == X
+segment.video_upload_id == X
+
+After relink:
+
+video_upload.id == X
+segment.video_upload_id == X
+
+The ID must never change.
+
+Phase 10 — Failure and edge cases
+
+Handle these one at a time.
+
+Task 10.1 — Wrong file
+
+Same filename, different video.
+
+Expected:
+
+REJECT
+Task 10.2 — Renamed file
+
+Different filename, same content.
+
+Expected:
+
+ACCEPT
+Task 10.3 — Corrupted file
+
+Expected:
+
+REJECT
+
+No crash.
+
+Task 10.4 — File disappears during hashing
+
+Expected:
+
+RELINK FAILED
+
+No database corruption.
+
+Task 10.5 — App interrupted during hashing
+
+Kill/background the app during hashing.
+
+Expected:
+
+no false relink;
+video remains recoverable;
+segments unchanged.
+Task 10.6 — Database update fails
+
+Simulate a database failure after successful hash verification.
+
+Expected:
+
+no success message;
+ID unchanged;
+segments unchanged;
+video remains recoverable.
+Task 10.7 — Multiple missing videos
+
+Verify that relinking one video doesn't affect any other video.
+
+Task 10.8 — Partial recovery
+
+Some videos are recovered and others aren't.
+
+Expected:
+
+Recovered video → usable
+Missing video → NEEDS_RELINK
+
+The entire project should not be treated as unavailable.
+
+Phase 11 — Media/cloud isolation
+Task 11.1 — Verify no video upload occurs during relinking
+
+Instrument/mock the network layer.
+
+Perform:
+
+Select file
+→ calculate hash
+→ relink
+
+Verify that no video bytes are uploaded.
+
+Only the necessary metadata/database operation should occur.
+
+This is an architectural requirement.
+
+Phase 12 — Regression suite
+
+Once implementation is complete, create a permanent automated suite covering the core invariants.
+
+Required regression tests
+ Existing videos still resolve.
+ Missing videos return NEEDS_RELINK.
+ Existing segments survive missing media.
+ video_upload.id never changes.
+ segment.video_upload_id never changes.
+ Correct video can be relinked.
+ Renamed correct video can be relinked.
+ Wrong video cannot be relinked.
+ Filename alone cannot establish identity.
+ Size/duration alone cannot establish identity.
+ Hash mismatch always rejects.
+ Successful hash match allows relinking.
+ Failed database update doesn't produce false success.
+ Partial recovery works.
+ Multiple videos can be recovered independently.
+ No video media is uploaded during recovery.
+Recommended Agent Execution Order
+
+To prevent the work becoming overwhelming, have the agent work through these small milestones in order:
+
+M1 — Understand existing architecture
+ ↓
+M2 — Database/schema changes
+ ↓
+M3 — Capture video metadata + hash
+ ↓
+M4 — VideoAssetResolver
+ ↓
+M5 — Missing-file detection
+ ↓
+M6 — Manual relinking
+ ↓
+M7 — Recovery UI
+ ↓
+M8 — Automatic matching
+ ↓
+M9 — Device migration testing
+ ↓
+M10 — Failure/edge cases
+ ↓
+M11 — Media/cloud isolation
+ ↓
+M12 — Final regression suite
+Important instruction for the agent
+
+Do not attempt the entire feature in one pass.
+
+For each milestone:
+
+Inspect the existing implementation.
+Make the smallest necessary change.
+Add/update automated tests.
+Run the relevant tests.
+Fix failures.
+Only then move to the next milestone.
+
+And throughout the implementation, continuously enforce this invariant:
+
+video_upload.id
+       │
+       │ NEVER CHANGES
+       ▼
+segment.video_upload_id
+
+The only thing that is allowed to change during a successful relink is:
+
+old local_file_reference
+          ↓
+new local_file_reference
+
+That gives the agent a fairly clean implementation path: first make the data model safe, then isolate local-file resolution, then add manual recovery, and only after that add automatic matching and polish.

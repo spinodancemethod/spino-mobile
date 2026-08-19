@@ -1,3 +1,29 @@
+  fallback_uri text,
+  name text,
+  filename text,
++  original_filename text,
++  content_hash text,
+  custom_title text,
+  duration_seconds double precision,
+  mime_type text,
+  file_size_bytes bigint,
+  width integer,
+  height integer,
+  creation_time timestamptz,
+  thumbnail_reference text,
+  status text NOT NULL DEFAULT 'UNKNOWN',
+  replacement_review_pending boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
+  CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
+  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key),
++  CONSTRAINT video_uploads_original_filename_check CHECK (original_filename IS NULL OR length(trim(original_filename)) > 0),
++  CONSTRAINT video_uploads_content_hash_check CHECK (content_hash IS NULL OR content_hash ~ '^[a-f0-9]{64}$'),
+  CONSTRAINT video_uploads_custom_title_check CHECK (custom_title IS NULL OR length(trim(custom_title)) > 0)
+);
+
+CREATE TABLE IF NOT EXISTS public.video_categories (
 -- 01_tables.sql
 -- Base tables and core constraints for the public schema.
 -- Run as a privileged role (for example, postgres/service_role).

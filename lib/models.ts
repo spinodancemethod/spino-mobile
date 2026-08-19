@@ -8,6 +8,10 @@ export type VideoUploadRecord = {
     fallback_uri?: string | null;
     name?: string | null;
     filename?: string | null;
+    // Captured once at import; relinking must not overwrite it with a renamed local file.
+    original_filename?: string | null;
+    // SHA-256 of the source video, unavailable for pre-recovery legacy records.
+    content_hash?: string | null;
     custom_title?: string | null;
     duration_seconds?: number | null;
     mime_type?: string | null;
@@ -21,13 +25,16 @@ export type VideoUploadRecord = {
     created_at: string;
     updated_at: string;
 };
-export type LocalVideoStatus = 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'UNKNOWN';
+export type LocalVideoStatus = 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'NEEDS_RELINK' | 'UNKNOWN';
 
 export type LocalVideoUpload = {
     id: string;
     assetId: string | null;
     uri: string;
     fileName: string | null;
+    originalFilename?: string | null;
+    contentHash?: string | null;
+    segmentCount?: number;
     mimeType: string | null;
     duration: number | null;
     fileSize: number | null;

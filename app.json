@@ -46,6 +46,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Spino to scan videos on this device and suggest recovered source references.",
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {

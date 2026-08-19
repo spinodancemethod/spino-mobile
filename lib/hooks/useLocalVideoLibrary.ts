@@ -3,16 +3,28 @@ import { Alert } from 'react-native'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as ImagePicker from 'expo-image-picker'
 import { useDeleteVideoUpload, useSyncVideoUpload, useVideoUploads } from './useVideoUploads'
+import { useRelinkVideoUpload } from './useRelinkVideoUpload'
+import { useVideoAssetAvailability } from './useVideoAssetAvailability'
+import { useVideoSegmentCounts } from './useVideoSegmentCounts'
 import { useUserRoadmaps } from './useUserRoadmaps'
 import { showSnack } from 'lib/snackbarService'
 import type { LocalVideoStatus, LocalVideoUpload, VideoUploadRecord } from 'lib/models'
+import type { VideoAssetResolution } from 'lib/videoAssetResolver'
+import { calculateVideoContentHash } from 'lib/videoHash'
 
-function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): LocalVideoUpload {
+function cloudRecordToLocal(
+    record: VideoUploadRecord,
+    availability?: VideoAssetResolution,
+    segmentCount = 0,
+): LocalVideoUpload {
     return {
         id: record.local_reference_key,
         assetId: record.media_identifier ?? null,
-        uri: runtimeUri ?? record.fallback_uri ?? '',
+        uri: availability?.status === 'AVAILABLE' ? availability.uri : record.fallback_uri ?? '',
         fileName: record.filename ?? record.name ?? null,
+        originalFilename: record.original_filename ?? record.filename ?? record.name ?? null,
+        contentHash: record.content_hash ?? null,
+        segmentCount,
         mimeType: record.mime_type ?? null,
         duration: record.duration_seconds ?? null,
         fileSize: record.file_size_bytes ?? null,
@@ -22,7 +34,11 @@ function cloudRecordToLocal(record: VideoUploadRecord, runtimeUri?: string): Loc
         rangeStart: 0,
         rangeEnd: record.duration_seconds ?? 10,
         thumbnailReference: record.thumbnail_reference ?? null,
-        status: record.status,
+        status: availability?.status === 'AVAILABLE'
+            ? 'AVAILABLE'
+            : availability?.status === 'NEEDS_RELINK'
+                ? 'NEEDS_RELINK'
+                : 'UNKNOWN',
         updatedAt: record.updated_at,
     }
 }
@@ -35,9 +51,23 @@ export function useLocalVideoLibrary() {
     const roadmapsQuery = useUserRoadmaps()
     const { mutateAsync: syncVideoUpload } = useSyncVideoUpload()
     const { mutateAsync: deleteCloudVideoUpload } = useDeleteVideoUpload()
+    const { mutateAsync: relinkVideoUpload } = useRelinkVideoUpload()
+    const recordsWithRuntimeUris = useMemo(
+        () => (cloudUploadsQuery.data ?? []).map((record) => ({
+            ...record,
+            fallback_uri: runtimeUris[record.local_reference_key] ?? record.fallback_uri,
+        })),
+        [cloudUploadsQuery.data, runtimeUris],
+    )
+    const availabilityQuery = useVideoAssetAvailability(recordsWithRuntimeUris)
+    const segmentCountsQuery = useVideoSegmentCounts()
     const videos = useMemo(
-        () => (cloudUploadsQuery.data ?? []).map((record) => cloudRecordToLocal(record, runtimeUris[record.local_reference_key])),
-        [cloudUploadsQuery.data, runtimeUris]
+        () => recordsWithRuntimeUris.map((record) => cloudRecordToLocal(
+            record,
+            availabilityQuery.data?.[record.id],
+            segmentCountsQuery.data?.[record.id] ?? 0,
+        )),
+        [availabilityQuery.data, recordsWithRuntimeUris, segmentCountsQuery.data],
     )
 
     async function pickVideo(replacementFor?: LocalVideoUpload) {
@@ -58,31 +88,53 @@ export function useLocalVideoLibrary() {
 
             const asset = result.assets[0]
             const durationSeconds = asset.duration == null ? null : asset.duration / 1000
+            const originalFilename = asset.fileName ?? asset.uri.split('/').pop() ?? null
+            if (replacementFor) {
+                const videoUpload = cloudUploadsQuery.data?.find((item) => item.local_reference_key === replacementFor.id)
+                if (!videoUpload) throw new Error('The saved video record could not be found.')
+
+                await relinkVideoUpload({
+                    videoUpload,
+                    candidate: {
+                        uri: asset.uri,
+                        assetId: asset.assetId ?? null,
+                        fileSize: asset.fileSize ?? null,
+                        durationSeconds,
+                    },
+                })
+                setRuntimeUris((currentUris) => ({ ...currentUris, [replacementFor.id]: asset.uri }))
+                setSelectedVideoId(replacementFor.id)
+                const segmentCount = replacementFor.segmentCount ?? 0
+                showSnack(`${replacementFor.originalFilename ?? replacementFor.fileName ?? 'Video'} restored. ${segmentCount} ${segmentCount === 1 ? 'segment is' : 'segments are'} available again.`)
+                return
+            }
+
+            const contentHash = await calculateVideoContentHash(asset.uri)
             const video: LocalVideoUpload = {
-                id: replacementFor?.id ?? `${asset.assetId ?? asset.uri}-${Date.now()}`,
+                id: `${asset.assetId ?? asset.uri}-${Date.now()}`,
                 assetId: asset.assetId ?? null,
                 uri: asset.uri,
-                fileName: asset.fileName ?? asset.uri.split('/').pop() ?? null,
+                fileName: originalFilename,
+                originalFilename,
+                contentHash,
                 mimeType: asset.mimeType ?? 'video/*',
                 duration: durationSeconds,
                 fileSize: asset.fileSize ?? null,
                 width: asset.width ?? null,
                 height: asset.height ?? null,
                 creationTime: null,
-                rangeStart: replacementFor?.rangeStart ?? 0,
-                rangeEnd: replacementFor?.rangeEnd ?? durationSeconds ?? 10,
-                thumbnailReference: replacementFor?.thumbnailReference ?? null,
+                rangeStart: 0,
+                rangeEnd: durationSeconds ?? 10,
+                thumbnailReference: null,
                 status: 'AVAILABLE',
                 updatedAt: new Date().toISOString(),
             }
-            const roadmapId = replacementFor?.id
-                ? cloudUploadsQuery.data?.find((item) => item.local_reference_key === replacementFor.id)?.roadmap_id
-                : roadmapsQuery.data?.[0]?.id
+            const roadmapId = roadmapsQuery.data?.[0]?.id
             if (!roadmapId) throw new Error('Create a roadmap before adding a video reference.')
             await syncVideoUpload({ ...video, roadmapId })
             setRuntimeUris((currentUris) => ({ ...currentUris, [video.id]: video.uri }))
             setSelectedVideoId(video.id)
-            showSnack(replacementFor ? 'Replacement video saved. Review its segments.' : 'Local video reference saved.')
+            showSnack('Local video reference saved.')
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not choose that video.')
         } finally {

@@ -16,6 +16,7 @@ import { useCompletedSegmentIdsByUser } from 'lib/hooks/useCompletedSegmentIdsBy
 import { useToggleSegmentCompletion } from 'lib/hooks/useToggleSegmentCompletion'
 import { useVideoCategories } from 'lib/hooks/useVideoCategories'
 import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoSegments, validateSegmentRange } from 'lib/hooks/useSegments'
+import { useVideoAsset } from 'lib/hooks/useVideoAsset'
 
 export default function VideoUploadDetailScreen() {
     const { id, segmentId, startTime, endTime, category, title } = useLocalSearchParams<{ id?: string; segmentId?: string; startTime?: string; endTime?: string; category?: string; title?: string }>()
@@ -31,6 +32,7 @@ export default function VideoUploadDetailScreen() {
     const categoriesQuery = useVideoCategories(uploadQuery.data?.roadmap_id)
     const completedSegmentsQuery = useCompletedSegmentIdsByUser()
     const toggleSegmentCompletion = useToggleSegmentCompletion()
+    const videoAssetQuery = useVideoAsset(uploadQuery.data)
     const [noteText, setNoteText] = useState('')
     const [noteEditorOpen, setNoteEditorOpen] = useState(false)
     const [titleText, setTitleText] = useState('')
@@ -85,6 +87,7 @@ export default function VideoUploadDetailScreen() {
     }
 
     const upload = uploadQuery.data
+    const videoAsset = videoAssetQuery.data
     const segmentStart = Number(segmentStartText)
     const segmentEnd = Number(segmentEndText)
     const hasSegmentRange = !!segmentId && Number.isFinite(segmentStart) && Number.isFinite(segmentEnd) && segmentStart < segmentEnd
@@ -167,7 +170,7 @@ export default function VideoUploadDetailScreen() {
     }
 
     async function generateSegmentThumbnail() {
-        if (!upload.fallback_uri) {
+        if (videoAsset?.status !== 'AVAILABLE') {
             showSnack('The local video is unavailable for thumbnail generation.')
             return
         }
@@ -181,7 +184,7 @@ export default function VideoUploadDetailScreen() {
 
         setThumbnailLoading(true)
         try {
-            const result = await VideoThumbnails.getThumbnailAsync(upload.fallback_uri, { time: Math.round(seconds * 1000) })
+            const result = await VideoThumbnails.getThumbnailAsync(videoAsset.uri, { time: Math.round(seconds * 1000) })
             setThumbnailPreview(result.uri)
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not generate a thumbnail from this video.')
@@ -347,8 +350,8 @@ export default function VideoUploadDetailScreen() {
                     ) : null}
                 </View>
 
-                {!segmentEditorOpen && upload.fallback_uri && upload.status === 'AVAILABLE' && hasSegmentRange ? (
-                    <LocalSegmentPlayer source={upload.fallback_uri} startTime={segmentStart} endTime={segmentEnd} />
+                {!segmentEditorOpen && videoAsset?.status === 'AVAILABLE' && hasSegmentRange ? (
+                    <LocalSegmentPlayer source={videoAsset.uri} startTime={segmentStart} endTime={segmentEnd} />
                 ) : (
                     <View style={[styles.unavailable, { borderColor: colors.border }]}>
                         {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
@@ -511,9 +514,9 @@ export default function VideoUploadDetailScreen() {
                         onPress={(event) => event.stopPropagation()}
                     >
                         <ThemedText variant="subheader">Edit Segment Range</ThemedText>
-                        {upload.fallback_uri && upload.status === 'AVAILABLE' && Number.isFinite(Number(segmentStartDraft)) && Number.isFinite(Number(segmentEndDraft)) ? (
+                        {videoAsset?.status === 'AVAILABLE' && Number.isFinite(Number(segmentStartDraft)) && Number.isFinite(Number(segmentEndDraft)) ? (
                             <LocalSegmentPlayer
-                                source={upload.fallback_uri}
+                                source={videoAsset.uri}
                                 startTime={Number(segmentStartDraft)}
                                 endTime={Number(segmentEndDraft)}
                                 editableRange

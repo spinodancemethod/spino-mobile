@@ -3,6 +3,9 @@ import { QueryKey } from '@tanstack/react-query';
 export const queryKeys = {
     completedSegmentIds: (userId?: string | null) => ['completedSegmentIds', userId ?? 'current'] as const,
     videoUploads: (userId?: string | null) => ['videoUploads', userId ?? null] as const,
+    videoAsset: (videoUploadId?: string | null, fallbackUri?: string | null) => ['videoAsset', videoUploadId ?? null, fallbackUri ?? null] as const,
+    videoAssetAvailability: (userId?: string | null, references?: string) => ['videoAssetAvailability', userId ?? null, references ?? ''] as const,
+    videoSegmentCounts: (userId?: string | null) => ['videoSegmentCounts', userId ?? null] as const,
     videoCategories: (userId?: string | null, roadmapId?: string | null) => ['videoCategories', userId ?? null, roadmapId ?? null] as const,
     segments: (userId?: string | null, videoUploadId?: string | null) => ['segments', userId ?? null, videoUploadId ?? null] as const,
     userRoadmaps: (userId?: string | null) => ['userRoadmaps', userId ?? null] as const,

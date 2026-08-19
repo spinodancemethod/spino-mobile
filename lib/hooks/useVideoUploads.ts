@@ -15,6 +15,8 @@ type VideoUploadUpsert = {
     fallback_uri: string | null
     name: string | null
     filename: string | null
+    original_filename: string | null
+    content_hash: string | null
     duration_seconds: number | null
     mime_type: string | null
     file_size_bytes: number | null
@@ -44,6 +46,8 @@ function toUpsertPayload(video: LocalVideoUpload & { roadmapId: string }): Video
         fallback_uri: video.uri,
         name: video.fileName,
         filename: video.fileName,
+        original_filename: video.originalFilename ?? video.fileName,
+        content_hash: video.contentHash ?? null,
         duration_seconds: video.duration,
         mime_type: video.mimeType,
         file_size_bytes: video.fileSize,
@@ -88,6 +92,7 @@ export function useSyncVideoUpload() {
         },
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoSegmentCounts(user?.id) })
         },
     })
 }

@@ -17,6 +17,7 @@ import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
 import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCategories'
 import { useCreateVideoSegment } from 'lib/hooks/useSegments'
 import type { LocalVideoUpload } from 'lib/models'
+import { calculateVideoContentHash } from 'lib/videoHash'
 import { useLocalSearchParams } from 'expo-router'
 
 function formatTimestamp(value: number) {
@@ -91,11 +92,15 @@ export default function AddVideoScreen() {
 
             const asset = result.assets[0]
             const durationSeconds = asset.duration == null ? null : asset.duration / 1000
+            const originalFilename = asset.fileName ?? asset.uri.split('/').pop() ?? null
+            const contentHash = await calculateVideoContentHash(asset.uri)
             const nextVideo: LocalVideoUpload = {
                 id: `${asset.assetId ?? asset.uri}-${Date.now()}`,
                 assetId: asset.assetId ?? null,
                 uri: asset.uri,
-                fileName: asset.fileName ?? asset.uri.split('/').pop() ?? null,
+                fileName: originalFilename,
+                originalFilename,
+                contentHash,
                 mimeType: asset.mimeType ?? 'video/*',
                 duration: durationSeconds,
                 fileSize: asset.fileSize ?? null,

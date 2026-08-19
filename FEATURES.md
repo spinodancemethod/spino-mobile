@@ -7,6 +7,15 @@
 - Removed the admin catalog upload flow and legacy catalog system: routes, video/position/favourite/note hooks, old completion state, catalog models, bootstrap tables and policies, and obsolete seed/test files. Added `20260816_remove_legacy_catalog.sql`; it removes the old database objects but does not delete storage objects automatically.
 
 ## Dance Memory MVP
+## Dance Memory MVP
+
+- Added recovery-safe video metadata schema support: immutable original filenames and nullable SHA-256 content hashes are now available while existing video and segment identities remain unchanged.
+- Added bounded-memory SHA-256 hashing for local source-video URIs; content identity is calculated on-device and source-video bytes are never sent to Supabase.
+- Added a local video asset resolver that returns `NEEDS_RELINK` for missing, invalid, or inaccessible device references instead of exposing raw file failures.
+- Added verified manual video relinking: a selected local video must match the persisted SHA-256 before the existing upload's local reference is updated, preserving its ID and all saved segments.
+- Added recovery status and saved-segment counts to Local Videos, so unavailable source files are explicitly marked for relinking without hiding their learning items.
+- Added deterministic recovery candidate discovery that filters by saved metadata before hashing and returns only exact SHA-256 matches.
+- Added an on-device video scan for unavailable source references, presenting exact hash-based recovery recommendations that still require explicit confirmation.
 
 - Added a crop-style segment range editor with draggable start/end handles and in-range play/pause preview when editing an existing local video segment.
 - Extended the crop-style range editor to Add Video so new local video segments can be trimmed before they are saved.

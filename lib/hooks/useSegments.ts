@@ -102,6 +102,7 @@ export function useCreateVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoSegmentCounts(user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
@@ -136,6 +137,7 @@ export function useUpdateVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoSegmentCounts(user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
@@ -156,6 +158,7 @@ export function useDeleteVideoSegment() {
         },
         onSuccess: (segment) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, segment.video_upload_id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoSegmentCounts(user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
