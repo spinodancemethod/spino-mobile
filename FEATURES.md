@@ -40,6 +40,8 @@
 
 ## Current Product (Google Play Runtime)
 
+- Hardened Supabase release configuration by carrying the public URL and publishable key through Expo runtime metadata as a fallback, preventing silent missing-API-key login requests in store builds.
+- Hardened password login against transient native transport failures by retrying only `Network request failed` responses with bounded backoff; credential and backend errors still return immediately.
 - Fixed successful password login in release builds by routing from the concrete `/login` path only after the Supabase user state commits, preventing an unauthenticated-layout redirect race.
 
 - Standardized app form fields with a shared themed input so borders use the theme border color and placeholders use the theme placeholder color consistently.

@@ -3,6 +3,7 @@ import { ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Slot, router, usePathname } from 'expo-router';
 import * as Font from 'expo-font';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
@@ -23,9 +24,13 @@ import { invalidateBillingQueries } from 'lib/hooks/useBilling';
 
 function validateStartupEnv() {
     // Supabase backend for user auth and entitlements
+    const runtimeExtra = (Constants.expoConfig?.extra ?? {}) as {
+        supabaseUrl?: string;
+        supabasePublishableKey?: string;
+    };
     const supabaseVars = {
-        EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+        EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || runtimeExtra.supabaseUrl,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || runtimeExtra.supabasePublishableKey,
     };
 
     // RevenueCat SDKs for iOS and Android in-app purchases (both keys needed for cross-platform support)

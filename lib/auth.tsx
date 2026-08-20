@@ -7,6 +7,7 @@ import { showSnack } from 'lib/snackbarService';
 import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
+import { retryTransientAuthNetworkFailure } from 'lib/authNetworkRetry';
 
 type LegacyAuthLinkResult = {
     error?: { message?: string | null } | null;
@@ -261,7 +262,9 @@ export async function requestPasswordReset(email: string, redirectTo: string) {
 
 export async function signIn(email: string, password: string) {
     try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await retryTransientAuthNetworkFailure(() => (
+            supabase.auth.signInWithPassword({ email, password })
+        ));
         if (error) {
             showSnack(error.message || 'Login failed');
             void reportAppError({
