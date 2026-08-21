@@ -7,7 +7,6 @@
 - Removed the admin catalog upload flow and legacy catalog system: routes, video/position/favourite/note hooks, old completion state, catalog models, bootstrap tables and policies, and obsolete seed/test files. Added `20260816_remove_legacy_catalog.sql`; it removes the old database objects but does not delete storage objects automatically.
 
 ## Dance Memory MVP
-## Dance Memory MVP
 
 - Added recovery-safe video metadata schema support: immutable original filenames and nullable SHA-256 content hashes are now available while existing video and segment identities remain unchanged.
 - Added bounded-memory SHA-256 hashing for local source-video URIs; content identity is calculated on-device and source-video bytes are never sent to Supabase.
@@ -41,7 +40,6 @@
 ## Current Product (Google Play Runtime)
 
 - Hardened Supabase release configuration by carrying the public URL and publishable key through Expo runtime metadata as a fallback, preventing silent missing-API-key login requests in store builds.
-- Hardened password login against transient native transport failures by retrying only `Network request failed` responses with bounded backoff; credential and backend errors still return immediately.
 - Fixed successful password login in release builds by routing from the concrete `/login` path only after the Supabase user state commits, preventing an unauthenticated-layout redirect race.
 
 - Standardized app form fields with a shared themed input so borders use the theme border color and placeholders use the theme placeholder color consistently.

@@ -1,8 +1,8 @@
 import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import Constants from 'expo-constants'
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { getSupabaseRuntimeConfig } from './runtimeConfig'
 
 /*
     Supabase client wrapper for React Native / Expo.
@@ -14,14 +14,9 @@ import * as SecureStore from 'expo-secure-store';
         should be provided via your Expo environment configuration.
     - The auth options enable automatic token refresh and persistent sessions.
 */
-type SupabaseRuntimeExtra = {
-    supabaseUrl?: string;
-    supabasePublishableKey?: string;
-};
-
-const runtimeExtra = (Constants.expoConfig?.extra ?? {}) as SupabaseRuntimeExtra;
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() || runtimeExtra.supabaseUrl?.trim() || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || runtimeExtra.supabasePublishableKey?.trim() || '';
+const runtimeConfig = getSupabaseRuntimeConfig();
+const supabaseUrl = runtimeConfig.url;
+const supabaseAnonKey = runtimeConfig.publishableKey;
 const authStorageKey = 'spino-mobile.supabase.auth-token';
 const SECURE_STORE_CHUNK_SIZE = 1900;
 const CHUNK_PREFIX = '__spino_chunked_v1__:';
@@ -156,6 +151,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    // Explicitly set the public API header as well as passing the key to
+    // createClient. This protects standalone release builds from dropping the
+    // apikey header when runtime config comes from Expo manifest metadata.
+    global: {
+        headers: {
+            apikey: supabaseAnonKey,
+        },
+    },
     auth: {
         storage: authStorage,
         storageKey: authStorageKey,
