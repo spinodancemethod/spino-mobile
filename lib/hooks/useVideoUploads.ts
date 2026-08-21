@@ -34,7 +34,12 @@ async function fetchVideoUploads(userId: string): Promise<VideoUploadRecord[]> {
         .order('updated_at', { ascending: false })
 
     if (error) throw error
-    return (data ?? []) as VideoUploadRecord[]
+    // Postgres returns `bigint` columns (file_size_bytes) as strings to avoid JS number precision loss;
+    // coerce back to number so downstream strict equality checks (e.g. relink metadata matching) work.
+    return (data ?? []).map((record) => ({
+        ...record,
+        file_size_bytes: record.file_size_bytes == null ? null : Number(record.file_size_bytes),
+    })) as VideoUploadRecord[]
 }
 
 function toUpsertPayload(video: LocalVideoUpload & { roadmapId: string }): VideoUploadUpsert {
