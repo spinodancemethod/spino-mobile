@@ -22,6 +22,13 @@ import { useEntitlement } from 'lib/hooks/useEntitlement';
         only via explicit upsell CTAs within the content screens.
 */
 
+// Expo Router 58 removed the `initialRouteName` navigator prop. `anchor` in
+// unstable_settings preserves the previous behavior: "your-roadmaps" is inserted
+// as the back destination when deep linking directly into another tab.
+export const unstable_settings = {
+    anchor: 'your-roadmaps',
+};
+
 export default function DashboardLayout() {
     const styles = useStyles();
     const { isLoading } = useEntitlement();
@@ -40,7 +47,10 @@ export default function DashboardLayout() {
     return (
         <>
             <Tabs
-                initialRouteName="your-roadmaps"
+                // Required for the "your-roadmaps" anchor above to take effect:
+                // non-stack navigators only return to the anchor when backBehavior
+                // is "initialRoute" (the default is "firstRoute").
+                backBehavior="initialRoute"
                 screenOptions={{
                     headerShown: false,
                     tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
@@ -72,7 +82,6 @@ export default function DashboardLayout() {
                         )
                     }}
                 />
-                <Tabs.Screen name="user-roadmap" options={{ href: null }} />
             </Tabs>
         </>
     )

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Animated, LayoutChangeEvent, PanResponderInstance, Pressable, TouchableOpacity, View } from 'react-native'
+import { Animated, LayoutChangeEvent, PanResponderInstance, Pressable, TouchableOpacity, View, ViewInstance } from 'react-native'
 import { Image as ExpoImage } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedText from 'Components/ThemedText'
@@ -7,7 +7,7 @@ import { RoadmapPosition, RoadmapVideo } from './types'
 
 type RoadmapCanvasProps = {
     styles: any;
-    canvasRef: React.RefObject<View | null>;
+    canvasRef: React.RefObject<ViewInstance | null>;
     onCanvasLayout: (_event: LayoutChangeEvent) => void;
     onSurfaceLayout?: (_event: LayoutChangeEvent) => void;
     panHandlers: PanResponderInstance['panHandlers'];

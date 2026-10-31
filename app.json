@@ -7,12 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F5F3FF"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -23,7 +17,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5F3FF"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -37,6 +30,14 @@
       "expo-font",
       "expo-sqlite",
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F3FF"
+        }
+      ],
       "expo-video",
       [
         "expo-image-picker",
@@ -51,14 +52,6 @@
           "photosPermission": "Allow Spino to scan videos on this device and suggest recovered source references.",
           "savePhotosPermission": false,
           "isAccessMediaLocationEnabled": false
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "2.1.20"
-          }
         }
       ],
       "expo-system-ui",

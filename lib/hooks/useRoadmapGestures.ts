@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { Animated, LayoutChangeEvent, PanResponder, View } from 'react-native'
+import { Animated, LayoutChangeEvent, PanResponder, View, ViewInstance } from 'react-native'
 
 type UseRoadmapGesturesParams = {
     minScale: number;
@@ -30,7 +30,9 @@ export function useRoadmapGestures({
     const initialDistance = useRef<number | null>(null)
     const surfaceHeightRef = useRef(0)
 
-    const canvasRef = useRef<View>(null)
+    // RN 0.88 strict ref types: refs to host components use instance types
+    // (ViewInstance) rather than the component type (View).
+    const canvasRef = useRef<ViewInstance>(null)
     const canvasOffset = useRef({ x: 0, y: 0 })
 
     const resetViewport = useCallback((nextPanX: number, nextPanY: number, nextScale: number) => {

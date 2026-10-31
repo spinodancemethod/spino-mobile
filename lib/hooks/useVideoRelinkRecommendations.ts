@@ -8,7 +8,9 @@ const ASSETS_PER_PAGE = 100
 const MAX_SCANNED_ASSETS = 1000
 
 async function scanVideoCandidates(uploads: VideoUploadRecord[]): Promise<ScannedVideoCandidate[]> {
-    const MediaLibrary = await import('expo-media-library')
+    // SDK 58 moved the classic MediaLibrary API (getAssetsAsync, MediaType, SortBy)
+    // behind the /legacy subpath; the root import now exposes the new "next" API.
+    const MediaLibrary = await import('expo-media-library/legacy')
     const { File } = await import('expo-file-system')
     const permission = await MediaLibrary.requestPermissionsAsync(false, ['video'])
     if (!permission.granted) throw new Error('Video library permission is required to find recovered videos.')

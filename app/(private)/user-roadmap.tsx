@@ -166,6 +166,7 @@ export default function UserRoadmapScreen() {
                         .then(() => {
                             showSnack('Roadmap deleted.')
                             setManageModalOpen(false)
+                            // Replace removes this detail screen from the stack after delete.
                             router.replace('/(private)/(dashboard)/your-roadmaps')
                         })
                         .catch((error) => showSnack(error instanceof Error ? error.message : 'Could not delete roadmap.'))
@@ -272,7 +273,7 @@ export default function UserRoadmapScreen() {
         <ThemedView style={{ flex: 1 }}>
             <View style={screenStyles.headerRow}>
                 <Pressable
-                    onPress={() => router.push('/(private)/(dashboard)/your-roadmaps')}
+                    onPress={() => router.back()}
                     style={screenStyles.editIconButton}
                     accessibilityRole="button"
                     accessibilityLabel="Go to your roadmaps"

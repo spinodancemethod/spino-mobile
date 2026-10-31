@@ -35,5 +35,11 @@ export async function calculateVideoContentHash(uri: string): Promise<string> {
     if (!file.exists) {
         throw new Error('The selected video is no longer available.')
     }
-    return sha256FromReader(file.open())
+    // expo-file-system (SDK 58) made FileHandle.readBytes async; readBytesSync keeps
+    // the chunk reader synchronous, matching the synchronous sha256 hashing loop.
+    const handle = file.open()
+    return sha256FromReader({
+        readBytes: (length) => handle.readBytesSync(length),
+        close: () => handle.close(),
+    })
 }

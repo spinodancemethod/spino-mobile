@@ -51,12 +51,14 @@ export default function YourRoadmapsScreen() {
     }
 
     function openRoadmap(roadmap: UserRoadmap) {
-        router.push({ pathname: '/(private)/(dashboard)/user-roadmap', params: { roadmapId: roadmap.id } })
+        // user-roadmap is a Stack screen (not a tab), so a plain push gives
+        // correct back behavior to the roadmap list.
+        router.push({ pathname: '/(private)/user-roadmap', params: { roadmapId: roadmap.id } })
     }
 
     function editRoadmap(roadmap: UserRoadmap) {
         router.push({
-            pathname: '/(private)/(dashboard)/user-roadmap',
+            pathname: '/(private)/user-roadmap',
             params: { roadmapId: roadmap.id, editRoadmap: '1' },
         })
     }
