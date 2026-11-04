@@ -31,6 +31,11 @@ CREATE INDEX IF NOT EXISTS user_segment_progress_user_status_idx
 CREATE INDEX IF NOT EXISTS video_uploads_user_updated_idx
   ON public.video_uploads (user_id, updated_at DESC);
 
+-- Add Video reuses a finished analysis for the same file (by sampled fingerprint).
+CREATE INDEX IF NOT EXISTS video_uploads_user_content_hash_idx
+  ON public.video_uploads (user_id, content_hash)
+  WHERE content_hash IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS user_roadmaps_user_updated_idx
   ON public.user_roadmaps (user_id, updated_at DESC);
 
@@ -45,3 +50,9 @@ CREATE INDEX IF NOT EXISTS segments_user_video_idx
 
 CREATE INDEX IF NOT EXISTS segments_category_idx
   ON public.segments (user_id, category_id);
+
+-- Fable v2
+CREATE UNIQUE INDEX IF NOT EXISTS analysis_jobs_one_active_per_video
+  ON public.analysis_jobs (video_upload_id) WHERE status IN ('queued', 'processing');
+CREATE INDEX IF NOT EXISTS analysis_jobs_queue_idx
+  ON public.analysis_jobs (status, created_at) WHERE status = 'queued';

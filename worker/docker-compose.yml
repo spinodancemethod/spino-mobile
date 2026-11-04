@@ -1,0 +1,23 @@
+services:
+  fable:
+    build: .
+    image: fable-poc:latest
+    # Usage: docker compose run --rm fable --video /media/<file>.mp4 --out /runs/<name>
+    volumes:
+      - ../testMedia:/media:ro
+      - ../runs:/runs
+      - ./positions:/app/positions:ro
+    # ANTHROPIC_API_KEY comes from .env.worker.local (git-ignored). To override
+    # for one run: docker compose run -e ANTHROPIC_API_KEY=... fable ...
+    env_file:
+      - .env.worker.local
+
+  # Long-running job loop: polls analysis_jobs, analyses uploaded audio, writes
+  # count_grid back, deletes the audio. `docker compose up -d worker`
+  worker:
+    build: .
+    image: fable-poc:latest
+    entrypoint: ["python", "-m", "fable.worker"]
+    restart: unless-stopped
+    env_file:
+      - .env.worker.local

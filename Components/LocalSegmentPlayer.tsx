@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { VideoView, useVideoPlayer } from 'expo-video'
 import { Ionicons } from '@expo/vector-icons'
+import { Gesture, GestureDetector } from 'react-native-gesture-handler'
 import ThemedText from 'Components/ThemedText'
 import { useTheme } from 'constants/useTheme'
 
@@ -193,6 +194,25 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
     }
 
     function renderControls() {
+        // Horizontal-only pans so a vertical scroll that starts on a track does not
+        // move a handle (that used to jump the trim end to wherever the finger landed).
+        // A plain tap still jumps the nearest handle / playhead to the tapped spot.
+        const rangeGesture = Gesture.Race(
+            Gesture.Pan().runOnJS(true).activeOffsetX([-6, 6]).failOffsetY([-12, 12])
+                .onStart((e) => beginRangeDrag(e.x))
+                .onUpdate((e) => applyRangeLocation(e.x))
+                .onEnd(finishRangeDrag)
+                .onFinalize(finishRangeDrag),
+            Gesture.Tap().runOnJS(true).onEnd((e) => { beginRangeDrag(e.x); finishRangeDrag() }),
+        )
+        const scrubGesture = Gesture.Race(
+            Gesture.Pan().runOnJS(true).activeOffsetX([-6, 6]).failOffsetY([-12, 12])
+                .onStart((e) => beginScrub(e.x))
+                .onUpdate((e) => applyScrubLocation(e.x))
+                .onEnd(finishScrub)
+                .onFinalize(finishScrub),
+            Gesture.Tap().runOnJS(true).onEnd((e) => { beginScrub(e.x); finishScrub() }),
+        )
         const rangeStartProgress = rangeDuration > 0 ? Math.max(0, Math.min(1, safeStartTime / rangeDuration)) : 0
         const rangeEndProgress = rangeDuration > 0 ? Math.max(0, Math.min(1, (safeEndTime ?? rangeDuration) / rangeDuration)) : 1
         return (
@@ -203,13 +223,10 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
                             <ThemedText variant="small">Trim selection</ThemedText>
                             <ThemedText variant="small">{formatSeconds(safeStartTime)} - {formatSeconds(safeEndTime ?? rangeDuration)}</ThemedText>
                         </View>
+                        <GestureDetector gesture={rangeGesture}>
                         <View
                             style={[styles.rangeTrack, { backgroundColor: colors.border }]}
                             onLayout={(event) => setRangeTrackWidth(event.nativeEvent.layout.width)}
-                            onTouchStart={(event) => beginRangeDrag(event.nativeEvent.locationX)}
-                            onTouchMove={(event) => applyRangeLocation(event.nativeEvent.locationX)}
-                            onTouchEnd={finishRangeDrag}
-                            onTouchCancel={finishRangeDrag}
                         >
                             <View
                                 pointerEvents="none"
@@ -218,23 +235,22 @@ export default function LocalSegmentPlayer({ source, startTime = 0, endTime = nu
                             <View pointerEvents="none" style={[styles.rangeHandle, { left: `${rangeStartProgress * 100}%`, backgroundColor: colors.card, borderColor: colors.primary }]} />
                             <View pointerEvents="none" style={[styles.rangeHandle, { left: `${rangeEndProgress * 100}%`, backgroundColor: colors.card, borderColor: colors.primary }]} />
                         </View>
+                        </GestureDetector>
                     </View>
                 ) : null}
                 <View style={styles.timeLabels}>
                     <ThemedText variant="small">{formatSeconds(Math.max(seekMin, activeTime))}</ThemedText>
                     <ThemedText variant="small">{formatSeconds(seekMax)}</ThemedText>
                 </View>
+                <GestureDetector gesture={scrubGesture}>
                 <View
                     style={[styles.scrubTouchArea, { backgroundColor: colors.border }]}
                     onLayout={(event) => setScrubWidth(event.nativeEvent.layout.width)}
-                    onTouchStart={(event) => beginScrub(event.nativeEvent.locationX)}
-                    onTouchMove={(event) => applyScrubLocation(event.nativeEvent.locationX)}
-                    onTouchEnd={finishScrub}
-                    onTouchCancel={finishScrub}
                 >
                     <View pointerEvents="none" style={[styles.scrubProgress, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
                     <View pointerEvents="none" style={[styles.scrubThumb, { left: `${progress * 100}%`, backgroundColor: colors.card, borderColor: colors.primary }]} />
                 </View>
+                </GestureDetector>
                 <View style={styles.buttonRow}>
                     <TouchableOpacity onPress={togglePlayback} style={[styles.playButton, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={isPlaying ? 'Pause video' : 'Play video'}>
                         <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color={colors.onPrimary} />

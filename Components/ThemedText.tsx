@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Text, TextStyle } from 'react-native';
+import { StyleProp, Text, TextStyle } from 'react-native';
 import { useTheme } from '../constants/useTheme';
 import { createStyles, useStyles } from '../constants/styles';
 type Variant = 'title' | 'subheader' | 'large' | 'small';
@@ -7,7 +7,7 @@ type Variant = 'title' | 'subheader' | 'large' | 'small';
 interface Props {
     children: React.ReactNode;
     variant?: Variant;
-    style?: TextStyle;
+    style?: StyleProp<TextStyle>;
     numberOfLines?: number;
 }
 

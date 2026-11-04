@@ -1,29 +1,3 @@
-  fallback_uri text,
-  name text,
-  filename text,
-+  original_filename text,
-+  content_hash text,
-  custom_title text,
-  duration_seconds double precision,
-  mime_type text,
-  file_size_bytes bigint,
-  width integer,
-  height integer,
-  creation_time timestamptz,
-  thumbnail_reference text,
-  status text NOT NULL DEFAULT 'UNKNOWN',
-  replacement_review_pending boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
-  CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
-  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key),
-+  CONSTRAINT video_uploads_original_filename_check CHECK (original_filename IS NULL OR length(trim(original_filename)) > 0),
-+  CONSTRAINT video_uploads_content_hash_check CHECK (content_hash IS NULL OR content_hash ~ '^[a-f0-9]{64}$'),
-  CONSTRAINT video_uploads_custom_title_check CHECK (custom_title IS NULL OR length(trim(custom_title)) > 0)
-);
-
-CREATE TABLE IF NOT EXISTS public.video_categories (
 -- 01_tables.sql
 -- Base tables and core constraints for the public schema.
 -- Run as a privileged role (for example, postgres/service_role).
@@ -63,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
   fallback_uri text,
   name text,
   filename text,
+  original_filename text,
+  content_hash text,
   custom_title text,
   duration_seconds double precision,
   mime_type text,
@@ -78,6 +54,9 @@ CREATE TABLE IF NOT EXISTS public.video_uploads (
   CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
   CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
   CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key),
+  CONSTRAINT video_uploads_original_filename_check CHECK (original_filename IS NULL OR length(trim(original_filename)) > 0),
+  -- Legacy 64-hex whole-file hash, or the sampled 'v2-' fingerprint from lib/videoHash.ts.
+  CONSTRAINT video_uploads_content_hash_check CHECK (content_hash IS NULL OR content_hash ~ '^(v2-)?[a-f0-9]{64}$'),
   CONSTRAINT video_uploads_custom_title_check CHECK (custom_title IS NULL OR length(trim(custom_title)) > 0)
 );
 
@@ -223,3 +202,27 @@ CREATE TABLE IF NOT EXISTS public.client_error_logs (
 );
 
 COMMIT;
+
+-- Fable v2 (2026-11-01): audio-only analysis. See sql/migrations/20261101_create_analysis_jobs.sql.
+ALTER TABLE public.video_uploads
+  ADD COLUMN IF NOT EXISTS analysis_status text NOT NULL DEFAULT 'none',
+  ADD COLUMN IF NOT EXISTS analysis_mode text,
+  ADD COLUMN IF NOT EXISTS count_grid jsonb,
+  ADD COLUMN IF NOT EXISTS analysed_at timestamptz;
+
+CREATE TABLE IF NOT EXISTS public.analysis_jobs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  video_upload_id uuid NOT NULL REFERENCES public.video_uploads (id) ON DELETE CASCADE,
+  audio_path text NOT NULL,
+  duration_seconds double precision,
+  status text NOT NULL DEFAULT 'queued',
+  attempts integer NOT NULL DEFAULT 0,
+  error text,
+  worker_id text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  started_at timestamptz,
+  finished_at timestamptz,
+  CONSTRAINT analysis_jobs_status_check CHECK (status IN ('queued', 'processing', 'done', 'failed')),
+  CONSTRAINT analysis_jobs_audio_path_check CHECK (length(trim(audio_path)) > 0)
+);

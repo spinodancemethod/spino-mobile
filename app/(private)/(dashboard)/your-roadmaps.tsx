@@ -13,11 +13,22 @@ import {
     useUserRoadmaps,
     UserRoadmap,
 } from 'lib/hooks/useUserRoadmaps'
+import { useApplyPositionLibrary } from 'lib/hooks/useVideoCategories'
 
 export default function YourRoadmapsScreen() {
     const { colors } = useTheme()
     const roadmapsQuery = useUserRoadmaps()
     const createRoadmap = useCreateUserRoadmap()
+    // Fable v2: copy the Bachata position list into a roadmap's categories (idempotent).
+    const applyLibrary = useApplyPositionLibrary()
+    async function addPositions(roadmapId: string) {
+        try {
+            const added = await applyLibrary.mutateAsync({ roadmapId, danceStyle: 'bachata' })
+            showSnack(added > 0 ? `Added ${added} Bachata positions` : 'All Bachata positions are already in this roadmap')
+        } catch (error) {
+            showSnack(error instanceof Error ? error.message : 'Could not add positions.')
+        }
+    }
 
     const [createModalOpen, setCreateModalOpen] = useState(false)
 
@@ -102,6 +113,12 @@ export default function YourRoadmapsScreen() {
                             <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
                             {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
                         </Pressable>
+                        <ThemedButton
+                            title="Add Bachata positions"
+                            variant="ghost"
+                            onPress={() => void addPositions(roadmap.id)}
+                            loading={applyLibrary.isPending && applyLibrary.variables?.roadmapId === roadmap.id}
+                        />
                     </View>
                 ))}
             </ScrollView>

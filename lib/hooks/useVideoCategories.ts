@@ -119,3 +119,25 @@ export function useDeleteVideoCategory() {
         },
     })
 }
+
+/**
+ * Fable v2 Prompt 10: copy the dance-style position library into a roadmap's
+ * categories (user-owned, tagged with position_slug). Idempotent; returns how many
+ * were added.
+ */
+export function useApplyPositionLibrary() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (input: { roadmapId: string; danceStyle: 'bachata' | 'salsa' }) => {
+            const { data, error } = await supabase.rpc('apply_position_library', {
+                p_roadmap_id: input.roadmapId,
+                p_dance_style: input.danceStyle,
+            })
+            if (error) throw error
+            return (data as number) ?? 0
+        },
+        onSuccess: (_added, input) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, input.roadmapId) })
+        },
+    })
+}

@@ -22,8 +22,48 @@ export type VideoUploadRecord = {
     thumbnail_reference?: string | null;
     status: 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'UNKNOWN';
     replacement_review_pending: boolean;
+    // Fable v2: audio-only analysis result. The video itself never leaves the phone.
+    analysis_status?: AnalysisStatus;
+    analysis_mode?: AnalysisMode | null;
+    count_grid?: CountGrid | null;
+    analysed_at?: string | null;
     created_at: string;
     updated_at: string;
+};
+
+export type AnalysisStatus = 'none' | 'queued' | 'processing' | 'ready' | 'failed';
+export type AnalysisMode = 'counting' | 'music' | 'none';
+
+/** Count grid produced by the worker (Fable_Master_Spec_v2.md §3). All times in seconds. */
+export type CountGrid = {
+    mode: AnalysisMode;
+    confidence: number;
+    count_period_s: number | null;
+    /** Start of each 8-count. Detected in counting mode; a guess in music mode. */
+    count1_times: number[];
+    /** Every 4 counts. */
+    bar_times: number[];
+    /** Every count. */
+    beat_times: number[];
+    /** Instructor talking rather than counting; shaded in the builder, still selectable. */
+    speech_spans: [number, number][];
+    /** Music mode: which bar is "1" is unknown until the user taps one. */
+    ambiguous_1_vs_5: boolean;
+    duration_s: number;
+};
+
+export type AnalysisJobRecord = {
+    id: string;
+    user_id: string;
+    video_upload_id: string;
+    audio_path: string;
+    duration_seconds: number | null;
+    status: 'queued' | 'processing' | 'done' | 'failed';
+    attempts: number;
+    error: string | null;
+    created_at: string;
+    started_at: string | null;
+    finished_at: string | null;
 };
 export type LocalVideoStatus = 'AVAILABLE' | 'MISSING' | 'ACCESS_DENIED' | 'NEEDS_RELINK' | 'UNKNOWN';
 
@@ -55,6 +95,9 @@ export type VideoCategoryRecord = {
     name: string;
     description: string | null;
     system_category: boolean;
+    // Fable v2: set when the category was created from the position library (stable id across renames)
+    position_slug?: string | null;
+    sort_order?: number | null;
     created_at: string;
     updated_at: string;
 };

@@ -317,3 +317,8 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.has_active_subscription(uuid) TO service_role;
 COMMIT;
+
+-- Fable v2: analysis_jobs policies, grants, bucket and RPCs live in
+-- sql/migrations/20261101_create_analysis_jobs.sql (sections 2-6). Run it after this file.
+-- Fable v2 Prompt 10: position_templates + apply_position_library live in
+-- sql/migrations/20261102_position_library.sql. Run it after the analysis-jobs migration.

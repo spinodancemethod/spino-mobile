@@ -261,7 +261,6 @@ export default function LocalVideosScreen() {
                         style={styles.fullButton}
                     />
                 ) : null}
-
                 {videos.length === 0 ? (
                     <View style={[styles.emptyState, { borderColor: colors.border }]}>
                         <ThemedText variant="subheader">No local video references yet.</ThemedText>

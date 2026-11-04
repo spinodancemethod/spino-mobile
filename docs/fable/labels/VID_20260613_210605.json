@@ -1,0 +1,18 @@
+{
+  "video": "testMedia/VID_20260613_210605.mp4.mp4",
+  "labelled_by": "user", "date": "2026-10-31",
+  "count1_times_verdict": "spot on",
+  "cycles": [
+    {"index": 0, "t": 0.00,  "true_position": "basic",               "note": "partial first cycle"},
+    {"index": 1, "t": 5.11,  "true_position": "shadow_back_to_back", "note": "spot on"},
+    {"index": 2, "t": 11.61, "true_position": null, "note": "not clear; merges with prior snippet"},
+    {"index": 3, "t": 17.60, "true_position": null, "note": "not clear; merges with prior snippet"},
+    {"index": 4, "t": 23.23, "true_position": null, "note": "not clear; merges with prior snippet"},
+    {"index": 5, "t": 30.08, "true_position": "basic",               "note": "correct"}
+  ],
+  "expected_snippets": [
+    {"position_id": "basic", "start": 0.0, "end": 5.11},
+    {"position_id": "shadow_back_to_back", "start": 5.11, "end": 30.08, "note": "16+ bars incl. unclear cycles"},
+    {"position_id": "basic", "start": 30.08, "end": 35.07}
+  ]
+}
