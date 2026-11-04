@@ -6,7 +6,7 @@ import { resolveStoredVideoAsset, type VideoAssetResolution } from '../videoAsse
 
 function createVideoReferences(records: VideoUploadRecord[]): string {
     return records
-        .map((record) => `${record.id}:${record.fallback_uri ?? ''}`)
+        .map((record) => `${record.id}:${record.media_identifier ?? ''}:${record.fallback_uri ?? ''}`)
         .sort()
         .join('|')
 }

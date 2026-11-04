@@ -20,6 +20,8 @@ import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCa
 import { useCreateVideoSegment } from 'lib/hooks/useSegments'
 import type { LocalVideoUpload } from 'lib/models'
 import { calculateVideoContentHash } from 'lib/videoHash'
+import { persistPickedVideo } from 'lib/localVideoStore'
+import { ensureMediaLibraryAssetAccess } from 'lib/mediaLibraryAccess'
 import { useLocalSearchParams } from 'expo-router'
 import { useRequestVideoAnalysis, useVideoAnalysisStatus, analysisStatusLabel, reuseStoredAnalysis } from 'lib/hooks/useVideoAnalysis'
 import { buildChunks, nearestBeat, type ChunkSize } from 'lib/analysis/chunks'
@@ -225,6 +227,9 @@ export default function AddVideoScreen() {
                 return
             }
 
+            // Grants the picker access to asset ids, which keep the reference stable (see lib/localVideoStore.ts).
+            await ensureMediaLibraryAssetAccess()
+
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
                 allowsEditing: false,
@@ -235,11 +240,18 @@ export default function AddVideoScreen() {
             const asset = result.assets[0]
             const durationSeconds = asset.duration == null ? null : asset.duration / 1000
             const originalFilename = asset.fileName ?? asset.uri.split('/').pop() ?? null
-            const contentHash = await calculateVideoContentHash(asset.uri)
-            const nextVideo: LocalVideoUpload = {
-                id: `${asset.assetId ?? asset.uri}-${Date.now()}`,
-                assetId: asset.assetId ?? null,
+            const localKey = `${asset.assetId ?? 'picked'}-${Date.now()}`
+            const { runtimeUri } = await persistPickedVideo({
                 uri: asset.uri,
+                assetId: asset.assetId ?? null,
+                fileName: originalFilename,
+                key: localKey,
+            })
+            const contentHash = await calculateVideoContentHash(runtimeUri)
+            const nextVideo: LocalVideoUpload = {
+                id: localKey,
+                assetId: asset.assetId ?? null,
+                uri: runtimeUri,
                 fileName: originalFilename,
                 originalFilename,
                 contentHash,

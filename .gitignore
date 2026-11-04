@@ -84,3 +84,6 @@ yarn-error.*
 # @end expo-cli
 # Fable PoC run outputs
 runs/
+
+# Local test videos (too large for GitHub)
+testMedia/

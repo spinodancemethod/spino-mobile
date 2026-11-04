@@ -6,6 +6,8 @@ import { requireUserId } from './userId'
 import { supabase } from '../supabase'
 import type { LocalVideoUpload, VideoUploadRecord } from '../models'
 import { Platform } from 'react-native'
+import * as FileSystem from 'expo-file-system/legacy'
+import { toPortableUri } from '../localVideoStore'
 
 type VideoUploadUpsert = {
     local_reference_key: string
@@ -48,7 +50,8 @@ function toUpsertPayload(video: LocalVideoUpload & { roadmapId: string }): Video
         roadmap_id: video.roadmapId,
         platform: Platform.OS,
         media_identifier: video.assetId,
-        fallback_uri: video.uri,
+        // Documents copies are stored with the portable appdocs:// scheme so iOS container path changes don't break them.
+        fallback_uri: video.uri ? toPortableUri(video.uri, FileSystem.documentDirectory) : null,
         name: video.fileName,
         filename: video.fileName,
         original_filename: video.originalFilename ?? video.fileName,

@@ -5,7 +5,7 @@ import { resolveStoredVideoAsset } from '../videoAssetResolver'
 
 export function useVideoAsset(videoUpload: VideoUploadRecord | null | undefined) {
     return useQuery({
-        queryKey: queryKeys.videoAsset(videoUpload?.id, videoUpload?.fallback_uri),
+        queryKey: queryKeys.videoAsset(videoUpload?.id, `${videoUpload?.media_identifier ?? ''}|${videoUpload?.fallback_uri ?? ''}`),
         queryFn: () => resolveStoredVideoAsset(videoUpload!),
         enabled: !!videoUpload?.id,
     })

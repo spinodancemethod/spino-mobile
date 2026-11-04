@@ -11,6 +11,8 @@ import { showSnack } from 'lib/snackbarService'
 import type { LocalVideoStatus, LocalVideoUpload, VideoUploadRecord } from 'lib/models'
 import type { VideoAssetResolution } from 'lib/videoAssetResolver'
 import { calculateVideoContentHash } from 'lib/videoHash'
+import { persistPickedVideo, removePersistedVideo } from 'lib/localVideoStore'
+import { ensureMediaLibraryAssetAccess } from 'lib/mediaLibraryAccess'
 
 function cloudRecordToLocal(
     record: VideoUploadRecord,
@@ -78,6 +80,9 @@ export function useLocalVideoLibrary() {
                 showSnack('Media library permission is required to choose a video.')
                 return
             }
+            // Without media-library access the picker returns no assetId on iOS, and the
+            // asset id is what keeps the reference stable across cache purges and updates.
+            await ensureMediaLibraryAssetAccess()
 
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
@@ -89,6 +94,13 @@ export function useLocalVideoLibrary() {
             const asset = result.assets[0]
             const durationSeconds = asset.duration == null ? null : asset.duration / 1000
             const originalFilename = asset.fileName ?? asset.uri.split('/').pop() ?? null
+            const persistKey = replacementFor ? replacementFor.id : `${asset.assetId ?? 'picked'}-${Date.now()}`
+            const { runtimeUri } = await persistPickedVideo({
+                uri: asset.uri,
+                assetId: asset.assetId ?? null,
+                fileName: originalFilename,
+                key: persistKey,
+            })
             if (replacementFor) {
                 const videoUpload = cloudUploadsQuery.data?.find((item) => item.local_reference_key === replacementFor.id)
                 if (!videoUpload) throw new Error('The saved video record could not be found.')
@@ -96,24 +108,24 @@ export function useLocalVideoLibrary() {
                 await relinkVideoUpload({
                     videoUpload,
                     candidate: {
-                        uri: asset.uri,
+                        uri: runtimeUri,
                         assetId: asset.assetId ?? null,
                         fileSize: asset.fileSize ?? null,
                         durationSeconds,
                     },
                 })
-                setRuntimeUris((currentUris) => ({ ...currentUris, [replacementFor.id]: asset.uri }))
+                setRuntimeUris((currentUris) => ({ ...currentUris, [replacementFor.id]: runtimeUri }))
                 setSelectedVideoId(replacementFor.id)
                 const segmentCount = replacementFor.segmentCount ?? 0
                 showSnack(`${replacementFor.originalFilename ?? replacementFor.fileName ?? 'Video'} restored. ${segmentCount} ${segmentCount === 1 ? 'segment is' : 'segments are'} available again.`)
                 return
             }
 
-            const contentHash = await calculateVideoContentHash(asset.uri)
+            const contentHash = await calculateVideoContentHash(runtimeUri)
             const video: LocalVideoUpload = {
-                id: `${asset.assetId ?? asset.uri}-${Date.now()}`,
+                id: persistKey,
                 assetId: asset.assetId ?? null,
-                uri: asset.uri,
+                uri: runtimeUri,
                 fileName: originalFilename,
                 originalFilename,
                 contentHash,
@@ -152,7 +164,10 @@ export function useLocalVideoLibrary() {
                     void (async () => {
                         const cloudVideo = cloudUploadsQuery.data?.find((item) => item.local_reference_key === video.id)
                         try {
-                            if (cloudVideo) await deleteCloudVideoUpload(cloudVideo.id)
+                            if (cloudVideo) {
+                                await deleteCloudVideoUpload(cloudVideo.id)
+                                await removePersistedVideo(cloudVideo.fallback_uri)
+                            }
                         } catch (error) {
                             showSnack(error instanceof Error ? error.message : 'Could not remove the cloud reference.')
                             return

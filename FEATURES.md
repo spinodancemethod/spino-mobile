@@ -13,6 +13,7 @@
 ## Dance Memory MVP
 
 - Added recovery-safe video metadata schema support: immutable original filenames and nullable SHA-256 content hashes are now available while existing video and segment identities remain unchanged.
+- Made local video references durable: the resolver now finds a video by its media-library asset id first (survives cache purges and iOS app-update container changes), then the stored path. Videos picked without an asset id are copied once into the app documents folder and stored as a portable `appdocs://` path. Relink only becomes necessary when the asset is genuinely gone from the device.
 - Added bounded-memory SHA-256 hashing for local source-video URIs; content identity is calculated on-device and source-video bytes are never sent to Supabase.
 - Added a local video asset resolver that returns `NEEDS_RELINK` for missing, invalid, or inaccessible device references instead of exposing raw file failures.
 - Added verified manual video relinking: a selected local video must match the persisted SHA-256 before the existing upload's local reference is updated, preserving its ID and all saved segments.

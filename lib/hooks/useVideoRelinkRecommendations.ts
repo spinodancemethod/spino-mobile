@@ -3,6 +3,7 @@ import type { VideoUploadRecord } from '../models'
 import { findVideoRelinkCandidates } from '../videoRelinkDiscovery'
 import { calculateVideoContentHash } from '../videoHash'
 import { hasPotentialVideoMetadataMatch, type ScannedVideoCandidate } from '../videoLibraryScanner'
+import { ensureMediaLibraryAssetAccess } from '../mediaLibraryAccess'
 
 const ASSETS_PER_PAGE = 100
 const MAX_SCANNED_ASSETS = 1000
@@ -12,8 +13,7 @@ async function scanVideoCandidates(uploads: VideoUploadRecord[]): Promise<Scanne
     // behind the /legacy subpath; the root import now exposes the new "next" API.
     const MediaLibrary = await import('expo-media-library/legacy')
     const { File } = await import('expo-file-system')
-    const permission = await MediaLibrary.requestPermissionsAsync(false, ['video'])
-    if (!permission.granted) throw new Error('Video library permission is required to find recovered videos.')
+    if (!await ensureMediaLibraryAssetAccess()) throw new Error('Video library permission is required to find recovered videos.')
 
     const candidates: ScannedVideoCandidate[] = []
     let inspectedAssets = 0
