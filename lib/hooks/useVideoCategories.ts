@@ -23,6 +23,8 @@ async function fetchCategories(roadmapId: string): Promise<VideoCategoryRecord[]
         .from('video_categories')
         .select('*')
         .eq('roadmap_id', roadmapId)
+        // User-set order first (nulls last), then the legacy order (system first, by name).
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('system_category', { ascending: false })
         .order('name')
     if (error) throw error
@@ -138,6 +140,39 @@ export function useApplyPositionLibrary() {
         },
         onSuccess: (_added, input) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, input.roadmapId) })
+        },
+    })
+}
+
+/**
+ * Persist a new vertical order of the categories of one roadmap (roadmap drag).
+ * Optimistic: the cache is reordered at once; the rows get sort_order = index * 10.
+ */
+export function useReorderVideoCategories() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async ({ roadmapId, orderedIds }: { roadmapId: string; orderedIds: string[] }) => {
+            // RPC rather than per-row updates: the per-roadmap system category (Misc) is
+            // not user-owned, so a client update on it would be a silent no-op under RLS.
+            const { error } = await supabase.rpc('reorder_video_categories', { p_roadmap_id: roadmapId, p_ids: orderedIds })
+            if (error) throw error
+        },
+        onMutate: async ({ roadmapId, orderedIds }) => {
+            const key = queryKeys.videoCategories(user?.id, roadmapId)
+            await queryClient.cancelQueries({ queryKey: key })
+            const previous = queryClient.getQueryData<VideoCategoryRecord[]>(key)
+            if (previous) {
+                const byId = new Map(previous.map((c) => [c.id, c]))
+                const next = orderedIds.map((id, index) => ({ ...byId.get(id)!, sort_order: index * 10 })).filter(Boolean)
+                queryClient.setQueryData(key, next)
+            }
+            return { previous, key }
+        },
+        onError: (_e, _v, ctx) => {
+            if (ctx?.previous) queryClient.setQueryData(ctx.key, ctx.previous)
+        },
+        onSettled: (_d, _e, { roadmapId }) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, roadmapId) })
         },
     })
 }

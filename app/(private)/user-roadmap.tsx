@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -7,10 +7,12 @@ import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import ThemedInput from 'Components/ThemedInput'
 import { RoadmapCanvas } from 'Components/roadmap/RoadmapCanvas'
+import { useReorderRoadmapSegments } from 'lib/hooks/useRoadmapSegments'
+import { errorMessage } from 'lib/errorMessage'
 import { RoadmapPosition } from 'Components/roadmap/types'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
 import { useDeleteUserRoadmap, useUpdateUserRoadmap, useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
-import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory } from 'lib/hooks/useVideoCategories'
+import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory, useReorderVideoCategories } from 'lib/hooks/useVideoCategories'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { VideoCategoryRecord } from 'lib/models'
@@ -54,6 +56,35 @@ export default function UserRoadmapScreen() {
         emptyVideos,
     } = useUserRoadmapViewModel(roadmap?.id, showEmptyCategories, showCompleted)
     const toggleSegmentCompletion = useToggleSegmentCompletion()
+    const reorderSegmentsMutation = useReorderRoadmapSegments()
+    const reorderCategoriesMutation = useReorderVideoCategories()
+
+    /** Drag of a video tile within its category row (indices are positions in the visible row). */
+    const reorderVideos = useCallback((categoryId: string, fromIndex: number, toIndex: number) => {
+        if (!roadmap) return
+        const ids = (filteredVideosByCategory.get(categoryId) ?? []).map((v) => v.id).filter((id): id is string => !!id)
+        if (fromIndex === toIndex || fromIndex >= ids.length || toIndex >= ids.length) return
+        const next = [...ids]
+        const [moved] = next.splice(fromIndex, 1)
+        next.splice(toIndex, 0, moved)
+        reorderSegmentsMutation.mutate({ roadmapId: roadmap.id, orderedIds: next }, {
+            onError: (error) => showSnack(errorMessage(error, 'Could not save the new order.')),
+        })
+    }, [filteredVideosByCategory, reorderSegmentsMutation, roadmap])
+
+    /** Drag of a category tile: the whole row moves (indices are positions in the visible list). */
+    const reorderCategories = useCallback((fromIndex: number, toIndex: number) => {
+        if (!roadmap || fromIndex === toIndex) return
+        const visible = categoryRows.map((c) => c.id)
+        const next = [...visible]
+        const [moved] = next.splice(fromIndex, 1)
+        next.splice(toIndex, 0, moved)
+        // Hidden (empty) categories keep their relative place after the visible ones.
+        const hidden = (categoriesQuery.data ?? []).map((c) => c.id).filter((id) => !visible.includes(id))
+        reorderCategoriesMutation.mutate({ roadmapId: roadmap.id, orderedIds: [...next, ...hidden] }, {
+            onError: (error) => showSnack(errorMessage(error, 'Could not save the new order.')),
+        })
+    }, [categoriesQuery.data, categoryRows, reorderCategoriesMutation, roadmap])
     const [manageModalOpen, setManageModalOpen] = useState(false)
     const [addCategoryModalOpen, setAddCategoryModalOpen] = useState(false)
     const [roadmapName, setRoadmapName] = useState('')
@@ -76,7 +107,7 @@ export default function UserRoadmapScreen() {
     // The scale transform pivots around the surface's own center, so the initial
     // pan must offset that pivot to land the surface top near the viewport top.
     const defaultPanY = CATEGORIES_ANCHOR_VIEWPORT_Y - (surfaceHeight / 2) * (1 - DEFAULT_SCALE)
-    const { canvasRef, onCanvasLayout, pan, panHandlers, scale, setSurfaceHeight: setGestureSurfaceHeight, resetViewport } = useRoadmapGestures({
+    const { canvasGesture, surfaceStyle, scale, setSurfaceHeight: setGestureSurfaceHeight, resetViewport } = useRoadmapGestures({
         minScale: 0.2,
         maxScale: 3,
         defaultScale: DEFAULT_SCALE,
@@ -287,12 +318,13 @@ export default function UserRoadmapScreen() {
             <View style={screenStyles.canvasWrap}>
                 <RoadmapCanvas
                     styles={screenStyles}
-                    canvasRef={canvasRef}
-                    onCanvasLayout={onCanvasLayout}
                     onSurfaceLayout={(event) => setSurfaceHeight(Math.max(500, event.nativeEvent.layout.height))}
-                    panHandlers={panHandlers}
-                    pan={pan}
+                    canvasGesture={canvasGesture}
+                    surfaceStyle={surfaceStyle}
                     scale={scale}
+                    rowGap={ROW_GAP}
+                    onReorderVideos={reorderVideos}
+                    onReorderPositions={reorderCategories}
                     surfaceWidth={SURFACE_WIDTH}
                     estimatedSurfaceHeight={Math.max(surfaceHeight, 500)}
                     positionColumnWidth={POSITION_COLUMN_WIDTH}
