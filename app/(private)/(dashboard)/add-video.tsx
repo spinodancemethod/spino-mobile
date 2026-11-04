@@ -21,6 +21,7 @@ import { useCreateVideoSegments } from 'lib/hooks/useSegments'
 import type { LocalVideoUpload } from 'lib/models'
 import { calculateVideoContentHash } from 'lib/videoHash'
 import { persistPickedVideo, persistThumbnail } from 'lib/localVideoStore'
+import { lookupPickedMediaAssetId } from 'lib/pickedMediaAsset'
 import { thumbnailDisplayUri } from 'lib/thumbnailUri'
 import { ensureMediaLibraryAssetAccess } from 'lib/mediaLibraryAccess'
 import { useLocalSearchParams } from 'expo-router'
@@ -241,17 +242,20 @@ export default function AddVideoScreen() {
             const asset = result.assets[0]
             const durationSeconds = asset.duration == null ? null : asset.duration / 1000
             const originalFilename = asset.fileName ?? asset.uri.split('/').pop() ?? null
-            const localKey = `${asset.assetId ?? 'picked'}-${Date.now()}`
+            // The Android photo picker never supplies assetId (see lib/pickedMediaAsset.ts);
+            // recover it from the media library so the record survives cache purges.
+            const assetId = asset.assetId ?? await lookupPickedMediaAssetId({ fileName: originalFilename, durationSeconds })
+            const localKey = `${assetId ?? 'picked'}-${Date.now()}`
             const { runtimeUri } = await persistPickedVideo({
                 uri: asset.uri,
-                assetId: asset.assetId ?? null,
+                assetId,
                 fileName: originalFilename,
                 key: localKey,
             })
             const contentHash = await calculateVideoContentHash(runtimeUri)
             const nextVideo: LocalVideoUpload = {
                 id: localKey,
-                assetId: asset.assetId ?? null,
+                assetId,
                 uri: runtimeUri,
                 fileName: originalFilename,
                 originalFilename,

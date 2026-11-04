@@ -16,7 +16,7 @@ import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCa
 import { useCreateVideoSegment, useDeleteVideoSegment, useUpdateVideoSegment, useVideoSegments } from 'lib/hooks/useSegments'
 import { useLocalVideoLibrary } from 'lib/hooks/useLocalVideoLibrary'
 import { useRelinkVideoUpload } from 'lib/hooks/useRelinkVideoUpload'
-import { useVideoRelinkRecommendations } from 'lib/hooks/useVideoRelinkRecommendations'
+import { describeRelinkScan, useVideoRelinkRecommendations } from 'lib/hooks/useVideoRelinkRecommendations'
 import type { LocalVideoUpload, SegmentRecord } from 'lib/models'
 
 function formatTimestamp(value: number) {
@@ -66,9 +66,11 @@ export default function LocalVideosScreen() {
 
     async function findRecommendedVideos() {
         try {
-            const recommendations = await recommendationsMutation.mutateAsync(missingUploadRecords)
-            const matchCount = Object.values(recommendations).reduce((total, candidates) => total + candidates.length, 0)
-            showSnack(matchCount > 0 ? `${matchCount} matching local ${matchCount === 1 ? 'video was' : 'videos were'} found.` : 'No matching videos were found on this device.')
+            const { matchCount, diagnostics } = await recommendationsMutation.mutateAsync(missingUploadRecords)
+            // The scan breakdown is shown on a miss so a release build can be debugged without logs.
+            showSnack(matchCount > 0
+                ? `${matchCount} matching local ${matchCount === 1 ? 'video was' : 'videos were'} found.`
+                : `No matching videos were found. ${describeRelinkScan(diagnostics)}`)
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not scan this device for matching videos.')
         }
@@ -76,7 +78,7 @@ export default function LocalVideosScreen() {
 
     async function restoreRecommendedVideo(video: LocalVideoUpload, candidateIndex: number) {
         const videoUpload = cloudUploadsQuery.data?.find((record) => record.local_reference_key === video.id)
-        const candidate = videoUpload ? recommendationsMutation.data?.[videoUpload.id]?.[candidateIndex] : null
+        const candidate = videoUpload ? recommendationsMutation.data?.byUploadId[videoUpload.id]?.[candidateIndex] : null
         if (!videoUpload || !candidate) return
         try {
             await relinkVideoUpload.mutateAsync({ videoUpload, candidate })
@@ -271,7 +273,7 @@ export default function LocalVideosScreen() {
                 ) : videos.map((video) => {
                     const selected = selectedVideoId === video.id
                     const cloudVideo = cloudUploadsQuery.data?.find((record) => record.local_reference_key === video.id)
-                    const recommendations = cloudVideo ? recommendationsMutation.data?.[cloudVideo.id] ?? [] : []
+                    const recommendations = cloudVideo ? recommendationsMutation.data?.byUploadId[cloudVideo.id] ?? [] : []
                     return (
                         <View key={video.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <ThemedText variant="subheader" numberOfLines={2} style={styles.videoName}>
