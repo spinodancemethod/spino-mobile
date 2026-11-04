@@ -22,15 +22,32 @@ async function withGranularFallback(call: (granular?: string[]) => Promise<Permi
     }
 }
 
-/** Read-only media-library permission state. Never throws. */
-export async function getMediaLibraryAssetAccess(): Promise<boolean> {
-    try {
-        const MediaLibrary = await loadMediaLibrary()
-        const status = await withGranularFallback((granular) => MediaLibrary.getPermissionsAsync(false, granular))
-        return status.granted
-    } catch {
-        return false
-    }
+const ACCESS_CACHE_TTL_MS = 30_000
+let cachedAccess: { value: Promise<boolean>; expiresAt: number } | null = null
+
+/**
+ * Read-only media-library permission state. Never throws.
+ * Cached briefly: resolving a library of N videos used to make N permission round trips to
+ * native before a single tile could render. A grant via ensureMediaLibraryAssetAccess resets it.
+ */
+export function getMediaLibraryAssetAccess(): Promise<boolean> {
+    const now = Date.now()
+    if (cachedAccess && cachedAccess.expiresAt > now) return cachedAccess.value
+    const value = (async () => {
+        try {
+            const MediaLibrary = await loadMediaLibrary()
+            const status = await withGranularFallback((granular) => MediaLibrary.getPermissionsAsync(false, granular))
+            return status.granted
+        } catch {
+            return false
+        }
+    })()
+    cachedAccess = { value, expiresAt: now + ACCESS_CACHE_TTL_MS }
+    return value
+}
+
+export function resetMediaLibraryAccessCache() {
+    cachedAccess = null
 }
 
 /**
@@ -46,6 +63,7 @@ export async function ensureMediaLibraryAssetAccess(): Promise<boolean> {
         if (current.granted) return true
         if (current.canAskAgain === false) return false
         const requested = await withGranularFallback((granular) => MediaLibrary.requestPermissionsAsync(false, granular))
+        resetMediaLibraryAccessCache()
         return requested.granted
     } catch {
         return false

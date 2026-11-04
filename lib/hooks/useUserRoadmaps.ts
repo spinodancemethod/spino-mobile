@@ -4,6 +4,7 @@ import { queryClient } from '../queryClient'
 import { queryKeys } from '../queryKeys'
 import { requireUserId } from './userId'
 import { supabase } from '../supabase'
+import type { VideoCategoryRecord } from '../models'
 
 export type UserRoadmap = {
     id: string
@@ -14,14 +15,31 @@ export type UserRoadmap = {
     updated_at: string
 }
 
+/** Same ordering as fetchCategories in useVideoCategories: user order first (nulls last), then system, then name. */
+export function sortCategories(categories: VideoCategoryRecord[]): VideoCategoryRecord[] {
+    return [...categories].sort((a, b) => {
+        const aOrder = a.sort_order ?? Number.POSITIVE_INFINITY
+        const bOrder = b.sort_order ?? Number.POSITIVE_INFINITY
+        if (aOrder !== bOrder) return aOrder - bOrder
+        if (a.system_category !== b.system_category) return a.system_category ? -1 : 1
+        return a.name.localeCompare(b.name)
+    })
+}
+
 async function fetchRoadmaps(userId: string): Promise<UserRoadmap[]> {
+    // Categories ride along in the same request and seed the per-roadmap category queries,
+    // so screens like Add Video no longer wait for roadmaps *then* categories (two round trips).
     const { data, error } = await supabase
         .from('user_roadmaps')
-        .select('*')
+        .select('*, video_categories(*)')
         .eq('user_id', userId)
         .order('name')
     if (error) throw error
-    return (data ?? []) as UserRoadmap[]
+    return (data ?? []).map((row) => {
+        const { video_categories: categories, ...roadmap } = row as UserRoadmap & { video_categories?: VideoCategoryRecord[] }
+        queryClient.setQueryData(queryKeys.videoCategories(userId, roadmap.id), sortCategories(categories ?? []))
+        return roadmap
+    })
 }
 
 export function useUserRoadmaps() {

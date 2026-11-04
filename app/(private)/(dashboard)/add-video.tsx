@@ -17,10 +17,11 @@ import { useDeleteVideoUpload, useSyncVideoUpload } from 'lib/hooks/useVideoUplo
 import { errorMessage } from 'lib/errorMessage'
 import { useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
 import { useCreateVideoCategory, useVideoCategories } from 'lib/hooks/useVideoCategories'
-import { useCreateVideoSegment } from 'lib/hooks/useSegments'
+import { useCreateVideoSegments } from 'lib/hooks/useSegments'
 import type { LocalVideoUpload } from 'lib/models'
 import { calculateVideoContentHash } from 'lib/videoHash'
-import { persistPickedVideo } from 'lib/localVideoStore'
+import { persistPickedVideo, persistThumbnail } from 'lib/localVideoStore'
+import { thumbnailDisplayUri } from 'lib/thumbnailUri'
 import { ensureMediaLibraryAssetAccess } from 'lib/mediaLibraryAccess'
 import { useLocalSearchParams } from 'expo-router'
 import { useRequestVideoAnalysis, useVideoAnalysisStatus, analysisStatusLabel, reuseStoredAnalysis } from 'lib/hooks/useVideoAnalysis'
@@ -73,12 +74,15 @@ export default function AddVideoScreen() {
     const { user } = useAuth()
     const syncVideoUpload = useSyncVideoUpload()
     const deleteVideoUpload = useDeleteVideoUpload()
-    const createSegment = useCreateVideoSegment()
+    const createSegments = useCreateVideoSegments()
     const createCategory = useCreateVideoCategory()
     const roadmapsQuery = useUserRoadmaps()
     const params = useLocalSearchParams<{ roadmapId?: string; categoryId?: string }>()
     const [selectedVideo, setSelectedVideo] = useState<LocalVideoUpload | null>(null)
-    const [roadmapId, setRoadmapId] = useState('')
+    const [chosenRoadmapId, setChosenRoadmapId] = useState('')
+    // Derived synchronously so the category query starts on the same render the roadmaps
+    // arrive (previously an effect set state a render later, adding a round trip's delay).
+    const roadmapId = params.roadmapId || chosenRoadmapId || roadmapsQuery.data?.[0]?.id || ''
     const categoriesQuery = useVideoCategories(roadmapId || null)
     const [roadmapMenuOpen, setRoadmapMenuOpen] = useState(false)
     const [picking, setPicking] = useState(false)
@@ -165,7 +169,7 @@ export default function AddVideoScreen() {
             for (const d of drafts) {
                 try {
                     const r = await VideoThumbnails.getThumbnailAsync(selectedVideo.uri, { time: Math.round((Number(d.start) + 0.2) * 1000), quality: 0.5 })
-                    updateSegmentDraft(d.id, { thumbnailReference: r.uri })
+                    updateSegmentDraft(d.id, { thumbnailReference: await persistThumbnail(r.uri) })
                 } catch { /* cosmetic */ }
             }
         })()
@@ -213,11 +217,6 @@ export default function AddVideoScreen() {
         updateSegmentDraft(id, { start: formatTimestamp(start), end: formatTimestamp(end) })
     }
 
-    useEffect(() => {
-        if (params.roadmapId) setRoadmapId(params.roadmapId)
-        else if (!roadmapId && roadmapsQuery.data?.[0]) setRoadmapId(roadmapsQuery.data[0].id)
-    }, [params.roadmapId, roadmapId, roadmapsQuery.data])
-
     async function chooseVideo() {
         setPicking(true)
         try {
@@ -233,7 +232,9 @@ export default function AddVideoScreen() {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
                 allowsEditing: false,
-                quality: 1,
+                // iOS otherwise re-encodes the clip into the cache before returning, which takes
+                // many seconds for a long class video. 'Current' hands back the file as stored.
+                preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
             })
             if (result.canceled) return
 
@@ -274,7 +275,8 @@ export default function AddVideoScreen() {
             const initialDraft = createSegmentDraft(durationSeconds, params.categoryId ?? miscCategoryId)
             setSegmentDrafts([initialDraft])
             setActiveSegmentIndex(0)
-            await generateSegmentThumbnail(nextVideo, initialDraft.id, initialDraft.start)
+            // Not awaited: the player can show the video immediately while the first frame renders.
+            void generateSegmentThumbnail(nextVideo, initialDraft.id, initialDraft.start)
         } catch (error) {
             showSnack(errorMessage(error, 'Could not choose that video.'))
         } finally {
@@ -314,8 +316,9 @@ export default function AddVideoScreen() {
         updateSegmentDraft(draftId, { thumbnailLoading: true })
         try {
             const result = await VideoThumbnails.getThumbnailAsync(video.uri, { time: Math.round(maxSeconds * 1000) })
-            updateSegmentDraft(draftId, { thumbnailReference: result.uri, thumbnailLoading: false })
-            setSelectedVideo((current) => current ? { ...current, thumbnailReference: current.thumbnailReference ?? result.uri } : current)
+            const reference = await persistThumbnail(result.uri)
+            updateSegmentDraft(draftId, { thumbnailReference: reference, thumbnailLoading: false })
+            setSelectedVideo((current) => current ? { ...current, thumbnailReference: current.thumbnailReference ?? reference } : current)
         } catch (error) {
             updateSegmentDraft(draftId, { thumbnailLoading: false })
             showSnack(errorMessage(error, 'Could not generate a thumbnail from this video.'))
@@ -360,19 +363,17 @@ export default function AddVideoScreen() {
                 roadmapId,
             })
             savedUploadId = savedUpload.id
-            for (const [index, draft] of segmentDrafts.entries()) {
-                const range = segmentRanges[index]
-                await createSegment.mutateAsync({
-                    videoUploadId: savedUpload.id,
-                    startTime: range.start,
-                    endTime: range.end,
-                    durationSeconds: selectedVideo.duration,
-                    categoryId: draft.categoryId,
-                    title: draft.title,
-                    userNotes: draft.description,
-                    thumbnailReference: draft.thumbnailReference,
-                })
-            }
+            // One insert for every draft: N sequential inserts each invalidated three queries.
+            await createSegments.mutateAsync(segmentDrafts.map((draft, index) => ({
+                videoUploadId: savedUpload.id,
+                startTime: segmentRanges[index].start,
+                endTime: segmentRanges[index].end,
+                durationSeconds: selectedVideo.duration,
+                categoryId: draft.categoryId,
+                title: draft.title,
+                userNotes: draft.description,
+                thumbnailReference: draft.thumbnailReference,
+            })))
             showSnack(segmentDrafts.length === 1 ? 'Video segment added.' : `${segmentDrafts.length} video segments added.`)
             setSelectedVideo(null)
             setSegmentDrafts([])
@@ -466,7 +467,7 @@ export default function AddVideoScreen() {
                                         key={roadmap.id}
                                         title={roadmap.name}
                                         variant={roadmapId === roadmap.id ? 'primary' : 'ghost'}
-                                        onPress={() => { setRoadmapId(roadmap.id); setRoadmapMenuOpen(false) }}
+                                        onPress={() => { setChosenRoadmapId(roadmap.id); setRoadmapMenuOpen(false) }}
                                         style={styles.fullButton}
                                     />
                                 ))}
@@ -576,7 +577,7 @@ export default function AddVideoScreen() {
                                             style={[styles.snippetCard, { borderColor: active ? colors.primary : colors.border, backgroundColor: colors.background }]}
                                         >
                                             {draft.thumbnailReference ? (
-                                                <ExpoImage source={{ uri: draft.thumbnailReference }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                                                <ExpoImage source={{ uri: thumbnailDisplayUri(draft.thumbnailReference) }} style={StyleSheet.absoluteFill} contentFit="cover" />
                                             ) : null}
                                             <View style={[styles.snippetCardShade, draft.thumbnailReference ? null : { backgroundColor: 'transparent' }]} />
                                             <View style={styles.snippetCardTop}>
@@ -701,7 +702,7 @@ export default function AddVideoScreen() {
                                     <ThemedText variant="small" style={[styles.fieldLabel, { color: colors.placeholder }]}>Thumbnail</ThemedText>
                                     <View style={styles.thumbnailRow}>
                                         {activeDraft.thumbnailReference ? (
-                                            <ExpoImage source={{ uri: activeDraft.thumbnailReference }} style={[styles.thumbnailPreview, { borderColor: colors.border }]} contentFit="cover" />
+                                            <ExpoImage source={{ uri: thumbnailDisplayUri(activeDraft.thumbnailReference) }} style={[styles.thumbnailPreview, { borderColor: colors.border }]} contentFit="cover" />
                                         ) : (
                                             <View style={[styles.thumbnailPreview, styles.thumbnailEmpty, { borderColor: colors.border, backgroundColor: colors.card }]}>
                                                 <Ionicons name="image-outline" size={20} color={colors.placeholder} />
@@ -718,9 +719,9 @@ export default function AddVideoScreen() {
                     ) : <ThemedText variant="small" style={styles.thumbnailPrompt}>Select a video above to choose a thumbnail frame from it.</ThemedText>}
 
                     <ThemedButton
-                        title={syncVideoUpload.isPending || createSegment.isPending ? 'Saving segments...' : 'Add video segments'}
+                        title={syncVideoUpload.isPending || createSegments.isPending ? 'Saving segments...' : 'Add video segments'}
                         onPress={() => void saveVideoReference()}
-                        loading={syncVideoUpload.isPending || createSegment.isPending}
+                        loading={syncVideoUpload.isPending || createSegments.isPending}
                         style={styles.fullButton}
                     />
                     {syncVideoUpload.isPending ? <ActivityIndicator /> : null}

@@ -2,9 +2,6 @@ import { Tabs } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
 import React from 'react'
-import { ActivityIndicator, View } from 'react-native';
-import ThemedText from 'Components/ThemedText';
-import { useEntitlement } from 'lib/hooks/useEntitlement';
 
 /*
     Dashboard tab layout.
@@ -31,18 +28,8 @@ export const unstable_settings = {
 
 export default function DashboardLayout() {
     const styles = useStyles();
-    const { isLoading } = useEntitlement();
-
-    // Show a brief loading state while the entitlement check resolves.
-    // Free and paid users both proceed past this point — no redirect.
-    if (isLoading) {
-        return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
-                <ActivityIndicator />
-                <ThemedText style={{ marginTop: 10 }}>Loading...</ThemedText>
-            </View>
-        );
-    }
+    // No entitlement gate here: free and paid users both see the tabs, so blocking on the
+    // subscription RPC only delayed first paint. Screens that upsell read useEntitlement themselves.
 
     return (
         <>

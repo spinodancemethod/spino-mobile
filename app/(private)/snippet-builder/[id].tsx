@@ -17,6 +17,7 @@ import { useCreateVideoSegment, useDeleteVideoSegment, useVideoSegments } from '
 import { useUpdateCountGridPhase } from 'lib/hooks/useVideoAnalysis'
 import { buildChunks, formatClock, nearestBeat, type Chunk, type ChunkSize } from 'lib/analysis/chunks'
 import type { SegmentRecord } from 'lib/models'
+import { persistThumbnail } from 'lib/localVideoStore'
 
 /**
  * Snippet builder (Fable v2 spec §5.2). Portrait, one-handed:
@@ -124,7 +125,8 @@ export default function SnippetBuilderScreen() {
             const seg = await createSegment.mutateAsync({
                 videoUploadId: video.id, startTime: Number(range.start.toFixed(3)), endTime: Number(range.end.toFixed(3)),
                 durationSeconds: grid?.duration_s ?? video.duration_seconds ?? null, categoryId, title: title.trim() || null,
-                thumbnailReference: sel ? thumbs[Math.min(sel.a, sel.b)] ?? null : null,
+                // Preview thumbs live in the purgeable cache; copy the chosen one into documents on save.
+                thumbnailReference: sel && thumbs[Math.min(sel.a, sel.b)] ? await persistThumbnail(thumbs[Math.min(sel.a, sel.b)]) : null,
             })
             setLastSaved(seg as SegmentRecord)
             setTitle('')

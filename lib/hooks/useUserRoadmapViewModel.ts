@@ -3,6 +3,7 @@ import { useRoadmapSegments } from './useRoadmapSegments'
 import { useVideoCategories } from './useVideoCategories'
 import { useCompletedSegmentIdsByUser } from './useCompletedSegmentIdsByUser'
 import type { RoadmapPosition, RoadmapVideo } from 'Components/roadmap/types'
+import { thumbnailDisplayUri } from '../thumbnailUri'
 
 export function useUserRoadmapViewModel(
     roadmapId: string | null | undefined,
@@ -29,7 +30,7 @@ export function useUserRoadmapViewModel(
                 id: segment.id,
                 title: (segment.title?.trim() || segment.video_name) ?? segment.video_filename ?? null,
                 note_text: segment.note_text,
-                thumbnail_url: segment.video_thumbnail,
+                thumbnail_url: thumbnailDisplayUri(segment.video_thumbnail),
                 video_upload_id: segment.video_upload_id,
                 start_time: segment.start_time,
                 end_time: segment.end_time,

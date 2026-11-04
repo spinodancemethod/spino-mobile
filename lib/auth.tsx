@@ -8,6 +8,7 @@ import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
 import { getSupabaseConfigDiagnostics } from 'lib/runtimeConfig';
+import { queryClient } from 'lib/queryClient';
 
 type LegacyAuthLinkResult = {
     error?: { message?: string | null } | null;
@@ -34,52 +35,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         async function readSessionWithRefreshFallback() {
             try {
-                console.log('[auth-debug] getSession() starting');
                 const { data } = await supabase.auth.getSession();
                 let nextSession = data?.session ?? null;
-                console.log('[auth-debug] getSession() completed, session exists:', !!nextSession);
 
                 // Only attempt a refresh if there IS a stored session with an expired token.
                 // Calling refreshSession() with no session makes a pointless network request
                 // and can hang indefinitely if the Supabase URL is unreachable.
                 if (nextSession && !nextSession.access_token) {
-                    console.log('[auth-debug] calling refreshSession()');
                     const { data: refreshed } = await supabase.auth.refreshSession();
                     nextSession = refreshed?.session ?? null;
-                    console.log('[auth-debug] refreshSession() completed');
                 } else {
-                    console.log('[auth-debug] skipping refreshSession() (no stored session or has token)');
                 }
 
                 return nextSession;
             } catch (e) {
-                console.error('[auth-debug] readSessionWithRefreshFallback error:', e);
                 throw e;
             }
         }
 
         async function init() {
             try {
-                console.log('[auth-debug] init() starting');
                 const nextSession = await readSessionWithRefreshFallback();
                 if (!mounted) {
-                    console.log('[auth-debug] unmounted before setSession');
                     return;
                 }
-                console.log('[auth-debug] setting session state');
                 setSession(nextSession);
                 setUser(nextSession?.user ?? null);
             } catch (e) {
-                console.error('[auth-debug] init() error:', e);
             } finally {
                 if (mounted) {
-                    console.log('[auth-debug] setting loading=false');
                     setLoading(false);
                 }
             }
         }
 
-        console.log('[auth-debug] AuthProvider effect mounted');
         init();
 
         const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -95,6 +84,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             if (event === 'SIGNED_OUT') {
+                // The query cache is persisted to disk; drop it so the next account never sees this one's data.
+                queryClient.clear();
                 void clearRevenueCatAppUser().catch(() => {
                     // Ignore sign-out cleanup failures; auth state remains authoritative.
                 });

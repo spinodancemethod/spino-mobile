@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals'
-import { persistPickedVideo, removePersistedVideo, toPortableUri, toRuntimeUri } from './localVideoStore'
+import { persistPickedVideo, persistThumbnail, removePersistedVideo, toPortableUri, toRuntimeUri } from './localVideoStore'
 
 const docs = 'file:///container-A/Documents/'
 
@@ -51,5 +51,21 @@ describe('removePersistedVideo', () => {
         expect(fs.deleteAsync).not.toHaveBeenCalled()
         await removePersistedVideo('appdocs://local-videos/k1.mov', fs)
         expect(fs.deleteAsync).toHaveBeenCalledWith(`${docs}local-videos/k1.mov`, { idempotent: true })
+    })
+})
+
+describe('persistThumbnail', () => {
+    it('copies a cache thumbnail into documents and returns the portable form', async () => {
+        const fs = fakeFs()
+        const stored = await persistThumbnail('file:///cache/VideoThumbnails/abc.jpg', fs)
+        expect(stored.startsWith('appdocs://thumbnails/')).toBe(true)
+        expect(stored.endsWith('.jpg')).toBe(true)
+        expect(fs.copyAsync).toHaveBeenCalledTimes(1)
+    })
+
+    it('falls back to the cache uri when the copy fails', async () => {
+        const fs = fakeFs()
+        fs.copyAsync = jest.fn(async () => { throw new Error('disk full') })
+        expect(await persistThumbnail('file:///cache/abc.jpg', fs)).toBe('file:///cache/abc.jpg')
     })
 })

@@ -10,6 +10,7 @@ export type { CreateVideoCategoryInput } from './useVideoCategories'
 export {
     useVideoSegments,
     useCreateVideoSegment,
+    useCreateVideoSegments,
     useUpdateVideoSegment,
     useDeleteVideoSegment,
     validateSegmentRange,

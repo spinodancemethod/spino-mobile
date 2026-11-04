@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import { persistThumbnail } from 'lib/localVideoStore'
+import { thumbnailDisplayUri } from 'lib/thumbnailUri'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Image as ExpoImage } from 'expo-image'
@@ -185,7 +187,7 @@ export default function VideoUploadDetailScreen() {
         setThumbnailLoading(true)
         try {
             const result = await VideoThumbnails.getThumbnailAsync(videoAsset.uri, { time: Math.round(seconds * 1000) })
-            setThumbnailPreview(result.uri)
+            setThumbnailPreview(await persistThumbnail(result.uri))
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not generate a thumbnail from this video.')
         } finally {
@@ -354,7 +356,7 @@ export default function VideoUploadDetailScreen() {
                     <LocalSegmentPlayer source={videoAsset.uri} startTime={segmentStart} endTime={segmentEnd} />
                 ) : (
                     <View style={[styles.unavailable, { borderColor: colors.border }]}>
-                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: upload.thumbnail_reference }} style={styles.thumbnail} contentFit="cover" /> : null}
+                        {upload.thumbnail_reference ? <ExpoImage source={{ uri: thumbnailDisplayUri(upload.thumbnail_reference) }} style={styles.thumbnail} contentFit="cover" /> : null}
                         <ThemedText variant="subheader">Video unavailable on this device</ThemedText>
                         <ThemedButton title="Choose replacement video" onPress={() => router.push('/local-videos')} style={styles.fullButton} />
                     </View>
@@ -447,7 +449,7 @@ export default function VideoUploadDetailScreen() {
                             </Pressable>
                         </View>
                         {activeSegment?.thumbnail_reference ? (
-                            <ExpoImage source={{ uri: activeSegment.thumbnail_reference }} style={styles.segmentThumbnail} contentFit="cover" />
+                            <ExpoImage source={{ uri: thumbnailDisplayUri(activeSegment.thumbnail_reference) }} style={styles.segmentThumbnail} contentFit="cover" />
                         ) : (
                             <ThemedText variant="small" style={{ color: colors.border }}>No thumbnail selected.</ThemedText>
                         )}
@@ -590,7 +592,7 @@ export default function VideoUploadDetailScreen() {
                         onPress={(event) => event.stopPropagation()}
                     >
                         <ThemedText variant="subheader">Edit Thumbnail</ThemedText>
-                        {thumbnailPreview ? <ExpoImage source={{ uri: thumbnailPreview }} style={styles.segmentThumbnail} contentFit="cover" /> : null}
+                        {thumbnailPreview ? <ExpoImage source={{ uri: thumbnailDisplayUri(thumbnailPreview) }} style={styles.segmentThumbnail} contentFit="cover" /> : null}
                         <ThemedText variant="small">Choose a frame between {activeSegment?.start_time ?? segmentStart} and {activeSegment?.end_time ?? segmentEnd} seconds.</ThemedText>
                         <View style={styles.thumbnailControls}>
                             <ThemedInput

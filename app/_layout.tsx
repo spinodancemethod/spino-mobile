@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ErrorBoundary from 'Components/ErrorBoundary';
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { queryClient } from 'lib/queryClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { PERSISTED_QUERY_MAX_AGE_MS, QUERY_CACHE_BUSTER, queryClient, queryPersister } from 'lib/queryClient';
 import { ThemeProvider } from 'constants/ThemeProvider';
 import { AuthProvider, useAuth } from 'lib/auth';
 import {
@@ -193,7 +194,19 @@ export default function RootLayout() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <ErrorBoundary>
-                <QueryClientProvider client={queryClient}>
+                <PersistQueryClientProvider
+                    client={queryClient}
+                    persistOptions={{
+                        persister: queryPersister,
+                        maxAge: PERSISTED_QUERY_MAX_AGE_MS,
+                        buster: QUERY_CACHE_BUSTER,
+                        dehydrateOptions: {
+                            // Only persist settled data. Polled analysis jobs are intentionally
+                            // excluded so a stale "processing" state never greets the next launch.
+                            shouldDehydrateQuery: (query) => query.state.status === 'success' && query.queryKey[0] !== 'analysisJob',
+                        },
+                    }}
+                >
                     <ThemeProvider>
                         <AuthProvider>
                             <RevenueCatBootstrap />
@@ -203,7 +216,7 @@ export default function RootLayout() {
                             <Snackbar />
                         </AuthProvider>
                     </ThemeProvider>
-                </QueryClientProvider>
+                </PersistQueryClientProvider>
             </ErrorBoundary>
         </GestureHandlerRootView>
     );

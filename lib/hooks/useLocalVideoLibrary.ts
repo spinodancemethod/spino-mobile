@@ -87,7 +87,9 @@ export function useLocalVideoLibrary() {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['videos'],
                 allowsEditing: false,
-                quality: 1,
+                // iOS otherwise re-encodes the clip into the cache before returning, which takes
+                // many seconds for a long class video. 'Current' hands back the file as stored.
+                preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
             })
             if (result.canceled) return
 

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 type RevenueCatModule = typeof import('react-native-purchases');
@@ -126,7 +126,14 @@ function isSupportedPlatform() {
 }
 
 function isExpoGo() {
-    return Constants.appOwnership === 'expo';
+    // Mirror react-native-purchases' own detection: it treats the runtime as Expo Go when the
+    // native RNPurchases module is absent and the ExpoGo module is present, then rejects any
+    // non-`test_`/`rcb_` key. `Constants.appOwnership` is deprecated and can be null on SDK 58+,
+    // which previously made us hand the SDK a native (appl_/goog_) key inside Expo Go.
+    const expoGoModule = (globalThis as { expo?: { modules?: { ExpoGo?: unknown } } }).expo?.modules?.ExpoGo;
+    return Boolean(expoGoModule)
+        || Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+        || Constants.appOwnership === 'expo';
 }
 
 function isRevenueCatUiUnavailableRuntime() {
@@ -255,10 +262,18 @@ export async function syncRevenueCatAppUser(appUserId: string | null | undefined
             }
 
             const purchases = await getPurchasesModule();
-            purchases.default.configure({
-                apiKey,
-                appUserID: appUserId,
-            });
+            try {
+                purchases.default.configure({
+                    apiKey,
+                    appUserID: appUserId,
+                });
+            } catch (error: any) {
+                // Same non-fatal handling as initializeRevenueCat: a configure failure must
+                // not surface as a red box on login.
+                // eslint-disable-next-line no-console
+                console.warn('[billing] RevenueCat configure skipped:', error?.message ?? error);
+                return;
+            }
             isConfigured = true;
             currentAppUserId = appUserId;
             return;

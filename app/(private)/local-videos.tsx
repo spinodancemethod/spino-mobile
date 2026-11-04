@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { persistThumbnail } from 'lib/localVideoStore'
+import { thumbnailDisplayUri } from 'lib/thumbnailUri'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
@@ -120,7 +122,7 @@ export default function LocalVideosScreen() {
         setSegmentThumbnailLoading(true)
         try {
             const result = await VideoThumbnails.getThumbnailAsync(video.uri, { time: Math.round(boundedSeconds * 1000) })
-            setSegmentThumbnailReference(result.uri)
+            setSegmentThumbnailReference(await persistThumbnail(result.uri))
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not generate thumbnail for this segment.')
         } finally {
@@ -376,7 +378,7 @@ export default function LocalVideosScreen() {
                                         />
                                         <ThemedButton title={segmentThumbnailLoading ? 'Generating...' : 'Choose frame'} onPress={() => void generateSegmentThumbnail(video)} loading={segmentThumbnailLoading} style={styles.addCategoryButton} />
                                     </View>
-                                    {segmentThumbnailReference ? <ExpoImage source={{ uri: segmentThumbnailReference }} style={styles.segmentThumbnailPreview} contentFit="cover" /> : null}
+                                    {segmentThumbnailReference ? <ExpoImage source={{ uri: thumbnailDisplayUri(segmentThumbnailReference) }} style={styles.segmentThumbnailPreview} contentFit="cover" /> : null}
                                     <ThemedButton
                                         title={isCreatingSegment ? 'Saving segment...' : 'Save segment'}
                                         onPress={() => void saveSegment(video)}

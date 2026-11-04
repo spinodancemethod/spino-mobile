@@ -108,6 +108,46 @@ export function useCreateVideoSegment() {
     })
 }
 
+/** Insert several segments in one request with a single cache invalidation (used by Add Video's save). */
+export function useCreateVideoSegments() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (inputs: CreateSegmentInput[]) => {
+            const userId = requireUserId(undefined, user?.id)
+            for (const input of inputs) {
+                const validationError = validateSegmentRange(input.startTime, input.endTime, input.durationSeconds)
+                if (validationError) throw new Error(validationError)
+            }
+            if (inputs.length === 0) return [] as SegmentRecord[]
+            const { data, error } = await supabase
+                .from('segments')
+                .insert(inputs.map((input) => ({
+                    user_id: userId,
+                    video_upload_id: input.videoUploadId,
+                    start_time: input.startTime,
+                    end_time: input.endTime,
+                    category_id: input.categoryId,
+                    title: cleanOptionalText(input.title),
+                    user_notes: cleanOptionalText(input.userNotes),
+                    thumbnail_reference: cleanOptionalText(input.thumbnailReference),
+                    user_confirmed: true,
+                    ai_generated: false,
+                })))
+                .select()
+            if (error) throw error
+            return (data ?? []) as SegmentRecord[]
+        },
+        onSuccess: (segments) => {
+            const videoUploadIds = new Set(segments.map((segment) => segment.video_upload_id))
+            for (const videoUploadId of videoUploadIds) {
+                void queryClient.invalidateQueries({ queryKey: queryKeys.segments(user?.id, videoUploadId) })
+            }
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoSegmentCounts(user?.id) })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
+        },
+    })
+}
+
 export function useUpdateVideoSegment() {
     const { user } = useAuth()
     return useMutation({

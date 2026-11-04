@@ -18,6 +18,7 @@ import type { LocalFileInfo } from './videoAssetResolver'
  */
 export const APP_DOCUMENTS_SCHEME = 'appdocs://'
 const VIDEO_FOLDER = 'local-videos/'
+const THUMBNAIL_FOLDER = 'thumbnails/'
 
 export function isPortableDocumentUri(uri: string | null | undefined): boolean {
     return !!uri && uri.startsWith(APP_DOCUMENTS_SCHEME)
@@ -88,6 +89,28 @@ export async function persistPickedVideo(input: PersistPickedVideoInput, fs?: Fi
     const target = `${folder}${key}${fileExtension(input.fileName, input.uri)}`
     await FileSystem.copyAsync({ from: input.uri, to: target })
     return { runtimeUri: target }
+}
+
+/**
+ * expo-video-thumbnails writes into the cache directory, which iOS purges and whose
+ * absolute path changes on every app update. Copy a generated thumbnail into documents
+ * and return the portable `appdocs://` form to store in the database. Falls back to the
+ * original URI if anything fails so thumbnail generation never blocks a save.
+ */
+export async function persistThumbnail(cacheUri: string, fs?: FileSystemLike): Promise<string> {
+    try {
+        const FileSystem = fs ?? await loadFileSystem()
+        if (!FileSystem.documentDirectory) return cacheUri
+        const folder = `${FileSystem.documentDirectory}${THUMBNAIL_FOLDER}`
+        const folderInfo = await FileSystem.getInfoAsync(folder)
+        if (!folderInfo.exists) await FileSystem.makeDirectoryAsync(folder, { intermediates: true })
+        const extension = /\.(jpe?g|png|webp)$/i.exec(cacheUri)?.[0]?.toLowerCase() ?? '.jpg'
+        const target = `${folder}${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`
+        await FileSystem.copyAsync({ from: cacheUri, to: target })
+        return toPortableUri(target, FileSystem.documentDirectory)
+    } catch {
+        return cacheUri
+    }
 }
 
 /** Delete a documents copy we made earlier. Cache and media-library references are left alone. */
