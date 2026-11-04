@@ -8,6 +8,7 @@ import ThemedView from 'Components/ThemedView'
 import ThemedInput from 'Components/ThemedInput'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
+import { errorMessage } from 'lib/errorMessage'
 import {
     useCreateUserRoadmap,
     useUserRoadmaps,
@@ -24,9 +25,9 @@ export default function YourRoadmapsScreen() {
     async function addPositions(roadmapId: string) {
         try {
             const added = await applyLibrary.mutateAsync({ roadmapId, danceStyle: 'bachata' })
-            showSnack(added > 0 ? `Added ${added} Bachata positions` : 'All Bachata positions are already in this roadmap')
+            showSnack(added > 0 ? `Added ${added} default categories` : 'All default categories are already in this roadmap')
         } catch (error) {
-            showSnack(error instanceof Error ? error.message : 'Could not add positions.')
+            showSnack(errorMessage(error, 'Could not add default categories.'))
         }
     }
 
@@ -114,7 +115,7 @@ export default function YourRoadmapsScreen() {
                             {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
                         </Pressable>
                         <ThemedButton
-                            title="Add Bachata positions"
+                            title="Add default categories"
                             variant="ghost"
                             onPress={() => void addPositions(roadmap.id)}
                             loading={applyLibrary.isPending && applyLibrary.variables?.roadmapId === roadmap.id}
