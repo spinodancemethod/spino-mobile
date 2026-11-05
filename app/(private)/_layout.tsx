@@ -8,11 +8,14 @@ import ThemedButton from 'Components/ThemedButton';
 import Spacer from 'Components/Spacer';
 import { router, usePathname } from 'expo-router';
 import { showSnack } from 'lib/snackbarService';
+import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
+import { requestOpenDefaultRoadmap } from 'lib/defaultRoadmapIntent';
 
 const RootLayout = () => {
     const { user, loading } = useAuth();
     const pathname = usePathname();
-    const redirectedToHomeOnEntry = useRef(false);
+    const redirectedOnEntry = useRef(false);
+    const subscription = useSubscriptionStatus();
 
     useEffect(() => {
         // Redirect to login after render if not loading and no user.
@@ -25,17 +28,26 @@ const RootLayout = () => {
     useEffect(() => {
         if (loading || !user) return;
         if (!Boolean((user as any)?.email_confirmed_at)) return;
-        if (redirectedToHomeOnEntry.current) return;
+        if (redirectedOnEntry.current) return;
+        // Wait for the subscription check so the landing page is decided once. The query is
+        // persisted, so this is usually instant.
+        if (subscription.isLoading) return;
+        const subscribed = subscription.isActiveSubscription;
 
-        redirectedToHomeOnEntry.current = true;
+        redirectedOnEntry.current = true;
 
-        // On authenticated app entry, normalize to Home once so users always
-        // start from the same landing page after logging in/opening the app.
-        if (pathname !== '/home') {
-            router.replace('/home');
+        // On authenticated app entry, land subscribers on their roadmaps (the starred one if
+        // set, with the list beneath it for Back); everyone else lands on Home with the other
+        // tabs locked.
+        if (!subscribed) {
+            if (pathname !== '/home') router.replace('/home');
+            return;
         }
+        // The Your Roadmaps screen opens the starred roadmap (if any) once it has focus.
+        requestOpenDefaultRoadmap();
+        router.replace('/your-roadmaps');
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading, user]);
+    }, [loading, user, subscription.isLoading, subscription.isActiveSubscription]);
 
     if (loading) {
         return (

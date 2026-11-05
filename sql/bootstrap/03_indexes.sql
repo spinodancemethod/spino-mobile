@@ -39,6 +39,11 @@ CREATE INDEX IF NOT EXISTS video_uploads_user_content_hash_idx
 CREATE INDEX IF NOT EXISTS user_roadmaps_user_updated_idx
   ON public.user_roadmaps (user_id, updated_at DESC);
 
+-- At most one default roadmap per user.
+CREATE UNIQUE INDEX IF NOT EXISTS user_roadmaps_one_default_per_user_idx
+  ON public.user_roadmaps (user_id)
+  WHERE is_default;
+
 CREATE INDEX IF NOT EXISTS video_uploads_roadmap_idx
   ON public.video_uploads (user_id, roadmap_id, updated_at DESC);
 

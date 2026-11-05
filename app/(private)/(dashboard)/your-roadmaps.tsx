@@ -1,15 +1,18 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
+import { consumeOpenDefaultRoadmap } from 'lib/defaultRoadmapIntent'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
 import ThemedInput from 'Components/ThemedInput'
+import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { errorMessage } from 'lib/errorMessage'
 import {
     useCreateUserRoadmap,
+    useSetDefaultRoadmap,
     useUserRoadmaps,
     UserRoadmap,
 } from 'lib/hooks/useUserRoadmaps'
@@ -21,6 +24,15 @@ export default function YourRoadmapsScreen() {
     const createRoadmap = useCreateUserRoadmap()
     // Fable v2: copy the Bachata position list into a roadmap's categories (idempotent).
     const applyLibrary = useApplyPositionLibrary()
+    const setDefault = useSetDefaultRoadmap()
+    async function toggleDefault(roadmap: UserRoadmap) {
+        try {
+            await setDefault.mutateAsync({ id: roadmap.id, isDefault: !roadmap.is_default })
+            showSnack(roadmap.is_default ? 'Default roadmap cleared.' : `${roadmap.name} opens by default from the Your Roadmaps tab.`)
+        } catch (error) {
+            showSnack(errorMessage(error, 'Could not update the default roadmap.'))
+        }
+    }
     async function addPositions(roadmapId: string) {
         try {
             const added = await applyLibrary.mutateAsync({ roadmapId, danceStyle: 'bachata' })
@@ -29,6 +41,21 @@ export default function YourRoadmapsScreen() {
             showSnack(errorMessage(error, 'Could not add default categories.'))
         }
     }
+
+    // Open the starred roadmap when this screen was reached via the tab bar or app entry
+    // (not via Back). The callback re-runs while focused when the data arrives, so a cold
+    // start that is still loading the list still opens the default once it is known.
+    const roadmaps = roadmapsQuery.data
+    useFocusEffect(
+        useCallback(() => {
+            if (!roadmaps) return
+            if (!consumeOpenDefaultRoadmap()) return
+            const defaultRoadmap = roadmaps.find((roadmap) => roadmap.is_default)
+            if (defaultRoadmap) {
+                router.push({ pathname: '/(private)/user-roadmap', params: { roadmapId: defaultRoadmap.id } })
+            }
+        }, [roadmaps]),
+    )
 
     const [createModalOpen, setCreateModalOpen] = useState(false)
 
@@ -73,7 +100,7 @@ export default function YourRoadmapsScreen() {
                 <View style={styles.headerRow}>
                     <View>
                         <ThemedText variant="title">Your Roadmaps</ThemedText>
-                        <ThemedText variant="small" style={styles.intro}>Choose/create a roadmap to continue.</ThemedText>
+                        <ThemedText variant="small" style={styles.intro}>Choose/create a roadmap to continue. Tap the star to open one by default.</ThemedText>
                     </View>
                 </View>
 
@@ -105,6 +132,18 @@ export default function YourRoadmapsScreen() {
                         >
                             <ThemedText variant="subheader" style={styles.roadmapTitle}>{roadmap.name}</ThemedText>
                             {roadmap.description ? <ThemedText variant="small">{roadmap.description}</ThemedText> : null}
+                        </Pressable>
+                        {/* Default toggle: the starred roadmap opens straight from the Your Roadmaps tab. */}
+                        <Pressable
+                            onPress={() => void toggleDefault(roadmap)}
+                            disabled={setDefault.isPending}
+                            hitSlop={8}
+                            style={styles.defaultToggle}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: roadmap.is_default }}
+                            accessibilityLabel={roadmap.is_default ? `${roadmap.name} is your default roadmap` : `Make ${roadmap.name} your default roadmap`}
+                        >
+                            <Ionicons name={roadmap.is_default ? 'star' : 'star-outline'} size={22} color={roadmap.is_default ? '#f59e0b' : colors.text} />
                         </Pressable>
                         <ThemedButton
                             title="Add default categories"
@@ -163,6 +202,7 @@ const styles = StyleSheet.create({
     roadmap: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 6, position: 'relative' },
     roadmapContentPressable: { gap: 6, paddingRight: 44, minHeight: 32, justifyContent: 'center' },
     roadmapTitle: { flex: 1 },
+    defaultToggle: { position: 'absolute', top: 12, right: 12, padding: 4 },
     input: { borderWidth: 1, borderRadius: 6, minHeight: 44, paddingHorizontal: 10 },
     multiline: { minHeight: 76, paddingTop: 10, textAlignVertical: 'top' },
     fullButton: { width: '100%' },

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, View } from 'react-native'
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
@@ -315,19 +315,8 @@ export default function UserRoadmapScreen() {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <View style={screenStyles.headerRow}>
-                <Pressable
-                    onPress={() => router.back()}
-                    style={screenStyles.editIconButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Go to your roadmaps"
-                >
-                    <Ionicons name="map-outline" size={20} color={colors.text} />
-                </Pressable>
-                <View style={screenStyles.headerTextWrap}>
-                    <ThemedText variant="title">{roadmap.name}</ThemedText>
-                </View>
-            </View>
+            {/* Show the roadmap name in the native header next to the "Roadmap" title. */}
+            <Stack.Screen options={{ title: `Roadmap - ${roadmap.name}` }} />
             <View style={screenStyles.canvasWrap}>
                 <RoadmapCanvas
                     styles={screenStyles}
@@ -535,14 +524,6 @@ export default function UserRoadmapScreen() {
 }
 
 const screenStyles = StyleSheet.create({
-    headerRow: {
-        paddingTop: 12,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-start',
-        gap: 8,
-    },
     subheaderRow: {
         paddingHorizontal: 12,
         paddingBottom: 2,
@@ -748,17 +729,6 @@ const screenStyles = StyleSheet.create({
         color: '#64748b',
         textAlign: 'center',
         maxWidth: 420,
-    },
-    headerTextWrap: {
-        flex: 1,
-    },
-    editIconButton: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 2,
     },
     modalBackdrop: {
         flex: 1,

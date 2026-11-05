@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.user_roadmaps (
   user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   name text NOT NULL,
   description text,
+  -- One roadmap per user may be the default; the Your Roadmaps tab opens it directly.
+  is_default boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   CONSTRAINT user_roadmaps_name_check CHECK (length(trim(name)) > 0),

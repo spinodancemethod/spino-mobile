@@ -11,6 +11,8 @@ export type UserRoadmap = {
     user_id: string
     name: string
     description: string | null
+    /** True for the user's single default roadmap (opened directly from the Your Roadmaps tab). */
+    is_default: boolean
     created_at: string
     updated_at: string
 }
@@ -48,6 +50,43 @@ export function useUserRoadmaps() {
         queryKey: queryKeys.userRoadmaps(user?.id),
         queryFn: () => fetchRoadmaps(user!.id),
         enabled: !loading && !!user?.id,
+    })
+}
+
+/** The user's default roadmap, if they marked one. `isLoading` mirrors the roadmaps query. */
+export function useDefaultRoadmap() {
+    const query = useUserRoadmaps()
+    return {
+        roadmap: query.data?.find((roadmap) => roadmap.is_default) ?? null,
+        isLoading: query.isLoading,
+    }
+}
+
+export function useSetDefaultRoadmap() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async (input: { id: string; isDefault: boolean }) => {
+            const userId = requireUserId(undefined, user?.id)
+            // Clear any existing default first: a partial unique index allows one default per user.
+            const clear = await supabase
+                .from('user_roadmaps')
+                .update({ is_default: false })
+                .eq('user_id', userId)
+                .eq('is_default', true)
+            if (clear.error) throw clear.error
+            if (input.isDefault) {
+                const set = await supabase
+                    .from('user_roadmaps')
+                    .update({ is_default: true })
+                    .eq('id', input.id)
+                    .eq('user_id', userId)
+                if (set.error) throw set.error
+            }
+            return input
+        },
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.userRoadmaps(user?.id) })
+        },
     })
 }
 
