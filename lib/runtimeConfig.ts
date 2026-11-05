@@ -1,5 +1,4 @@
 import Constants from 'expo-constants'
-import { Platform } from 'react-native'
 
 type RuntimeExtra = {
     supabaseUrl?: unknown
@@ -30,31 +29,5 @@ export function getSupabaseRuntimeConfig() {
         publishableKey: environmentKey || runtimeKey,
         urlSource: environmentUrl ? 'environment' : runtimeUrl ? 'expo-runtime-extra' : 'missing',
         keySource: environmentKey ? 'environment' : runtimeKey ? 'expo-runtime-extra' : 'missing',
-    }
-}
-
-export function getSupabaseConfigDiagnostics() {
-    const config = getSupabaseRuntimeConfig()
-    let host: string | null = null
-    try {
-        host = config.url ? new URL(config.url).host : null
-    } catch {
-        host = 'invalid-url'
-    }
-
-    return {
-        urlSource: config.urlSource,
-        keySource: config.keySource,
-        urlPresent: Boolean(config.url),
-        keyPresent: Boolean(config.publishableKey),
-        keyLength: config.publishableKey.length,
-        host,
-        platform: Platform.OS,
-        appOwnership: Constants.appOwnership ?? Constants.executionEnvironment ?? 'unknown',
-        runtimeVersion: typeof Constants.expoConfig?.runtimeVersion === 'string'
-            ? Constants.expoConfig.runtimeVersion
-            : Constants.expoConfig?.runtimeVersion
-                ? JSON.stringify(Constants.expoConfig.runtimeVersion)
-                : null,
     }
 }

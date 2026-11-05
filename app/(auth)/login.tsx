@@ -7,7 +7,6 @@ import ThemedSearch from 'Components/ThemedSearch';
 import Spacer from 'Components/Spacer';
 import { signIn } from 'lib/auth';
 import { useTheme } from 'constants/useTheme';
-import { getSupabaseConfigDiagnostics } from 'lib/runtimeConfig';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -17,7 +16,6 @@ export default function Login() {
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [loginError, setLoginError] = useState<string | null>(null);
     const { colors } = useTheme();
-    const diagnostics = getSupabaseConfigDiagnostics();
 
     const onLogin = async () => {
         // client-side validation
@@ -58,24 +56,17 @@ export default function Login() {
             <Spacer />
             <ThemedButton title="Log in" onPress={onLogin} loading={loading} />
 
-            <ThemedText variant="small" style={{ marginTop: 12, color: colors.warning }}>
-                {loginError ? `Login error: ${loginError}` : 'Connection diagnostics'}
-            </ThemedText>
-            <ThemedText variant="small">
-                Host: {diagnostics.host ?? 'missing'}{`\n`}
-                URL source: {diagnostics.urlSource}{`\n`}
-                API key: {diagnostics.keyPresent ? `present (${diagnostics.keyLength} chars)` : 'MISSING'}{`\n`}
-                Key source: {diagnostics.keySource}{`\n`}
-                Platform: {diagnostics.platform}; ownership: {diagnostics.appOwnership}{`\n`}
-                Runtime: {diagnostics.runtimeVersion ?? 'unknown'}
-            </ThemedText>
+            {loginError ? (
+                <ThemedText variant="small" style={{ marginTop: 12, color: colors.warning }}>
+                    {`Login error: ${loginError}`}
+                </ThemedText>
+            ) : null}
 
             <Spacer />
             <ThemedButton title="Forgot password" variant="ghost" onPress={() => router.push('/forgot-password')} />
             <Spacer />
             <ThemedText variant="small">Don't have an account?</ThemedText>
             <ThemedButton title="Sign up" variant="ghost" onPress={() => router.push('/signup')} />
-            {/* dev-only shortcut removed */}
         </ThemedView>
     );
 }

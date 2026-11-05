@@ -7,7 +7,6 @@ import { showSnack } from 'lib/snackbarService';
 import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
-import { getSupabaseConfigDiagnostics } from 'lib/runtimeConfig';
 import { queryClient } from 'lib/queryClient';
 
 type LegacyAuthLinkResult = {
@@ -253,14 +252,7 @@ export async function requestPasswordReset(email: string, redirectTo: string) {
 
 export async function signIn(email: string, password: string) {
     try {
-        console.log('[auth-diagnostics] login config', getSupabaseConfigDiagnostics());
-        console.log('[auth-diagnostics] signInWithPassword starting');
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        console.log('[auth-diagnostics] signInWithPassword completed', {
-            returnedError: Boolean(error),
-            errorMessage: error?.message ?? null,
-            errorStatus: error?.status ?? null,
-        });
         if (error) {
             showSnack(error.message || 'Login failed');
             void reportAppError({
