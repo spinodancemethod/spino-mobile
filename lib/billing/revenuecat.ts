@@ -3,10 +3,8 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 type RevenueCatModule = typeof import('react-native-purchases');
-type RevenueCatPaywallModule = typeof import('react-native-purchases-ui');
 
 let purchasesModule: RevenueCatModule | null = null;
-let revenueCatPaywallModule: RevenueCatPaywallModule | null = null;
 let isConfigured = false;
 let currentAppUserId: string | null = null;
 let revenueCatIdentityQueue: Promise<void> = Promise.resolve();
@@ -136,11 +134,6 @@ function isExpoGo() {
         || Constants.appOwnership === 'expo';
 }
 
-function isRevenueCatUiUnavailableRuntime() {
-    // In Expo Go, Purchases UI runs in preview mode and cannot present native paywalls.
-    return isExpoGo();
-}
-
 function getApiKey() {
     const testStoreApiKey = process.env.EXPO_PUBLIC_REVENUECAT_TEST_STORE_API_KEY?.trim() ?? '';
 
@@ -167,15 +160,6 @@ async function getPurchasesModule() {
 
     purchasesModule = await import('react-native-purchases');
     return purchasesModule;
-}
-
-async function getRevenueCatPaywallModule() {
-    if (revenueCatPaywallModule) {
-        return revenueCatPaywallModule;
-    }
-
-    revenueCatPaywallModule = await import('react-native-purchases-ui');
-    return revenueCatPaywallModule;
 }
 
 async function ensureRevenueCatConfigured() {
@@ -301,16 +285,6 @@ export async function clearRevenueCatAppUser() {
     });
 }
 
-export async function getRevenueCatCurrentOffering(): Promise<PurchasesOffering | null> {
-    const purchases = await ensureRevenueCatConfigured();
-    if (!purchases) {
-        return null;
-    }
-
-    const offerings = await purchases.default.getOfferings();
-    return offerings.current ?? null;
-}
-
 export async function getRevenueCatOfferingsSnapshot(): Promise<RevenueCatOfferingsSnapshot> {
     const purchases = await ensureRevenueCatConfigured();
     if (!purchases) {
@@ -369,50 +343,6 @@ export function hasRevenueCatEntitlement(
 ) {
     const activeEntitlements = customerInfo.entitlements?.active ?? {};
     return Boolean(activeEntitlements[entitlementIdentifier]);
-}
-
-export async function presentRevenueCatPaywall(offering?: PurchasesOffering | null) {
-    if (!isSupportedPlatform()) {
-        throw new Error('RevenueCat paywall is available on iOS and Android only.');
-    }
-
-    if (isRevenueCatUiUnavailableRuntime()) {
-        throw new Error('RevenueCat paywall is unavailable in Expo Go. Use a development build to test purchases UI.');
-    }
-
-    const purchases = await ensureRevenueCatConfigured();
-    if (!purchases) {
-        throw new Error('RevenueCat is not configured for this platform.');
-    }
-
-    const revenueCatUI = await getRevenueCatPaywallModule();
-
-    // Present the dashboard-managed paywall only when the Pro entitlement is missing.
-    const result = await revenueCatUI.default.presentPaywallIfNeeded({
-        requiredEntitlementIdentifier: getRevenueCatRequiredEntitlementIdentifier(),
-        offering: offering ?? undefined,
-        displayCloseButton: true,
-    });
-
-    return result;
-}
-
-export async function presentRevenueCatCustomerCenter() {
-    if (!isSupportedPlatform()) {
-        throw new Error('Customer Center is available on iOS and Android only.');
-    }
-
-    if (isRevenueCatUiUnavailableRuntime()) {
-        throw new Error('RevenueCat Customer Center is unavailable in Expo Go. Use a development build to test it.');
-    }
-
-    const purchases = await ensureRevenueCatConfigured();
-    if (!purchases) {
-        throw new Error('RevenueCat is not configured for this platform.');
-    }
-
-    const revenueCatUI = await getRevenueCatPaywallModule();
-    return revenueCatUI.default.presentCustomerCenter();
 }
 
 export async function addRevenueCatCustomerInfoUpdateListener(listener: (customerInfo: CustomerInfo) => void) {

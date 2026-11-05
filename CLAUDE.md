@@ -48,7 +48,6 @@ Copy `.env.example` and fill in:
 - `lib/hooks/useEntitlement.ts` — primary hook for access control; drives paywall redirect logic
 - `lib/hooks/useSubscriptionStatus.ts` — raw subscription status (active/trialing/grace_period)
 - `lib/subscriptionAccess.ts` — pure function `hasActiveSubscription()` (status + expiry logic)
-- `lib/entitlementGuards.ts` — pure helpers used by screens to decide redirect vs pending state
 
 **UI components**
 - `Components/` — themed primitives (`ThemedView`, `ThemedText`, `ThemedButton`, `ThemedSearch`)

@@ -63,4 +63,3 @@ docker compose run --rm --entrypoint pytest fable -q
 - `fable/media.py` probe + 16 kHz mono extraction · `fable/rhythm.py` beat grid · `fable/phase.py` spoken-count detection ·
   `fable/grid.py` count grid + reference chunking · `fable/analyse.py` CLI · `fable/config.py`.
 - `positions/` position list (becomes per-roadmap system categories in the app).
-- `legacy_v1/` the v1 vision pipeline (frames, pose, Claude classification, merge, HTML report), kept for reference; not built.

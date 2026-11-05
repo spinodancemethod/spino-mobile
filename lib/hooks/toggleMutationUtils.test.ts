@@ -1,23 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { QueryClient } from '@tanstack/react-query';
-import {
-    computeNextToggledIds,
-    createIdsOnlyToggleMutationLifecycle,
-} from './toggleMutationUtils';
-
-describe('computeNextToggledIds', () => {
-    it('adds item when not present', () => {
-        const { exists, next } = computeNextToggledIds(['a', 'b'], 'c');
-        expect(exists).toBe(false);
-        expect(next).toEqual(['a', 'b', 'c']);
-    });
-
-    it('removes item when present', () => {
-        const { exists, next } = computeNextToggledIds(['a', 'b', 'c'], 'b');
-        expect(exists).toBe(true);
-        expect(next).toEqual(['a', 'c']);
-    });
-});
+import { createIdsOnlyToggleMutationLifecycle } from './toggleMutationUtils';
 
 describe('createIdsOnlyToggleMutationLifecycle', () => {
     it('optimistically updates and rolls back ids cache', async () => {

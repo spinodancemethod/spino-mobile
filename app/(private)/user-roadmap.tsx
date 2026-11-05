@@ -32,7 +32,6 @@ const SURFACE_HORIZONTAL_PADDING = 24
 const CATEGORIES_ANCHOR_VIEWPORT_X = 240
 const CATEGORIES_ANCHOR_VIEWPORT_Y = 24
 const SAMPLE_PLACEHOLDER_URL = 'https://placehold.co/240x135/e2e8f0/475569?text=Local+Video'
-const SAMPLE_POSITION_PLACEHOLDER_URL = 'https://placehold.co/320x180/fef3c7/92400e?text=Roadmap'
 
 export default function UserRoadmapScreen() {
     const { colors } = useTheme()
@@ -338,11 +337,9 @@ export default function UserRoadmapScreen() {
                     roadmapPositionVideosByPosition={emptyVideos}
                     freeTierVideosByPosition={emptyVideos}
                     availableVideosByPosition={filteredVideosByCategory}
-                    availablePositionVideosByPosition={emptyVideos}
                     completedVideoIdSet={completedSegmentIdSet}
                     isSubscribed
                     showEmptyPositions={showEmptyCategories}
-                    samplePositionPlaceholderUrl={SAMPLE_POSITION_PLACEHOLDER_URL}
                     sampleVideoPlaceholderUrl={SAMPLE_PLACEHOLDER_URL}
                     showLeftLane={false}
                     showConnectorStubs

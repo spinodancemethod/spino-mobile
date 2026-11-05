@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { router } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -66,13 +65,6 @@ export default function YourRoadmapsScreen() {
         // user-roadmap is a Stack screen (not a tab), so a plain push gives
         // correct back behavior to the roadmap list.
         router.push({ pathname: '/(private)/user-roadmap', params: { roadmapId: roadmap.id } })
-    }
-
-    function editRoadmap(roadmap: UserRoadmap) {
-        router.push({
-            pathname: '/(private)/user-roadmap',
-            params: { roadmapId: roadmap.id, editRoadmap: '1' },
-        })
     }
 
     return (
@@ -171,8 +163,6 @@ const styles = StyleSheet.create({
     roadmap: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 6, position: 'relative' },
     roadmapContentPressable: { gap: 6, paddingRight: 44, minHeight: 32, justifyContent: 'center' },
     roadmapTitle: { flex: 1 },
-    editRoadmapIconButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-    editRoadmapIconButtonOverlay: { position: 'absolute', top: 10, right: 10, zIndex: 2, elevation: 2 },
     input: { borderWidth: 1, borderRadius: 6, minHeight: 44, paddingHorizontal: 10 },
     multiline: { minHeight: 76, paddingTop: 10, textAlignVertical: 'top' },
     fullButton: { width: '100%' },

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Alert } from 'react-native'
-import * as FileSystem from 'expo-file-system/legacy'
 import * as ImagePicker from 'expo-image-picker'
 import { useDeleteVideoUpload, useSyncVideoUpload, useVideoUploads } from './useVideoUploads'
 import { useRelinkVideoUpload } from './useRelinkVideoUpload'
@@ -8,7 +7,7 @@ import { useVideoAssetAvailability } from './useVideoAssetAvailability'
 import { useVideoSegmentCounts } from './useVideoSegmentCounts'
 import { useUserRoadmaps } from './useUserRoadmaps'
 import { showSnack } from 'lib/snackbarService'
-import type { LocalVideoStatus, LocalVideoUpload, VideoUploadRecord } from 'lib/models'
+import type { LocalVideoUpload, VideoUploadRecord } from 'lib/models'
 import type { VideoAssetResolution } from 'lib/videoAssetResolver'
 import { calculateVideoContentHash } from 'lib/videoHash'
 import { persistPickedVideo, removePersistedVideo } from 'lib/localVideoStore'
@@ -196,14 +195,5 @@ export function useLocalVideoLibrary() {
         pickVideo,
         confirmRemove,
         loading: cloudUploadsQuery.isLoading,
-    }
-}
-
-export async function resolveLocalVideoStatus(uri: string): Promise<LocalVideoStatus> {
-    try {
-        const info = await FileSystem.getInfoAsync(uri)
-        return info.exists ? 'AVAILABLE' : 'MISSING'
-    } catch {
-        return 'UNKNOWN'
     }
 }

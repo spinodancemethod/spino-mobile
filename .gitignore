@@ -87,3 +87,11 @@ runs/
 
 # Local test videos (too large for GitHub)
 testMedia/
+
+# Native module build output
+modules/*/android/build/
+modules/*/android/.cxx/
+
+# Python
+__pycache__/
+*.pyc

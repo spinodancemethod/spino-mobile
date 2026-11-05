@@ -317,35 +317,6 @@ export async function signUp(email: string, password: string) {
     }
 }
 
-export async function signInWithOAuth(provider: 'google' | 'apple') {
-    try {
-        const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
-        const redirectTo = `${scheme}://login`;
-        const res = await supabase.auth.signInWithOAuth({
-            provider,
-            options: { redirectTo },
-        });
-        if (res?.error) {
-            showSnack(res.error.message || 'OAuth sign-in failed');
-            void reportAppError({
-                context: 'auth.signInWithOAuth',
-                error: res.error,
-                metadata: { provider },
-            });
-            return { error: res.error };
-        }
-        return { error: null, data: res?.data };
-    } catch (e: any) {
-        showSnack(e?.message ?? 'OAuth sign-in failed');
-        void reportAppError({
-            context: 'auth.signInWithOAuth',
-            error: e,
-            metadata: { provider },
-        });
-        return { error: e };
-    }
-}
-
 export async function updatePassword(password: string) {
     try {
         const { data, error } = await supabase.auth.updateUser({ password });

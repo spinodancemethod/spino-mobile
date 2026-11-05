@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator } from 'react-native';
 // fonts are preloaded in app/_layout.tsx
-import ThemedButton from 'Components/ThemedButton';
 import { router } from 'expo-router';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';

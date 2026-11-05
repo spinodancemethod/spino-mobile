@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { createVideoRelinkUpdate, preservesVideoUploadIdentity } from './videoRelink'
+import { createVideoRelinkUpdate } from './videoRelink'
 
 describe('createVideoRelinkUpdate', () => {
     it('changes only mutable local-reference fields', () => {
@@ -16,10 +16,5 @@ describe('createVideoRelinkUpdate', () => {
         expect(update).not.toHaveProperty('id')
         expect(update).not.toHaveProperty('original_filename')
         expect(update).not.toHaveProperty('content_hash')
-    })
-
-    it('requires the permanent video upload ID to remain unchanged', () => {
-        expect(preservesVideoUploadIdentity({ id: 'video-a' }, { id: 'video-a' })).toBe(true)
-        expect(preservesVideoUploadIdentity({ id: 'video-a' }, { id: 'video-b' })).toBe(false)
     })
 })

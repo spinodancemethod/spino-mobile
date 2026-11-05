@@ -157,7 +157,7 @@ export default function LocalVideosScreen() {
             + (skipped > 0 ? ` ${skipped} with several matches need a manual choice.` : ''))
     }
 
-    async function saveRange(video: LocalVideoUpload) {
+    async function saveRange() {
         const start = Number(rangeStart)
         const end = Number(rangeEnd)
         if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start >= end) {
@@ -420,7 +420,7 @@ export default function LocalVideosScreen() {
                                     />
                                     <ThemedButton
                                         title="Save timestamp range"
-                                        onPress={() => void saveRange(video)}
+                                        onPress={() => void saveRange()}
                                         style={styles.fullButton}
                                     />
                                     <ThemedText variant="small" style={styles.rangeLabel}>Category</ThemedText>

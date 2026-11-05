@@ -65,37 +65,6 @@ export function useRequestVideoAnalysis() {
         onSuccess: (_job, { video }) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUpload(video.id, user?.id) })
-            void queryClient.invalidateQueries({ queryKey: queryKeys.analysisJob(video.id, user?.id) })
-        },
-    })
-}
-
-/**
- * Latest job for a video. Polls every 5 s while queued/processing so the Library
- * status chip and the builder update without push notifications (those come in Prompt 11).
- */
-export function useAnalysisJob(video: VideoUploadRecord | null | undefined) {
-    const { user } = useAuth()
-    const active = video?.analysis_status === 'queued' || video?.analysis_status === 'processing'
-    return useQuery({
-        queryKey: queryKeys.analysisJob(video?.id, user?.id),
-        enabled: !!video && !!user,
-        refetchInterval: active ? 5000 : false,
-        queryFn: async (): Promise<AnalysisJobRecord | null> => {
-            const { data, error } = await supabase
-                .from('analysis_jobs')
-                .select('*')
-                .eq('video_upload_id', video!.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-            if (error) throw error
-            // A finished job means the video row changed too; refresh the list once.
-            if (data && (data.status === 'done' || data.status === 'failed') && active) {
-                void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploads(user?.id) })
-                void queryClient.invalidateQueries({ queryKey: queryKeys.videoUpload(video!.id, user?.id) })
-            }
-            return (data as AnalysisJobRecord | null) ?? null
         },
     })
 }

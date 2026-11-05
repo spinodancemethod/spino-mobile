@@ -34,11 +34,9 @@ type RoadmapCanvasProps = {
     roadmapPositionVideosByPosition: Map<string, RoadmapVideo[]>;
     freeTierVideosByPosition: Map<string, RoadmapVideo[]>;
     availableVideosByPosition: Map<string, RoadmapVideo[]>;
-    availablePositionVideosByPosition: Map<string, RoadmapVideo[]>;
     completedVideoIdSet: Set<string>;
     isSubscribed: boolean;
     showEmptyPositions: boolean;
-    samplePositionPlaceholderUrl: string;
     sampleVideoPlaceholderUrl: string;
     onNodePress: (position: RoadmapPosition) => void;
     onEmptyPositionPress: (position: RoadmapPosition) => void;
@@ -238,9 +236,9 @@ type StackContext = {
     dropVideo: (positionId: string, from: number, to: number) => void;
 }
 
-const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos, rowIndex, videos, showEmptyState }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; rowIndex: number; videos: RoadmapVideo[]; showEmptyState: boolean }) {
+const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos, videos, showEmptyState }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean }) {
     const ctx = ctxRef.current!
-    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, freeTierVideosByPosition, availableVideosByPosition, completedVideoIdSet, isSubscribed, sampleVideoPlaceholderUrl, onEmptyPositionPress, onVideoPress, onLockedPositionPress, onToggleCompletion, onReorderVideos, drag, dropVideo } = ctx
+    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, freeTierVideosByPosition, availableVideosByPosition, completedVideoIdSet, isSubscribed, sampleVideoPlaceholderUrl, onReorderVideos, drag } = ctx
     // Fixed DOM order (by key); the data order is carried by `slot` (see DragState).
     const domOrder = useMemo(() => videos
         .map((video, slot) => ({ video, slot, key: video?.id ?? `${pos?.id}-fav-${slot}` }))
@@ -393,7 +391,7 @@ const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos,
 
 const PositionEntryStack = React.memo(function PositionEntryStack({ ctxRef, pos, videos, showAddButton }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showAddButton: boolean }) {
     const ctx = ctxRef.current!
-    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, completedVideoIdSet, sampleVideoPlaceholderUrl, onEmptyPositionVideoPress, onVideoPress, onToggleCompletion } = ctx
+    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, completedVideoIdSet, sampleVideoPlaceholderUrl } = ctx
     if (videos.length === 0 && !showAddButton) {
         return null
     }
@@ -514,11 +512,9 @@ export function RoadmapCanvas({
     roadmapPositionVideosByPosition,
     freeTierVideosByPosition,
     availableVideosByPosition,
-    availablePositionVideosByPosition,
     completedVideoIdSet,
     isSubscribed,
     showEmptyPositions,
-    samplePositionPlaceholderUrl,
     sampleVideoPlaceholderUrl,
     onNodePress,
     onEmptyPositionPress,
@@ -623,8 +619,6 @@ export function RoadmapCanvas({
                     {rowDom.map(({ position, slot: rowIndex }, domIndex) => {
                         const positionRoadmapVideos = roadmapPositionVideosByPosition.get(position.id) ?? []
                         const positionFavouriteVideos = videosFor(position.id)
-                        const hasRoadmapPositionVideos = positionRoadmapVideos.length > 0
-                        const hasAvailablePositionVideos = (availablePositionVideosByPosition.get(position.id)?.length ?? 0) > 0
                         const positionAllowsVideos = position?.has_videos !== false
                         // Left lane ("Getting to position"): show + for everyone as long as
                         // the position record allows videos — subscription state is irrelevant here.
@@ -694,7 +688,6 @@ export function RoadmapCanvas({
                                     <PositionVideoStack
                                         ctxRef={stackCtxRef}
                                         pos={position}
-                                        rowIndex={rowIndex}
                                         videos={positionFavouriteVideos}
                                         showEmptyState={showEmptyPositions}
                                     />

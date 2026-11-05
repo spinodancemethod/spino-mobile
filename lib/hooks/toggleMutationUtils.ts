@@ -1,17 +1,4 @@
 import { QueryClient, QueryKey } from '@tanstack/react-query';
-import { queryKeys } from 'lib/queryKeys';
-
-export function computeNextToggledIds(previous: string[], itemId: string) {
-    const exists = previous.includes(itemId);
-    const next = exists
-        ? previous.filter((id) => id !== itemId)
-        : [...previous, itemId];
-
-    return {
-        exists,
-        next,
-    };
-}
 
 type CreateIdsOnlyToggleMutationLifecycleParams<TVariables> = {
     queryClient: QueryClient;

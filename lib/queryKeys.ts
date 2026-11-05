@@ -1,5 +1,3 @@
-import { QueryKey } from '@tanstack/react-query';
-
 export const queryKeys = {
     completedSegmentIds: (userId?: string | null) => ['completedSegmentIds', userId ?? 'current'] as const,
     videoUploads: (userId?: string | null) => ['videoUploads', userId ?? null] as const,
@@ -13,10 +11,4 @@ export const queryKeys = {
     videoUploadNote: (id?: string | null, userId?: string | null) => ['videoUploadNote', id ?? null, userId ?? null] as const,
     roadmapSegmentsRoot: () => ['roadmapSegments'] as const,
     roadmapSegments: (roadmapId?: string | null, userId?: string | null) => ['roadmapSegments', roadmapId ?? null, userId ?? null] as const,
-    // Fable v2: latest analysis job for a video (polled while queued/processing)
-    analysisJob: (videoUploadId?: string | null, userId?: string | null) => ['analysisJob', videoUploadId ?? null, userId ?? null] as const,
 };
-
-export function isQueryKeyEqual(a: QueryKey, b: QueryKey) {
-    return JSON.stringify(a) === JSON.stringify(b);
-}

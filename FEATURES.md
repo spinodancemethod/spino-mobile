@@ -2,6 +2,7 @@
 
 ## Platform Upgrades
 
+- Repository cleanup: removed committed Android build output for the `audio-extract` module and Python `__pycache__` folders (now gitignored), the unused `worker/legacy_v1` vision pipeline, dead modules (`lib/entitlementGuards`, `lib/videoRelinkDiscovery`), unused functions (OAuth sign-in, RevenueCat paywall and Customer Center wrappers, analysis-job polling hook), stale relink planning docs, and the unused `react-dom`, `react-native-web`, and `react-native-purchases-ui` dependencies.
 - Upgraded the app from Expo SDK 54 to SDK 58 (React Native 0.88, React 19.3): realigned all Expo packages, moved to RevenueCat v11, migrated splash config to the `expo-splash-screen` plugin, adopted RN strict ref types (`ViewInstance`), switched video-library scanning to `expo-media-library/legacy`, and replaced the removed Tabs `initialRouteName` prop with `unstable_settings.anchor`.
 
 ## Cleanup

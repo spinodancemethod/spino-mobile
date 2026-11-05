@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { StyleProp, Text, TextStyle } from 'react-native';
-import { useTheme } from '../constants/useTheme';
-import { createStyles, useStyles } from '../constants/styles';
+import { useStyles } from '../constants/styles';
 type Variant = 'title' | 'subheader' | 'large' | 'small';
 
 interface Props {
