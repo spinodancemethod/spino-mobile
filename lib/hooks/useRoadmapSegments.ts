@@ -28,7 +28,7 @@ export function useRoadmapSegments(roadmapId?: string | null) {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('segments')
-                .select('id, user_id, video_upload_id, sequence, start_time, end_time, category_id, title, thumbnail_reference, video_categories!inner(name), video_uploads!inner(name, filename, custom_title, fallback_uri, thumbnail_reference, roadmap_id, video_upload_notes(note_text))')
+                .select('id, user_id, video_upload_id, sequence, start_time, end_time, category_id, title, user_notes, thumbnail_reference, video_categories!inner(name), video_uploads!inner(name, filename, custom_title, fallback_uri, thumbnail_reference, roadmap_id)')
                 .eq('user_id', user!.id)
                 .eq('video_uploads.roadmap_id', roadmapId!)
                 // User-set order within a category first (nulls last), then by time.
@@ -37,12 +37,9 @@ export function useRoadmapSegments(roadmapId?: string | null) {
 
             if (error) throw error
             return (data ?? []).map((row: any) => {
-                // Supabase relation can be array/object depending on inferred cardinality.
-                // Normalize to a single nullable note string for UI consumption.
-                const notesRelation = row.video_uploads?.video_upload_notes
-                const noteText = Array.isArray(notesRelation)
-                    ? (notesRelation[0]?.note_text ?? null)
-                    : (notesRelation?.note_text ?? null)
+                // Tile notes are per segment (segments.user_notes), not per video, so
+                // a note on one segment never shows on sibling segments of the same video.
+                const noteText = row.user_notes ?? null
 
                 const displayTitle = row.video_uploads?.custom_title?.trim() || null
                 const filename = row.video_uploads?.filename?.trim() || null

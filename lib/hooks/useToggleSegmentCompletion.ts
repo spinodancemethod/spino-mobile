@@ -65,7 +65,7 @@ export function useToggleSegmentCompletion(userId?: string | null) {
         onSettled: () => {
             toggleLifecycle.onSettled()
             // Keep roadmap tiles fresh after toggling completion in detail view.
-            queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }

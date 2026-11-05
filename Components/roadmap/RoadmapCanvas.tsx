@@ -236,9 +236,11 @@ type StackContext = {
     dropVideo: (positionId: string, from: number, to: number) => void;
 }
 
-const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos, videos, showEmptyState }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean }) {
+// `completedVideoIdSet` is passed as a prop (not only via ctxRef) so these memoised stacks
+// re-render when completion state changes; a ref update alone would not trigger a render.
+const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos, videos, showEmptyState, completedVideoIdSet }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showEmptyState: boolean; completedVideoIdSet: Set<string> }) {
     const ctx = ctxRef.current!
-    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, freeTierVideosByPosition, availableVideosByPosition, completedVideoIdSet, isSubscribed, sampleVideoPlaceholderUrl, onReorderVideos, drag } = ctx
+    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, freeTierVideosByPosition, availableVideosByPosition, isSubscribed, sampleVideoPlaceholderUrl, onReorderVideos, drag } = ctx
     // Fixed DOM order (by key); the data order is carried by `slot` (see DragState).
     const domOrder = useMemo(() => videos
         .map((video, slot) => ({ video, slot, key: video?.id ?? `${pos?.id}-fav-${slot}` }))
@@ -389,9 +391,9 @@ const PositionVideoStack = React.memo(function PositionVideoStack({ ctxRef, pos,
     )
 })
 
-const PositionEntryStack = React.memo(function PositionEntryStack({ ctxRef, pos, videos, showAddButton }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showAddButton: boolean }) {
+const PositionEntryStack = React.memo(function PositionEntryStack({ ctxRef, pos, videos, showAddButton, completedVideoIdSet }: { ctxRef: React.RefObject<StackContext>; pos: RoadmapPosition; videos: RoadmapVideo[]; showAddButton: boolean; completedVideoIdSet: Set<string> }) {
     const ctx = ctxRef.current!
-    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, completedVideoIdSet, sampleVideoPlaceholderUrl } = ctx
+    const { styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, sampleVideoPlaceholderUrl } = ctx
     if (videos.length === 0 && !showAddButton) {
         return null
     }
@@ -633,6 +635,7 @@ export function RoadmapCanvas({
                                             pos={position}
                                             videos={positionRoadmapVideos}
                                             showAddButton={shouldShowPositionAddButton}
+                                            completedVideoIdSet={completedVideoIdSet}
                                         />
                                     </View>
                                 ) : null}
@@ -690,6 +693,7 @@ export function RoadmapCanvas({
                                         pos={position}
                                         videos={positionFavouriteVideos}
                                         showEmptyState={showEmptyPositions}
+                                        completedVideoIdSet={completedVideoIdSet}
                                     />
                                 </View>
                             </DraggableRow>

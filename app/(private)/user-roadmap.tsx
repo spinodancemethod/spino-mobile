@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, View } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
@@ -56,6 +56,20 @@ export default function UserRoadmapScreen() {
     } = useUserRoadmapViewModel(roadmap?.id, showEmptyCategories, showCompleted)
     const toggleSegmentCompletion = useToggleSegmentCompletion()
     const reorderSegmentsMutation = useReorderRoadmapSegments()
+
+    // Safety net: any edit made on a detail page (notes, completion, category, thumbnail,
+    // delete) must show on the tiles when the user comes back, even if an invalidation
+    // was missed or the query was inactive. Refetch roadmap-driven queries on focus.
+    const segmentsRefetch = segmentsQuery.refetch
+    const completedRefetch = completedSegmentsQuery.refetch
+    const categoriesRefetch = categoriesQuery.refetch
+    const initialFocus = useRef(true)
+    useFocusEffect(useCallback(() => {
+        if (initialFocus.current) { initialFocus.current = false; return }
+        void segmentsRefetch()
+        void completedRefetch()
+        void categoriesRefetch()
+    }, [segmentsRefetch, completedRefetch, categoriesRefetch]))
     const reorderCategoriesMutation = useReorderVideoCategories()
 
     /** Drag of a video tile within its category row (indices are positions in the visible row). */

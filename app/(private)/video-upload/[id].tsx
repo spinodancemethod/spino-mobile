@@ -52,9 +52,14 @@ export default function VideoUploadDetailScreen() {
     const [thumbnailLoading, setThumbnailLoading] = useState(false)
     const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
 
+    const activeSegment = segmentsQuery.data?.find((segment) => segment.id === segmentId) ?? null
+    // When opened for a segment, notes are per segment (segments.user_notes). The
+    // video-level note is only used when no segment is selected.
+    const savedNoteText = segmentId ? (activeSegment?.user_notes ?? '') : (noteQuery.data?.note_text ?? '')
+
     useEffect(() => {
-        setNoteText(noteQuery.data?.note_text ?? '')
-    }, [noteQuery.data?.note_text])
+        setNoteText(savedNoteText)
+    }, [savedNoteText])
 
     useEffect(() => {
         setTitleText(uploadQuery.data?.custom_title ?? '')
@@ -67,7 +72,6 @@ export default function VideoUploadDetailScreen() {
         setSegmentEndDraft(endTime ?? '')
     }, [endTime, startTime])
 
-    const activeSegment = segmentsQuery.data?.find((segment) => segment.id === segmentId) ?? null
     const currentCategoryId = activeSegment?.category_id ?? null
     const currentCategoryName = categoriesQuery.data?.find((item) => item.id === currentCategoryId)?.name ?? category ?? 'Uncategorized'
 
@@ -302,7 +306,17 @@ export default function VideoUploadDetailScreen() {
 
     async function saveNote() {
         try {
-            await noteMutation.mutateAsync({ videoUploadId: upload.id, noteText })
+            if (activeSegment) {
+                await updateSegment.mutateAsync({
+                    id: activeSegment.id,
+                    videoUploadId: upload.id,
+                    startTime: activeSegment.start_time,
+                    endTime: activeSegment.end_time,
+                    userNotes: noteText,
+                })
+            } else {
+                await noteMutation.mutateAsync({ videoUploadId: upload.id, noteText })
+            }
             showSnack('Note saved.')
             setNoteEditorOpen(false)
         } catch (error) {
@@ -311,12 +325,12 @@ export default function VideoUploadDetailScreen() {
     }
 
     function openNoteEditor() {
-        setNoteText(noteQuery.data?.note_text ?? '')
+        setNoteText(savedNoteText)
         setNoteEditorOpen(true)
     }
 
     function closeNoteEditor() {
-        if (noteMutation.isPending) return
+        if (noteMutation.isPending || updateSegment.isPending) return
         setNoteEditorOpen(false)
     }
 
@@ -385,14 +399,14 @@ export default function VideoUploadDetailScreen() {
                             onPress={openNoteEditor}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={(noteQuery.data?.note_text ?? '').trim().length > 0 ? 'Edit note' : 'Add note'}
+                            accessibilityLabel={savedNoteText.trim().length > 0 ? 'Edit note' : 'Add note'}
                             style={[styles.editIconButton, { borderColor: colors.border }]}
                         >
                             <Ionicons name="create-outline" size={18} color={colors.text} />
                         </Pressable>
                     </View>
-                    {(noteQuery.data?.note_text ?? '').trim().length > 0 ? (
-                        <ThemedText style={styles.noteBody}>{noteQuery.data?.note_text}</ThemedText>
+                    {savedNoteText.trim().length > 0 ? (
+                        <ThemedText style={styles.noteBody}>{savedNoteText}</ThemedText>
                     ) : (
                         <ThemedText variant="small" style={styles.noteBody} >No notes yet.</ThemedText>
                     )}
@@ -482,7 +496,7 @@ export default function VideoUploadDetailScreen() {
                         />
                         <View style={styles.modalActions}>
                             <ThemedButton title="Cancel" variant="ghost" onPress={closeNoteEditor} style={styles.modalActionButton} />
-                            <ThemedButton title="Save" onPress={() => void saveNote()} loading={noteMutation.isPending} style={styles.modalActionButton} />
+                            <ThemedButton title="Save" onPress={() => void saveNote()} loading={noteMutation.isPending || updateSegment.isPending} style={styles.modalActionButton} />
                         </View>
                     </Pressable>
                 </Pressable>

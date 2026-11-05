@@ -83,7 +83,7 @@ export function useUpsertVideoUploadNote() {
         onSuccess: (note) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoUploadNote(note.video_upload_id, user?.id) })
             // Notes are shown on roadmap tiles, so refresh segment-driven roadmap data too.
-            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegments() })
+            void queryClient.invalidateQueries({ queryKey: queryKeys.roadmapSegmentsRoot() })
         },
     })
 }
