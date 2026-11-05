@@ -10,7 +10,8 @@ export type VideoRelinkCandidate = {
 
 export type VideoRelinkVerification =
     | { matches: true }
-    | { matches: false; reason: 'CANDIDATE_UNAVAILABLE' | 'FILE_SIZE_MISMATCH' | 'DURATION_MISMATCH' | 'HASH_UNAVAILABLE' | 'HASH_MISMATCH' }
+    | { matches: false; reason: 'FILE_SIZE_MISMATCH' | 'DURATION_MISMATCH' | 'HASH_UNAVAILABLE' | 'HASH_MISMATCH' }
+    | { matches: false; reason: 'CANDIDATE_UNAVAILABLE'; error?: string }
 
 export type ContentHashCalculator = (uri: string) => Promise<string>
 
@@ -54,7 +55,9 @@ export async function verifyVideoRelinkCandidate(
         return candidateHash === videoUpload.content_hash
             ? { matches: true }
             : { matches: false, reason: 'HASH_MISMATCH' }
-    } catch {
-        return { matches: false, reason: 'CANDIDATE_UNAVAILABLE' }
+    } catch (error) {
+        // Surface the native message: the scan diagnostics show it when every hash fails.
+        const message = error instanceof Error ? error.message : String(error)
+        return { matches: false, reason: 'CANDIDATE_UNAVAILABLE', error: `${message} (${candidate.uri})` }
     }
 }

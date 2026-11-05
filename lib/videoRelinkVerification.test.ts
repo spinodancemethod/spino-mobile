@@ -67,6 +67,6 @@ describe('verifyVideoRelinkCandidate', () => {
             uri: 'file:///disappeared.mp4',
             fileSize: 42,
             durationSeconds: 15,
-        }, async () => { throw new Error('File disappeared') })).resolves.toEqual({ matches: false, reason: 'CANDIDATE_UNAVAILABLE' })
+        }, async () => { throw new Error('File disappeared') })).resolves.toEqual({ matches: false, reason: 'CANDIDATE_UNAVAILABLE', error: 'File disappeared (file:///disappeared.mp4)' })
     })
 })

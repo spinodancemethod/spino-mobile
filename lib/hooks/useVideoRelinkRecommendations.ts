@@ -21,6 +21,8 @@ export type VideoRelinkScanDiagnostics = {
     hashMismatch: number
     hashUnavailable: number
     hashErrors: number
+    /** Message of the first hashing failure, so a release build can report why it failed. */
+    firstHashError?: string
 }
 
 type ScanResult = { candidates: ScannedVideoCandidate[]; diagnostics: VideoRelinkScanDiagnostics }
@@ -95,6 +97,7 @@ export function describeRelinkScan(d: VideoRelinkScanDiagnostics): string {
     return `Scanned ${d.inspected} device videos: ${d.durationPrefilterRejected} wrong duration, `
         + `${d.inaccessible} unreadable, ${d.sizePrefilterRejected} wrong size, ${d.candidates} candidates, `
         + `${d.hashMismatch} hash mismatch, ${d.hashUnavailable} no stored hash, ${d.hashErrors} hash errors.`
+        + (d.firstHashError ? ` First hash error: ${d.firstHashError}` : '')
 }
 
 export function useVideoRelinkRecommendations() {
@@ -116,6 +119,7 @@ export function useVideoRelinkRecommendations() {
                         diagnostics.hashMismatch += 1
                     } else if (verification.reason === 'CANDIDATE_UNAVAILABLE') {
                         diagnostics.hashErrors += 1
+                        diagnostics.firstHashError ??= verification.error ?? `unreadable ${candidate.uri}`
                     }
                 }
                 matches.sort((left, right) => left.uri.localeCompare(right.uri))

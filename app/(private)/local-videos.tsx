@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { persistThumbnail } from 'lib/localVideoStore'
 import { thumbnailDisplayUri } from 'lib/thumbnailUri'
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import * as VideoThumbnails from 'expo-video-thumbnails'
 import { Image as ExpoImage } from 'expo-image'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
+import { queryClient } from 'lib/queryClient'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -38,6 +39,29 @@ export default function LocalVideosScreen() {
     } = useLocalVideoLibrary()
     const relinkVideoUpload = useRelinkVideoUpload()
     const recommendationsMutation = useVideoRelinkRecommendations()
+    const [refreshing, setRefreshing] = useState(false)
+    // Recovery page: only records whose file can no longer be found belong here.
+    // Available videos are managed from the roadmap, not listed as history.
+    const missingVideos = videos.filter((video) => video.status === 'NEEDS_RELINK')
+    const checkingVideos = videos.some((video) => video.status === 'UNKNOWN')
+
+    // This is a recovery screen, so it must show the real state of every record rather than
+    // the minute-old persisted cache: refetch the records and re-check every file on the device
+    // each time the screen is opened, and forget any previous scan result.
+    const refreshLocalVideos = useCallback(async () => {
+        recommendationsMutation.reset()
+        await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['videoUploads'] }),
+            queryClient.invalidateQueries({ queryKey: ['videoAsset'] }),
+        ])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+    useFocusEffect(useCallback(() => { void refreshLocalVideos() }, [refreshLocalVideos]))
+
+    async function pullToRefresh() {
+        setRefreshing(true)
+        try { await refreshLocalVideos() } finally { setRefreshing(false) }
+    }
     const [rangeStart, setRangeStart] = useState('0.00')
     const [rangeEnd, setRangeEnd] = useState('10.00')
     const activeRoadmapId = selectedVideoId
@@ -66,7 +90,15 @@ export default function LocalVideosScreen() {
 
     async function findRecommendedVideos() {
         try {
-            const { matchCount, diagnostics } = await recommendationsMutation.mutateAsync(missingUploadRecords)
+            const { matchCount, diagnostics, byUploadId } = await recommendationsMutation.mutateAsync(missingUploadRecords)
+            // Full breakdown in the Metro console (copy/paste friendly); the snackbar only fits a summary.
+            console.log('[relink-scan]', JSON.stringify({
+                uploads: missingUploadRecords.map((u) => ({
+                    id: u.id, hash: u.content_hash, size: u.file_size_bytes, duration: u.duration_seconds,
+                })),
+                diagnostics,
+                matchesByUploadId: byUploadId,
+            }, null, 2))
             // The scan breakdown is shown on a miss so a release build can be debugged without logs.
             showSnack(matchCount > 0
                 ? `${matchCount} matching local ${matchCount === 1 ? 'video was' : 'videos were'} found.`
@@ -87,6 +119,42 @@ export default function LocalVideosScreen() {
         } catch (error) {
             showSnack(error instanceof Error ? error.message : 'Could not restore this video.')
         }
+    }
+
+    // Records whose scan produced exactly one verified match. Ambiguous ones (several device
+    // files with the same fingerprint) are left for the user to pick by hand.
+    const unambiguousMatches = missingUploadRecords.flatMap((videoUpload) => {
+        const matches = recommendationsMutation.data?.byUploadId[videoUpload.id] ?? []
+        return matches.length === 1 ? [{ videoUpload, candidate: matches[0] }] : []
+    })
+    const [restoringAll, setRestoringAll] = useState(false)
+
+    /**
+     * Restore every unambiguous match in one go. On a replacement phone there can be
+     * hundreds of records, so a per-card tap does not scale. Runs sequentially: each
+     * restore re-hashes the candidate, and parallel reads of large files stall the UI.
+     */
+    async function restoreAllMatches() {
+        if (unambiguousMatches.length === 0) return
+        setRestoringAll(true)
+        let restored = 0
+        let failed = 0
+        try {
+            for (const { videoUpload, candidate } of unambiguousMatches) {
+                try {
+                    await relinkVideoUpload.mutateAsync({ videoUpload, candidate })
+                    restored += 1
+                } catch {
+                    failed += 1
+                }
+            }
+        } finally {
+            setRestoringAll(false)
+        }
+        const skipped = missingUploadRecords.filter((r) => (recommendationsMutation.data?.byUploadId[r.id]?.length ?? 0) > 1).length
+        showSnack(`${restored} ${restored === 1 ? 'video' : 'videos'} restored.`
+            + (failed > 0 ? ` ${failed} failed.` : '')
+            + (skipped > 0 ? ` ${skipped} with several matches need a manual choice.` : ''))
     }
 
     async function saveRange(video: LocalVideoUpload) {
@@ -239,21 +307,17 @@ export default function LocalVideosScreen() {
 
     return (
         <ThemedView style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                <ThemedText variant="title">Local Videos</ThemedText>
+            <ScrollView
+                contentContainerStyle={styles.container}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void pullToRefresh()} tintColor={colors.text} />}
+            >
+                <ThemedText variant="title">Missing videos</ThemedText>
                 <ThemedText variant="subheader" style={styles.intro}>
-                    Segment workspace. Videos stay on this device and act only as source references for segment playback.
+                    Videos stay on your device. Any that can no longer be found are listed here so you can reconnect them.
                 </ThemedText>
-                <ThemedText variant="small">
-                    Cloud metadata: {cloudUploadsQuery.isLoading ? 'checking...' : cloudUploadsQuery.error ? 'migration required' : `${cloudUploadsQuery.data?.length ?? 0} reference(s) synced`}
-                </ThemedText>
-
-                <ThemedButton
-                    title={picking ? 'Opening media library...' : 'Choose local video'}
-                    onPress={() => void pickVideo()}
-                    loading={picking}
-                    style={styles.fullButton}
-                />
 
                 {missingUploadRecords.length > 0 ? (
                     <ThemedButton
@@ -265,12 +329,29 @@ export default function LocalVideosScreen() {
                         style={styles.fullButton}
                     />
                 ) : null}
-                {videos.length === 0 ? (
+                {unambiguousMatches.length > 0 ? (
+                    <ThemedButton
+                        title={restoringAll
+                            ? 'Restoring videos...'
+                            : `Restore all ${unambiguousMatches.length} ${unambiguousMatches.length === 1 ? 'match' : 'matches'}`}
+                        onPress={() => void restoreAllMatches()}
+                        loading={restoringAll}
+                        disabled={picking || relinkVideoUpload.isPending}
+                        style={styles.fullButton}
+                    />
+                ) : null}
+                {missingVideos.length === 0 ? (
                     <View style={[styles.emptyState, { borderColor: colors.border }]}>
-                        <ThemedText variant="subheader">No local video references yet.</ThemedText>
-                        <ThemedText variant="small">Choose a video to test persistence and segment playback.</ThemedText>
+                        {checkingVideos ? (
+                            <ThemedText variant="subheader">Checking your videos...</ThemedText>
+                        ) : (
+                            <>
+                                <ThemedText variant="subheader">All your videos are available on this device.</ThemedText>
+                                <ThemedText variant="small">Nothing needs reconnecting.</ThemedText>
+                            </>
+                        )}
                     </View>
-                ) : videos.map((video) => {
+                ) : missingVideos.map((video) => {
                     const selected = selectedVideoId === video.id
                     const cloudVideo = cloudUploadsQuery.data?.find((record) => record.local_reference_key === video.id)
                     const recommendations = cloudVideo ? recommendationsMutation.data?.byUploadId[cloudVideo.id] ?? [] : []
@@ -293,14 +374,22 @@ export default function LocalVideosScreen() {
                                         {recommendations.length === 1 ? 'Recommended match' : `${recommendations.length} matching videos`}
                                     </ThemedText>
                                     {recommendations.map((candidate, index) => (
-                                        <ThemedButton
-                                            key={candidate.assetId}
-                                            title={recommendations.length === 1 ? `Restore ${candidate.filename}` : `Restore ${candidate.filename}`}
-                                            variant="ghost"
-                                            onPress={() => void restoreRecommendedVideo(video, index)}
-                                            disabled={relinkVideoUpload.isPending}
-                                            style={styles.actionButton}
-                                        />
+                                        <View key={candidate.assetId} style={[styles.candidate, { borderColor: colors.border }]}>
+                                            <ThemedText variant="small" numberOfLines={1}>{candidate.filename}</ThemedText>
+                                            <ThemedText variant="small">
+                                                {candidate.durationSeconds != null ? `${candidate.durationSeconds.toFixed(1)}s` : 'Unknown length'}
+                                                {candidate.fileSize != null ? ` · ${(candidate.fileSize / (1024 * 1024)).toFixed(1)} MB` : ''}
+                                            </ThemedText>
+                                            {/* Play the device file in place so the user can confirm it is the right clip before restoring. */}
+                                            <LocalSegmentPlayer source={candidate.uri} />
+                                            <ThemedButton
+                                                title={recommendations.length === 1 ? 'Restore this video' : `Restore ${candidate.filename}`}
+                                                variant="ghost"
+                                                onPress={() => void restoreRecommendedVideo(video, index)}
+                                                disabled={relinkVideoUpload.isPending}
+                                                style={styles.actionButton}
+                                            />
+                                        </View>
                                     ))}
                                 </View>
                             ) : null}
@@ -419,7 +508,8 @@ export default function LocalVideosScreen() {
                                     />
                                 ) : null}
                                 <ThemedButton
-                                    title="Relink video"
+                                    // When the scan has a verified match, the manual picker is the secondary path.
+                                    title={video.status === 'NEEDS_RELINK' && recommendations.length > 0 ? 'Choose a different file' : 'Relink video'}
                                     variant="ghost"
                                     onPress={() => void pickVideo(video)}
                                     disabled={picking}
@@ -543,5 +633,12 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         width: '100%',
+    },
+    candidate: {
+        borderWidth: 1,
+        borderRadius: 8,
+        gap: 4,
+        padding: 8,
+        overflow: 'hidden',
     },
 })

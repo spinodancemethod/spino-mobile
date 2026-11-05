@@ -40,13 +40,15 @@ const SAMPLE_BYTES = 1024 * 1024
  * never collide with the earlier whole-file hashes.
  */
 export async function calculateVideoContentHash(uri: string): Promise<string> {
-    const { File } = await import('expo-file-system')
+    const { File, FileMode } = await import('expo-file-system')
     const file = new File(uri)
     if (!file.exists) {
         throw new Error('The selected video is no longer available.')
     }
     const size = file.size ?? 0
-    const handle = file.open()
+    // Read-only: the default mode opens for writing, which Android refuses for
+    // media-library files owned by other apps (relink scan hashes those in place).
+    const handle = file.open(FileMode.ReadOnly)
     try {
         const hash = sha256.create()
         hash.update(Uint8Array.from(`v2:${size}:`, (ch) => ch.charCodeAt(0)))

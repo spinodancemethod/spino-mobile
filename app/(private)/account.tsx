@@ -167,7 +167,7 @@ export default function AccountPage() {
                 ) : null}
 
                 <ThemedButton
-                    title="Test Local Videos"
+                    title="Find missing videos"
                     variant="ghost"
                     onPress={() => router.push('/local-videos')}
                     style={{ width: '100%', marginTop: 8 }}
