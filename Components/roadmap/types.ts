@@ -6,6 +6,8 @@ export type RoadmapPosition = {
     description?: string | null;
     has_videos?: boolean | null;
     roadmap_preview_url?: string | null;
+    /** System category (Misc): fixed symbol, no edit modal. */
+    locked?: boolean;
 }
 
 export type RoadmapVideo = {

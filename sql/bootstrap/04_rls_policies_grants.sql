@@ -322,3 +322,39 @@ COMMIT;
 -- sql/migrations/20261101_create_analysis_jobs.sql (sections 2-6). Run it after this file.
 -- Fable v2 Prompt 10: position_templates + apply_position_library live in
 -- sql/migrations/20261102_position_library.sql. Run it after the analysis-jobs migration.
+
+-- Category tile images bucket and per-user folder policies (migration 20261105_category_images.sql).
+-- Public bucket: tiles render the public URL directly (no signing round trip).
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('category-images', 'category-images', true, 5242880, ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO NOTHING;
+
+-- Users manage objects only inside their own folder.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'category_images_select_authenticated') THEN
+    CREATE POLICY category_images_select_authenticated ON storage.objects
+      FOR SELECT TO authenticated USING (bucket_id = 'category-images');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'category_images_insert_own_folder') THEN
+    CREATE POLICY category_images_insert_own_folder ON storage.objects
+      FOR INSERT TO authenticated WITH CHECK (
+        bucket_id = 'category-images'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'category_images_update_own_folder') THEN
+    CREATE POLICY category_images_update_own_folder ON storage.objects
+      FOR UPDATE TO authenticated USING (
+        bucket_id = 'category-images'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'category_images_delete_own_folder') THEN
+    CREATE POLICY category_images_delete_own_folder ON storage.objects
+      FOR DELETE TO authenticated USING (
+        bucket_id = 'category-images'
+        AND (storage.foldername(name))[1] = auth.uid()::text
+      );
+  END IF;
+END $$;

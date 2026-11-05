@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS public.video_categories (
   roadmap_id uuid NOT NULL REFERENCES public.user_roadmaps (id) ON DELETE CASCADE,
   name text NOT NULL,
   description text,
+  -- Storage object path in the category-images bucket (see 20261105_category_images.sql).
+  image_path text,
   system_category boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),

@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Switch, View } from 'react-native'
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
+import { Image as ExpoImage } from 'expo-image'
+import { categoryImageUrl } from 'lib/categoryImage'
 import ThemedButton from 'Components/ThemedButton'
 import ThemedText from 'Components/ThemedText'
 import ThemedView from 'Components/ThemedView'
@@ -12,7 +15,7 @@ import { errorMessage } from 'lib/errorMessage'
 import { RoadmapPosition } from 'Components/roadmap/types'
 import { useRoadmapGestures } from 'lib/hooks/useRoadmapGestures'
 import { useDeleteUserRoadmap, useUpdateUserRoadmap, useUserRoadmaps } from 'lib/hooks/useUserRoadmaps'
-import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory, useReorderVideoCategories } from 'lib/hooks/useVideoCategories'
+import { useCreateVideoCategory, useDeleteVideoCategory, useUpdateVideoCategory, useReorderVideoCategories, useSetCategoryImage, useRemoveCategoryImage } from 'lib/hooks/useVideoCategories'
 import { useTheme } from 'constants/useTheme'
 import { showSnack } from 'lib/snackbarService'
 import { VideoCategoryRecord } from 'lib/models'
@@ -42,6 +45,8 @@ export default function UserRoadmapScreen() {
     const createCategory = useCreateVideoCategory()
     const updateCategory = useUpdateVideoCategory()
     const deleteCategory = useDeleteVideoCategory()
+    const setCategoryImage = useSetCategoryImage()
+    const removeCategoryImage = useRemoveCategoryImage()
     const roadmap = roadmapsQuery.data?.find((item) => item.id === roadmapId) ?? roadmapsQuery.data?.[0]
     const [showEmptyCategories, setShowEmptyCategories] = useState(true)
     const [showCompleted, setShowCompleted] = useState(true)
@@ -244,9 +249,53 @@ export default function UserRoadmapScreen() {
         }
     }
 
+    // The modal shows the live row so the picture updates right after an upload.
+    const liveSelectedCategory = selectedCategory
+        ? (categoriesQuery.data ?? []).find((item) => item.id === selectedCategory.id) ?? selectedCategory
+        : null
+    const selectedCategoryImageUrl = categoryImageUrl(liveSelectedCategory?.image_path)
+
+    async function pickCategoryImage() {
+        if (!liveSelectedCategory) return
+        if (liveSelectedCategory.system_category) {
+            showSnack('The Misc category cannot have an image.')
+            return
+        }
+        try {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+            if (!permission.granted) {
+                showSnack('Photo library permission is required to choose an image.')
+                return
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            })
+            if (result.canceled) return
+            const asset = result.assets[0]
+            await setCategoryImage.mutateAsync({ category: liveSelectedCategory, uri: asset.uri, mimeType: asset.mimeType })
+            showSnack('Category image updated.')
+        } catch (error) {
+            showSnack(errorMessage(error, 'Could not upload the image.'))
+        }
+    }
+
+    async function clearCategoryImage() {
+        if (!liveSelectedCategory?.image_path) return
+        try {
+            await removeCategoryImage.mutateAsync({ category: liveSelectedCategory })
+            showSnack('Category image removed.')
+        } catch (error) {
+            showSnack(errorMessage(error, 'Could not remove the image.'))
+        }
+    }
+
     function openManageCategoryModal(position: RoadmapPosition) {
         const category = (categoriesQuery.data ?? []).find((item) => item.id === position.id)
-        if (!category) return
+        // Misc is locked: no edit modal.
+        if (!category || category.system_category) return
         setSelectedCategory(category)
         setEditingCategoryName(category.name)
         setEditingCategoryDescription(category.description ?? '')
@@ -489,6 +538,33 @@ export default function UserRoadmapScreen() {
                 <Pressable style={screenStyles.modalBackdrop} onPress={() => setManageCategoryModalOpen(false)}>
                     <View style={[screenStyles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ThemedText variant="subheader" style={screenStyles.modalTitle}>Manage category</ThemedText>
+                        <Pressable
+                            onPress={() => void pickCategoryImage()}
+                            disabled={setCategoryImage.isPending}
+                            style={[screenStyles.categoryImageBox, { borderColor: colors.border }]}
+                            accessibilityRole="button"
+                            accessibilityLabel={selectedCategoryImageUrl ? 'Change category image' : 'Add category image'}
+                        >
+                            {setCategoryImage.isPending ? (
+                                <ActivityIndicator />
+                            ) : selectedCategoryImageUrl ? (
+                                <ExpoImage source={{ uri: selectedCategoryImageUrl }} style={screenStyles.categoryImage} contentFit="cover" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="image-plus" size={36} color="#92400e" />
+                                    <ThemedText variant="small" style={screenStyles.categoryImageHint}>Tap to add an image</ThemedText>
+                                </>
+                            )}
+                        </Pressable>
+                        {selectedCategoryImageUrl ? (
+                            <ThemedButton
+                                title="Remove image"
+                                variant="ghost"
+                                onPress={() => void clearCategoryImage()}
+                                loading={removeCategoryImage.isPending}
+                                style={screenStyles.fullButton}
+                            />
+                        ) : null}
                         <ThemedInput
                             value={editingCategoryName}
                             onChangeText={setEditingCategoryName}
@@ -706,6 +782,27 @@ const screenStyles = StyleSheet.create({
         fontWeight: '700',
         marginBottom: 6,
         textAlign: 'left',
+    },
+    categoryImageBox: {
+        alignSelf: 'center',
+        width: 140,
+        height: 140,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        backgroundColor: '#fff7f9',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    categoryImage: {
+        width: '100%',
+        height: '100%',
+    },
+    categoryImageHint: {
+        color: '#92400e',
+        marginTop: 4,
     },
     positionPlaceholderImage: {
         width: '100%',

@@ -5,6 +5,7 @@ import { queryClient } from '../queryClient'
 import { queryKeys } from '../queryKeys'
 import { requireUserId } from './userId'
 import type { VideoCategoryRecord } from '../models'
+import { CATEGORY_IMAGE_BUCKET, newCategoryImagePath } from '../categoryImage'
 
 export type CreateVideoCategoryInput = {
     roadmapId: string
@@ -105,6 +106,10 @@ export function useDeleteVideoCategory() {
     return useMutation({
         mutationFn: async ({ id, roadmapId }: { id: string; roadmapId: string }) => {
             const userId = requireUserId(undefined, user?.id)
+            // Drop the tile image first (best effort) so the bucket does not collect orphans.
+            const cached = queryClient.getQueryData<VideoCategoryRecord[]>(queryKeys.videoCategories(userId, roadmapId))
+            const imagePath = cached?.find((c) => c.id === id)?.image_path
+            if (imagePath) await supabase.storage.from(CATEGORY_IMAGE_BUCKET).remove([imagePath])
             const { error } = await supabase
                 .from('video_categories')
                 .delete()
@@ -173,6 +178,71 @@ export function useReorderVideoCategories() {
         },
         onSettled: (_d, _e, { roadmapId }) => {
             void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, roadmapId) })
+        },
+    })
+}
+
+/** Persist image_path on the row and refresh the roadmap tiles. */
+async function saveCategoryImagePath(userId: string, category: VideoCategoryRecord, imagePath: string | null) {
+    const { data, error } = await supabase
+        .from('video_categories')
+        .update({ image_path: imagePath, updated_at: new Date().toISOString() })
+        .eq('id', category.id)
+        .eq('roadmap_id', category.roadmap_id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+    if (error) throw error
+    return data as VideoCategoryRecord
+}
+
+/**
+ * Upload a picked image to the public category-images bucket and point the
+ * category at it. The old object (if any) is removed afterwards. The system
+ * Misc category is not user-owned, so RLS rejects the row update for it.
+ */
+export function useSetCategoryImage() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async ({ category, uri, mimeType }: { category: VideoCategoryRecord; uri: string; mimeType?: string | null }) => {
+            const userId = requireUserId(undefined, user?.id)
+            if (category.system_category) throw new Error('The Misc category cannot have an image.')
+            const contentType = mimeType && mimeType.startsWith('image/') ? mimeType : 'image/jpeg'
+            const path = newCategoryImagePath(userId, category.id, contentType)
+            const body = await (await fetch(uri)).arrayBuffer()
+            const { error: upErr } = await supabase.storage.from(CATEGORY_IMAGE_BUCKET).upload(path, body, { contentType, upsert: false })
+            if (upErr) throw upErr
+            let updated: VideoCategoryRecord
+            try {
+                updated = await saveCategoryImagePath(userId, category, path)
+            } catch (error) {
+                // Row update failed: do not leave the fresh object behind.
+                await supabase.storage.from(CATEGORY_IMAGE_BUCKET).remove([path])
+                throw error
+            }
+            if (category.image_path && category.image_path !== path) {
+                await supabase.storage.from(CATEGORY_IMAGE_BUCKET).remove([category.image_path])
+            }
+            return updated
+        },
+        onSuccess: (category) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, category.roadmap_id) })
+        },
+    })
+}
+
+/** Clear the category image and delete the stored object. */
+export function useRemoveCategoryImage() {
+    const { user } = useAuth()
+    return useMutation({
+        mutationFn: async ({ category }: { category: VideoCategoryRecord }) => {
+            const userId = requireUserId(undefined, user?.id)
+            const updated = await saveCategoryImagePath(userId, category, null)
+            if (category.image_path) await supabase.storage.from(CATEGORY_IMAGE_BUCKET).remove([category.image_path])
+            return updated
+        },
+        onSuccess: (category) => {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.videoCategories(user?.id, category.roadmap_id) })
         },
     })
 }

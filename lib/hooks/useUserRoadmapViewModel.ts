@@ -4,6 +4,7 @@ import { useVideoCategories } from './useVideoCategories'
 import { useCompletedSegmentIdsByUser } from './useCompletedSegmentIdsByUser'
 import type { RoadmapPosition, RoadmapVideo } from 'Components/roadmap/types'
 import { thumbnailDisplayUri } from '../thumbnailUri'
+import { categoryImageUrl } from '../categoryImage'
 
 export function useUserRoadmapViewModel(
     roadmapId: string | null | undefined,
@@ -19,6 +20,8 @@ export function useUserRoadmapViewModel(
             id: category.id,
             name: category.name,
             description: category.description ?? null,
+            roadmap_preview_url: categoryImageUrl(category.image_path),
+            locked: category.system_category,
         }))
     ), [categoriesQuery.data])
 

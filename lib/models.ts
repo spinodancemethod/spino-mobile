@@ -94,6 +94,8 @@ export type VideoCategoryRecord = {
     roadmap_id: string;
     name: string;
     description: string | null;
+    // Storage object path in the public category-images bucket (see lib/categoryImage.ts)
+    image_path?: string | null;
     system_category: boolean;
     // Fable v2: set when the category was created from the position library (stable id across renames)
     position_slug?: string | null;

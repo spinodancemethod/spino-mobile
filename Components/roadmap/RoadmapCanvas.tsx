@@ -3,7 +3,7 @@ import { LayoutChangeEvent, Pressable, TouchableOpacity, View } from 'react-nati
 import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated'
 import { Image as ExpoImage } from 'expo-image'
-import { Ionicons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import ThemedText from 'Components/ThemedText'
 import { RoadmapPosition, RoadmapVideo } from './types'
 
@@ -579,10 +579,6 @@ export function RoadmapCanvas({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    const getCategoryPlaceholderUrl = (label: string) => {
-        // Keep placeholder images meaningful when a custom preview thumbnail is missing.
-        return `https://placehold.co/320x180/fef3c7/92400e?text=${encodeURIComponent(label)}`
-    }
 
     const stackCtx: StackContext = {
         styles, videoWidth, videoHeight, videoMargin, videoGap, iconSize, freeTierVideosByPosition, availableVideosByPosition,
@@ -644,7 +640,7 @@ export function RoadmapCanvas({
 
                                 <View style={styles.positionColumn}>
                                     <RowHandle drag={drag} slot={rowIndex} count={positions.length} onDrop={onReorderPositions ? dropRow : undefined}>
-                                    <TouchableOpacity onPress={() => onNodePress(position)} activeOpacity={0.85}>
+                                    <TouchableOpacity onPress={() => onNodePress(position)} activeOpacity={0.85} disabled={!!position.locked}>
                                         <View
                                             style={[
                                                 styles.positionBox,
@@ -662,15 +658,24 @@ export function RoadmapCanvas({
                                             >
                                                 {position.name || position.title || 'Position'}
                                             </ThemedText>
-                                            <ExpoImage
-                                                source={{
-                                                    uri:
-                                                        position?.roadmap_preview_url
-                                                        ?? getCategoryPlaceholderUrl(position.name || position.title || 'Category'),
-                                                }}
-                                                style={styles.positionPlaceholderImage}
-                                                contentFit="cover"
-                                            />
+                                            {position.locked ? (
+                                                // Misc: fixed symbol, nothing to upload or edit.
+                                                <View style={[styles.positionPlaceholderImage, { alignItems: 'center', justifyContent: 'center' }]}>
+                                                    <MaterialCommunityIcons name="shape-outline" size={56} color="#92400e" />
+                                                </View>
+                                            ) : position?.roadmap_preview_url ? (
+                                                <ExpoImage
+                                                    source={{ uri: position.roadmap_preview_url }}
+                                                    style={styles.positionPlaceholderImage}
+                                                    contentFit="cover"
+                                                />
+                                            ) : (
+                                                // No image yet: image-plus placeholder tells the user the tile accepts a picture
+                                                // (picked from the Manage category modal opened by tapping the tile).
+                                                <View style={[styles.positionPlaceholderImage, { alignItems: 'center', justifyContent: 'center' }]}>
+                                                    <MaterialCommunityIcons name="image-plus" size={56} color="#92400e" />
+                                                </View>
+                                            )}
                                             {showPositionDescription && position?.description ? (
                                                 <ThemedText
                                                     variant="small"
