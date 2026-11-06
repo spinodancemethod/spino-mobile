@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Slot } from 'expo-router';
+import { Slot, router, usePathname } from 'expo-router';
 import * as Font from 'expo-font';
 import { Ionicons } from '@expo/vector-icons';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ErrorBoundary from 'Components/ErrorBoundary';
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { queryClient } from 'lib/queryClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { PERSISTED_QUERY_MAX_AGE_MS, QUERY_CACHE_BUSTER, queryClient, queryPersister } from 'lib/queryClient';
 import { ThemeProvider } from 'constants/ThemeProvider';
 import { AuthProvider, useAuth } from 'lib/auth';
 import {
@@ -18,16 +19,16 @@ import {
 } from 'lib/billing/revenuecat';
 import Snackbar from 'Components/Snackbar';
 import { showSnack } from 'lib/snackbarService';
-import { accountDetailsQueryKey } from 'lib/hooks/useAccountDetails';
-import { entitlementQueryKey } from 'lib/hooks/useEntitlement';
-import { subscriptionStatusQueryKey } from 'lib/hooks/useSubscriptionStatus';
 import { useEntitlement } from 'lib/hooks/useEntitlement';
+import { invalidateBillingQueries } from 'lib/hooks/useBilling';
+import { getSupabaseRuntimeConfig } from 'lib/runtimeConfig';
 
 function validateStartupEnv() {
     // Supabase backend for user auth and entitlements
+    const runtimeConfig = getSupabaseRuntimeConfig();
     const supabaseVars = {
-        EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
-        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+        EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL || runtimeConfig.url,
+        EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || runtimeConfig.publishableKey,
     };
 
     // RevenueCat SDKs for iOS and Android in-app purchases (both keys needed for cross-platform support)
@@ -82,11 +83,7 @@ function RevenueCatBootstrap() {
                 }
 
                 unsubscribeCustomerInfoListener = await addRevenueCatCustomerInfoUpdateListener(() => {
-                    void Promise.all([
-                        queryClient.invalidateQueries({ queryKey: subscriptionStatusQueryKey(userId) }),
-                        queryClient.invalidateQueries({ queryKey: accountDetailsQueryKey(userId) }),
-                        queryClient.invalidateQueries({ queryKey: entitlementQueryKey(userId) }),
-                    ]);
+                    void invalidateBillingQueries(queryClient, userId);
                 });
             } catch {
                 // Ignore sync bootstrap errors; manual refresh paths still work.
@@ -120,14 +117,9 @@ function EntitlementCacheGuard() {
         // On paid -> free transitions, drop cached paid payloads immediately
         // and refetch user-visible collections under current RLS.
         if (previous === true && isSubscribed === false) {
-            queryClient.removeQueries({ queryKey: ['video'] });
-            queryClient.removeQueries({ queryKey: ['videos'] });
-            queryClient.removeQueries({ queryKey: ['videosByIds'] });
-
             void Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['favourites', user.id] }),
-                queryClient.invalidateQueries({ queryKey: ['deck', user.id] }),
-                queryClient.invalidateQueries({ queryKey: ['positions'] }),
+                queryClient.invalidateQueries({ queryKey: ['videoUploads', user.id] }),
+                queryClient.invalidateQueries({ queryKey: ['userRoadmaps', user.id] }),
             ]);
         }
 
@@ -139,6 +131,26 @@ function EntitlementCacheGuard() {
             previousSubscriptionRef.current = null;
         }
     }, [user?.id]);
+
+    return null;
+}
+
+function AuthRouteRedirect() {
+    const { user, loading } = useAuth();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        if (loading || !user) {
+            return;
+        }
+
+        // Wait for AuthProvider state to commit before entering the private group.
+        // This prevents the private layout from seeing the stale signed-out state
+        // and returning a successful password login to the login screen.
+        if (pathname === '/login') {
+            router.replace('/home');
+        }
+    }, [loading, pathname, user]);
 
     return null;
 }
@@ -182,16 +194,29 @@ export default function RootLayout() {
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <ErrorBoundary>
-                <QueryClientProvider client={queryClient}>
+                <PersistQueryClientProvider
+                    client={queryClient}
+                    persistOptions={{
+                        persister: queryPersister,
+                        maxAge: PERSISTED_QUERY_MAX_AGE_MS,
+                        buster: QUERY_CACHE_BUSTER,
+                        dehydrateOptions: {
+                            // Only persist settled data. Polled analysis jobs are intentionally
+                            // excluded so a stale "processing" state never greets the next launch.
+                            shouldDehydrateQuery: (query) => query.state.status === 'success' && query.queryKey[0] !== 'analysisJob',
+                        },
+                    }}
+                >
                     <ThemeProvider>
                         <AuthProvider>
                             <RevenueCatBootstrap />
                             <EntitlementCacheGuard />
+                            <AuthRouteRedirect />
                             <Slot />
                             <Snackbar />
                         </AuthProvider>
                     </ThemeProvider>
-                </QueryClientProvider>
+                </PersistQueryClientProvider>
             </ErrorBoundary>
         </GestureHandlerRootView>
     );

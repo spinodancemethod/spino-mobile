@@ -14,6 +14,7 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [emailError, setEmailError] = useState<string | null>(null);
     const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [loginError, setLoginError] = useState<string | null>(null);
     const { colors } = useTheme();
 
     const onLogin = async () => {
@@ -21,15 +22,18 @@ export default function Login() {
         let ok = true;
         setEmailError(null);
         setPasswordError(null);
+        setLoginError(null);
         const emailRegex = /\S+@\S+\.\S+/;
         if (!email || !emailRegex.test(email)) { setEmailError('Please enter a valid email'); ok = false; }
         if (!password || password.length < 8) { setPasswordError('Password must be at least 8 characters'); ok = false; }
         if (!ok) return;
         setLoading(true);
         try {
-            await signIn(email, password);
-            // Navigation to /home is handled by onAuthStateChange('SIGNED_IN') in auth.tsx.
-            // Doing it here too races with the private layout's user-null guard on Android.
+            const result = await signIn(email, password);
+            if (result.error) {
+                setLoginError(result.error instanceof Error ? result.error.message : String(result.error));
+            }
+            // AuthRouteRedirect navigates once the signed-in user state is committed.
         } finally {
             setLoading(false);
         }
@@ -52,12 +56,17 @@ export default function Login() {
             <Spacer />
             <ThemedButton title="Log in" onPress={onLogin} loading={loading} />
 
+            {loginError ? (
+                <ThemedText variant="small" style={{ marginTop: 12, color: colors.warning }}>
+                    {`Login error: ${loginError}`}
+                </ThemedText>
+            ) : null}
+
             <Spacer />
             <ThemedButton title="Forgot password" variant="ghost" onPress={() => router.push('/forgot-password')} />
             <Spacer />
             <ThemedText variant="small">Don't have an account?</ThemedText>
             <ThemedButton title="Sign up" variant="ghost" onPress={() => router.push('/signup')} />
-            {/* dev-only shortcut removed */}
         </ThemedView>
     );
 }

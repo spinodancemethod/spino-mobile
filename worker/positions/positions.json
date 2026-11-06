@@ -1,0 +1,388 @@
+{
+  "roadmap": "bachata",
+  "source": "testPositionsDoc/bachata_position_reference.md (user, refined 2026-11-01). Attribute = Body Arrangement | Partner Order | Arm/Hand Connection.",
+  "note": "Condensed vocabulary (user decision 2026-11-01): mirror-pair positions that differ only by hand/arm side are inactive children of a family id (see parent_id). Flip active flags to re-enable sides later; keep ids stable; retired ids stay in the file with active=false. 'doc_no' = row(s) in the source document.",
+  "positions": [
+    {
+      "id": "basic_sensual",
+      "doc_no": 1,
+      "name": "Close Sensual Position",
+      "aliases": [
+        "Closed Position",
+        "Basic sensual"
+      ],
+      "attribute": "Facing | Equal | Closed",
+      "active": true,
+      "description": "Partners face each other in a close embrace, typically with hip connection. Torsos touching or nearly touching.",
+      "cues": [
+        "facing each other",
+        "torsos/hips touching",
+        "close embrace"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "basic",
+      "doc_no": 2,
+      "name": "Open Position (Basic Position)",
+      "aliases": [
+        "Open Position",
+        "Basic"
+      ],
+      "attribute": "Facing | Equal | Open",
+      "active": true,
+      "description": "Partners face each other with space between them, connected by one or both hands. Standard hold: leader's left hand holds the follower's right hand.",
+      "cues": [
+        "facing each other",
+        "clear space between torsos",
+        "leader left to follower right (not crossed)"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "cross_hand",
+      "reference_images": [],
+      "doc_no": "3-4",
+      "name": "Cross-Hand Position",
+      "aliases": [
+        "Cross-Hand L/R",
+        "Cross-Hand R/L",
+        "Basic left over right"
+      ],
+      "attribute": "Facing | Equal | Crossed",
+      "description": "Partners face each other holding BOTH hands with the arms crossed (leader's left to follower's left and right to right), one arm passing over the other.",
+      "cues": [
+        "facing each other",
+        "both hands held",
+        "arms crossed over each other",
+        "space between torsos"
+      ],
+      "active": true
+    },
+    {
+      "id": "handshake",
+      "name": "Handshake Hold",
+      "aliases": [
+        "Handshake Hold LL",
+        "Handshake Hold RR"
+      ],
+      "active": true,
+      "description": "Partners face each other with a single handshake-style hand connection (same-side hands joined). Other hands free.",
+      "cues": [
+        "facing each other",
+        "only one hand joined",
+        "handshake-style grip"
+      ],
+      "reference_images": [],
+      "doc_no": "5-6",
+      "attribute": "Facing | Equal | Single Hand Hold"
+    },
+    {
+      "id": "shadow",
+      "doc_no": 7,
+      "name": "Shadow Position – Follower in Front",
+      "aliases": [
+        "Shadow Position"
+      ],
+      "attribute": "Shadow (Same Direction) | Follower in Front | Open / Frame Contact",
+      "active": true,
+      "description": "Follower stands ahead, leader stands directly behind, both facing the same direction. Hands held in an open frame or light frame contact, not wrapped across the body.",
+      "cues": [
+        "both face same direction",
+        "follower in front of leader",
+        "arms not wrapped"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "reverse_shadow",
+      "doc_no": 8,
+      "name": "Reverse Shadow Position – Leader in Front",
+      "aliases": [
+        "Reverse Shadow"
+      ],
+      "attribute": "Shadow (Same Direction) | Leader in Front | Open / Body Contact",
+      "active": true,
+      "description": "Leader stands ahead, follower stands directly behind, both facing the same direction.",
+      "cues": [
+        "both face same direction",
+        "leader in front of follower"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "cuddle",
+      "doc_no": 9,
+      "name": "Cuddle Position / Wrap Position – Follower in Front",
+      "aliases": [
+        "Cuddle",
+        "Wrap",
+        "Sweetheart"
+      ],
+      "attribute": "Side-by-Side | Follower in Front | Wrapped (Follower)",
+      "active": true,
+      "description": "Follower is in front and wrapped by the leader, with one or both arms positioned across the follower's body.",
+      "cues": [
+        "follower in front",
+        "arms wrapped across follower's torso",
+        "both face roughly same direction"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "side_by_side",
+      "name": "Side-by-Side",
+      "aliases": [
+        "Side-by-Side – Leader on Left",
+        "Side-by-Side – Leader on Right"
+      ],
+      "active": true,
+      "description": "Partners stand alongside each other, shoulder to shoulder, both facing the same direction, connected by one or both hands. Not wrapped.",
+      "cues": [
+        "both face same direction",
+        "shoulder to shoulder",
+        "arms not wrapped"
+      ],
+      "reference_images": [],
+      "doc_no": "10-11",
+      "attribute": "Side-by-Side | Equal | Open"
+    },
+    {
+      "id": "shadow_back_to_back",
+      "doc_no": 12,
+      "name": "Back-to-Back Position",
+      "aliases": [
+        "Back-to-Back",
+        "Shadow back to back"
+      ],
+      "attribute": "Back-to-Back | Equal | Open / Touch",
+      "active": true,
+      "description": "Partners stand with their backs towards each other, facing opposite directions, often keeping a hand connection.",
+      "cues": [
+        "backs touching or close",
+        "facing opposite directions",
+        "no face-to-face connection"
+      ],
+      "reference_images": []
+    },
+    {
+      "id": "hammerlock",
+      "name": "Hammerlock",
+      "aliases": [],
+      "active": true,
+      "description": "One dancer's arm is folded behind their own back and held there by the partner's hand.",
+      "cues": [
+        "one arm behind a back",
+        "hand held behind the back"
+      ],
+      "reference_images": [],
+      "doc_no": "13-16",
+      "attribute": "Facing / Side-by-Side | Equal | Hammerlock"
+    },
+    {
+      "id": "basic_left_over_right",
+      "doc_no": 3,
+      "name": "Cross-Hand Position L/R",
+      "aliases": [
+        "Cross-Hand Position",
+        "Basic left over right"
+      ],
+      "attribute": "Facing | Equal | Crossed",
+      "active": false,
+      "description": "Partners face each other holding both hands in a crossed configuration, with the leader's LEFT arm passing over the right. Leader's left holds follower's left, leader's right holds follower's right.",
+      "cues": [
+        "facing each other",
+        "both hands held, arms crossed",
+        "leader's left arm on top"
+      ],
+      "reference_images": [],
+      "parent_id": "cross_hand"
+    },
+    {
+      "id": "cross_hand_right_over_left",
+      "doc_no": 4,
+      "name": "Cross-Hand Position R/L",
+      "aliases": [],
+      "attribute": "Facing | Equal | Crossed",
+      "active": false,
+      "description": "Partners face each other holding both hands in a crossed configuration, with the leader's RIGHT arm passing over the left. Leader's right holds follower's right, leader's left holds follower's left.",
+      "cues": [
+        "facing each other",
+        "both hands held, arms crossed",
+        "leader's right arm on top"
+      ],
+      "reference_images": [],
+      "parent_id": "cross_hand"
+    },
+    {
+      "id": "handshake_left_left",
+      "doc_no": 5,
+      "name": "Handshake Hold LL",
+      "aliases": [],
+      "attribute": "Facing | Equal | Single Hand Hold (Left-to-Left)",
+      "active": false,
+      "description": "Partners face each other with a single handshake-style hand connection: leader's LEFT hand holds the follower's LEFT hand. Other hands free.",
+      "cues": [
+        "facing each other",
+        "only one hand joined",
+        "left to left"
+      ],
+      "reference_images": [],
+      "parent_id": "handshake"
+    },
+    {
+      "id": "handshake_right_right",
+      "doc_no": 6,
+      "name": "Handshake Hold RR",
+      "aliases": [],
+      "attribute": "Facing | Equal | Single Hand Hold (Right-to-Right)",
+      "active": false,
+      "description": "Partners face each other with a single handshake-style hand connection: leader's RIGHT hand holds the follower's RIGHT hand. Other hands free.",
+      "cues": [
+        "facing each other",
+        "only one hand joined",
+        "right to right"
+      ],
+      "reference_images": [],
+      "parent_id": "handshake"
+    },
+    {
+      "id": "side_by_side_leader_left",
+      "doc_no": 10,
+      "name": "Side-by-Side – Leader on Left",
+      "aliases": [],
+      "attribute": "Side-by-Side | Leader Slightly Ahead | Open",
+      "active": false,
+      "description": "Partners stand alongside each other facing the same direction, with the leader on the follower's LEFT (from the dancers' own perspective). Open hand connection.",
+      "cues": [
+        "both face same direction",
+        "shoulder to shoulder",
+        "leader on the left"
+      ],
+      "reference_images": [],
+      "parent_id": "side_by_side"
+    },
+    {
+      "id": "side_by_side_leader_right",
+      "doc_no": 11,
+      "name": "Side-by-Side – Leader on Right",
+      "aliases": [],
+      "attribute": "Side-by-Side | Follower Slightly Ahead | Open",
+      "active": false,
+      "description": "Partners stand alongside each other facing the same direction, with the leader on the follower's RIGHT (follower is to the leader's left). Open hand connection.",
+      "cues": [
+        "both face same direction",
+        "shoulder to shoulder",
+        "leader on the right"
+      ],
+      "reference_images": [],
+      "parent_id": "side_by_side"
+    },
+    {
+      "id": "hammerlock_leader_left",
+      "doc_no": 13,
+      "name": "Hammerlock – Leader Left Arm",
+      "aliases": [],
+      "attribute": "Facing / Side-by-Side | Equal | Hammerlock (Leader)",
+      "active": false,
+      "description": "The leader's LEFT arm is folded behind the leader's own back, held there by the follower's hand.",
+      "cues": [
+        "one arm behind a back",
+        "it is the leader's left arm"
+      ],
+      "reference_images": [],
+      "parent_id": "hammerlock"
+    },
+    {
+      "id": "hammerlock_leader_right",
+      "doc_no": 14,
+      "name": "Hammerlock – Leader Right Arm",
+      "aliases": [],
+      "attribute": "Facing / Side-by-Side | Equal | Hammerlock (Leader)",
+      "active": false,
+      "description": "The leader's RIGHT arm is folded behind the leader's own back, held there by the follower's hand.",
+      "cues": [
+        "one arm behind a back",
+        "it is the leader's right arm"
+      ],
+      "reference_images": [],
+      "parent_id": "hammerlock"
+    },
+    {
+      "id": "hammerlock_follower_left",
+      "doc_no": 15,
+      "name": "Hammerlock – Follower Left Arm",
+      "aliases": [],
+      "attribute": "Facing / Side-by-Side | Equal | Hammerlock (Follower)",
+      "active": false,
+      "description": "The follower's LEFT arm is folded behind the follower's own back, held there by the leader's hand.",
+      "cues": [
+        "one arm behind a back",
+        "it is the follower's left arm"
+      ],
+      "reference_images": [],
+      "parent_id": "hammerlock"
+    },
+    {
+      "id": "hammerlock_follower_right",
+      "doc_no": 16,
+      "name": "Hammerlock – Follower Right Arm",
+      "aliases": [],
+      "attribute": "Facing / Side-by-Side | Equal | Hammerlock (Follower)",
+      "active": false,
+      "description": "The follower's RIGHT arm is folded behind the follower's own back, held there by the leader's hand.",
+      "cues": [
+        "one arm behind a back",
+        "it is the follower's right arm"
+      ],
+      "reference_images": [],
+      "parent_id": "hammerlock"
+    },
+    {
+      "id": "wrap",
+      "name": "Wrap (retired, merged into cuddle)",
+      "aliases": [],
+      "active": false,
+      "description": "Retired 2026-11-01. Use cuddle.",
+      "cues": [],
+      "reference_images": []
+    },
+    {
+      "id": "side_wrap",
+      "name": "Side Wrap (retired)",
+      "aliases": [],
+      "active": false,
+      "description": "Retired 2026-11-01. Not in the refined list.",
+      "cues": [],
+      "reference_images": []
+    },
+    {
+      "id": "sweetheart",
+      "name": "Sweetheart (retired, merged into cuddle)",
+      "aliases": [],
+      "active": false,
+      "description": "Retired 2026-11-01. Use cuddle.",
+      "cues": [],
+      "reference_images": []
+    },
+    {
+      "id": "back_to_chest",
+      "name": "Back-to-Chest (retired)",
+      "aliases": [],
+      "active": false,
+      "description": "Retired 2026-11-01. Not in the refined list; closest active labels are shadow or cuddle.",
+      "cues": [],
+      "reference_images": []
+    },
+    {
+      "id": "promenade",
+      "name": "Promenade (retired)",
+      "aliases": [],
+      "active": false,
+      "description": "Retired 2026-11-01. Not in the refined list.",
+      "cues": [],
+      "reference_images": []
+    }
+  ],
+  "fallback_id": "unknown"
+}

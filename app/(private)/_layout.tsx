@@ -1,19 +1,21 @@
 import React, { useEffect, useRef } from 'react';
 import AppContent from './AppContent';
-import { useAuth, signOut } from 'lib/auth';
+import { useAuth, refreshCurrentUser, signOut } from 'lib/auth';
 import { ActivityIndicator } from 'react-native';
 import ThemedView from 'Components/ThemedView';
 import ThemedText from 'Components/ThemedText';
 import ThemedButton from 'Components/ThemedButton';
 import Spacer from 'Components/Spacer';
 import { router, usePathname } from 'expo-router';
-import { supabase } from 'lib/supabase';
 import { showSnack } from 'lib/snackbarService';
+import { useSubscriptionStatus } from 'lib/hooks/useSubscriptionStatus';
+import { requestOpenDefaultRoadmap } from 'lib/defaultRoadmapIntent';
 
 const RootLayout = () => {
     const { user, loading } = useAuth();
     const pathname = usePathname();
-    const redirectedToHomeOnEntry = useRef(false);
+    const redirectedOnEntry = useRef(false);
+    const subscription = useSubscriptionStatus();
 
     useEffect(() => {
         // Redirect to login after render if not loading and no user.
@@ -26,17 +28,26 @@ const RootLayout = () => {
     useEffect(() => {
         if (loading || !user) return;
         if (!Boolean((user as any)?.email_confirmed_at)) return;
-        if (redirectedToHomeOnEntry.current) return;
+        if (redirectedOnEntry.current) return;
+        // Wait for the subscription check so the landing page is decided once. The query is
+        // persisted, so this is usually instant.
+        if (subscription.isLoading) return;
+        const subscribed = subscription.isActiveSubscription;
 
-        redirectedToHomeOnEntry.current = true;
+        redirectedOnEntry.current = true;
 
-        // On authenticated app entry, normalize to Home once so users always
-        // start from the same landing page after logging in/opening the app.
-        if (pathname !== '/home') {
-            router.replace('/home');
+        // On authenticated app entry, land subscribers on their roadmaps (the starred one if
+        // set, with the list beneath it for Back); everyone else lands on Home with the other
+        // tabs locked.
+        if (!subscribed) {
+            if (pathname !== '/home') router.replace('/home');
+            return;
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading, user]);
+        // The Your Roadmaps screen opens the starred roadmap (if any) once it has focus.
+        requestOpenDefaultRoadmap();
+        router.replace('/your-roadmaps');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, user, subscription.isLoading, subscription.isActiveSubscription]);
 
     if (loading) {
         return (
@@ -58,8 +69,8 @@ const RootLayout = () => {
     if (!emailConfirmed) {
         const onCheck = async () => {
             try {
-                const { data } = await supabase.auth.getSession();
-                const confirmed = Boolean((data?.session?.user as any)?.email_confirmed_at);
+                const refreshedUser = await refreshCurrentUser();
+                const confirmed = Boolean((refreshedUser as any)?.email_confirmed_at);
                 if (confirmed) {
                     showSnack('Email confirmed — thanks!');
                     router.replace('/home');
@@ -78,7 +89,7 @@ const RootLayout = () => {
                 <Spacer />
                 <ThemedButton title="I confirmed — check again" onPress={onCheck} />
                 <Spacer />
-                <ThemedButton title="Sign out" variant="ghost" onPress={async () => { await signOut(); router.replace('/login'); }} />
+                <ThemedButton title="Sign out" variant="ghost" onPress={signOut} />
             </ThemedView>
         );
     }

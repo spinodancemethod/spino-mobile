@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { Animated, LayoutChangeEvent, PanResponder, View } from 'react-native'
+import { useCallback, useEffect, useMemo } from 'react'
+import { Gesture } from 'react-native-gesture-handler'
+import { useAnimatedStyle, useSharedValue } from 'react-native-reanimated'
 
 type UseRoadmapGesturesParams = {
     minScale: number;
@@ -10,8 +11,15 @@ type UseRoadmapGesturesParams = {
     defaultPanY: number;
 }
 
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
-
+/**
+ * Pan + pinch for the roadmap surface, on gesture-handler and Reanimated.
+ *
+ * Why not the old PanResponder: the tiles on the surface now carry their own
+ * long-press drag gestures (reorder). With gesture-handler the arbitration is
+ * automatic: a one-finger move of more than `minDistance` activates the canvas
+ * pan and cancels any pending tile drag; a long press that activates a tile
+ * drag cancels the canvas pan. Nothing to coordinate by hand.
+ */
 export function useRoadmapGestures({
     minScale,
     maxScale,
@@ -20,146 +28,105 @@ export function useRoadmapGestures({
     defaultPanX,
     defaultPanY,
 }: UseRoadmapGesturesParams) {
-    // Animated values are stable refs so gesture updates stay smooth.
-    const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
-    const scale = useRef(new Animated.Value(defaultScale)).current
+    const panX = useSharedValue(defaultPanX)
+    const panY = useSharedValue(defaultPanY)
+    const scale = useSharedValue(defaultScale)
+    const surfaceHeight = useSharedValue(0)
 
-    const lastPan = useRef({ x: 0, y: 0 })
-    const lastScale = useRef(defaultScale)
-    const initialTouches = useRef<{ x: number; y: number }[] | null>(null)
-    const initialDistance = useRef<number | null>(null)
-    const surfaceHeightRef = useRef(0)
+    // Values at the start of the current gesture.
+    const startPanX = useSharedValue(0)
+    const startPanY = useSharedValue(0)
+    const startScale = useSharedValue(defaultScale)
+    // Pinch keeps its own start pan so the pan gesture cannot overwrite it mid-pinch.
+    const pinchStartPanX = useSharedValue(0)
+    const pinchStartPanY = useSharedValue(0)
+    const focalX0 = useSharedValue(0)
+    const focalY0 = useSharedValue(0)
+    // The pan and pinch run simultaneously and both write panX/panY. While the
+    // pinch is active the pan must yield (its translation is already folded into
+    // the pinch focal), and when the pinch ends the pan has to re-baseline from
+    // wherever the pinch left the surface. Without this, iOS keeps the one-finger
+    // pan alive through the pinch, and on release it snaps the surface back to
+    // `startPan + translation` measured from before the pinch began.
+    const pinchActive = useSharedValue(false)
+    const panNeedsRebase = useSharedValue(false)
 
-    const canvasRef = useRef<View>(null)
-    const canvasOffset = useRef({ x: 0, y: 0 })
-
-    const onCanvasLayout = useCallback((_e: LayoutChangeEvent) => {
-        canvasRef.current?.measureInWindow((x, y) => {
-            canvasOffset.current = { x: x ?? 0, y: y ?? 0 }
-        })
-    }, [])
-
-    const panResponder = useRef(
-        PanResponder.create({
-            onStartShouldSetPanResponder: () => false,
-            onStartShouldSetPanResponderCapture: () => false,
-            onMoveShouldSetPanResponder: (evt, gestureState) => {
-                const touches = evt.nativeEvent.touches
-                return (touches && touches.length === 2) || Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6
-            },
-            onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-                const touches = evt.nativeEvent.touches
-                return (touches && touches.length === 2) || Math.abs(gestureState.dx) > 6 || Math.abs(gestureState.dy) > 6
-            },
-            onPanResponderGrant: (evt) => {
-                const touches = evt.nativeEvent.touches
-
-                pan.x.stopAnimation((x: number) => {
-                    pan.y.stopAnimation((y: number) => {
-                        lastPan.current = { x, y }
-                    })
-                })
-                scale.stopAnimation((currentScale: number) => {
-                    lastScale.current = currentScale
-                })
-
-                if (touches && touches.length === 2) {
-                    initialTouches.current = [
-                        { x: touches[0].pageX, y: touches[0].pageY },
-                        { x: touches[1].pageX, y: touches[1].pageY },
-                    ]
-                    const dx = touches[0].pageX - touches[1].pageX
-                    const dy = touches[0].pageY - touches[1].pageY
-                    initialDistance.current = Math.sqrt(dx * dx + dy * dy)
-                    return
-                }
-
-                initialTouches.current = null
-                initialDistance.current = null
-            },
-            onPanResponderMove: (evt, gestureState) => {
-                const touches = evt.nativeEvent.touches
-
-                if (touches && touches.length === 2) {
-                    if (initialDistance.current == null) {
-                        initialTouches.current = [
-                            { x: touches[0].pageX, y: touches[0].pageY },
-                            { x: touches[1].pageX, y: touches[1].pageY },
-                        ]
-                        const dx0 = touches[0].pageX - touches[1].pageX
-                        const dy0 = touches[0].pageY - touches[1].pageY
-                        initialDistance.current = Math.sqrt(dx0 * dx0 + dy0 * dy0)
-                    }
-
-                    if (initialDistance.current != null) {
-                        const dx = touches[0].pageX - touches[1].pageX
-                        const dy = touches[0].pageY - touches[1].pageY
-                        const distance = Math.sqrt(dx * dx + dy * dy)
-                        const scaleFactor = distance / initialDistance.current
-                        const nextScale = clamp(lastScale.current * scaleFactor, minScale, maxScale)
-                        scale.setValue(nextScale)
-
-                        // Translate absolute touch coordinates into canvas-relative coordinates
-                        // so pinch focal compensation works regardless of screen offset.
-                        const ox = canvasOffset.current.x
-                        const oy = canvasOffset.current.y
-                        const midX = (touches[0].pageX + touches[1].pageX) / 2 - ox
-                        const midY = (touches[0].pageY + touches[1].pageY) / 2 - oy
-
-                        if (initialTouches.current) {
-                            const initMidX = (initialTouches.current[0].x + initialTouches.current[1].x) / 2 - ox
-                            const initMidY = (initialTouches.current[0].y + initialTouches.current[1].y) / 2 - oy
-
-                            const ratio = nextScale / lastScale.current
-                            const cx = surfaceWidth / 2
-                            const cy = surfaceHeightRef.current / 2
-                            const newPanX = midX + ratio * (lastPan.current.x - initMidX) + cx * (ratio - 1)
-                            const newPanY = midY + ratio * (lastPan.current.y - initMidY) + cy * (ratio - 1)
-                            pan.setValue({ x: newPanX, y: newPanY })
-                        }
-                    }
-
-                    return
-                }
-
-                pan.setValue({
-                    x: lastPan.current.x + gestureState.dx,
-                    y: lastPan.current.y + gestureState.dy,
-                })
-            },
-            onPanResponderRelease: () => {
-                pan.x.stopAnimation((x: number) => {
-                    pan.y.stopAnimation((y: number) => {
-                        lastPan.current = { x, y }
-                    })
-                })
-                scale.stopAnimation((currentScale: number) => {
-                    lastScale.current = currentScale
-                })
-                initialTouches.current = null
-                initialDistance.current = null
-            },
-            onPanResponderTerminationRequest: () => true,
-        })
-    ).current
+    const resetViewport = useCallback((nextPanX: number, nextPanY: number, nextScale: number) => {
+        panX.value = nextPanX
+        panY.value = nextPanY
+        scale.value = nextScale
+    }, [panX, panY, scale])
 
     useEffect(() => {
-        pan.setValue({ x: defaultPanX, y: defaultPanY })
-        scale.setValue(defaultScale)
-        lastPan.current = { x: defaultPanX, y: defaultPanY }
-        lastScale.current = defaultScale
-    }, [defaultPanX, defaultPanY, defaultScale, pan, scale])
+        resetViewport(defaultPanX, defaultPanY, defaultScale)
+    }, [defaultPanX, defaultPanY, defaultScale, resetViewport])
 
     const setSurfaceHeight = useCallback((height: number) => {
-        surfaceHeightRef.current = height
-    }, [])
+        surfaceHeight.value = height
+    }, [surfaceHeight])
+
+    const canvasGesture = useMemo(() => {
+        const pan = Gesture.Pan()
+            .minDistance(6)
+            .onStart(() => {
+                // Baseline on the first update rather than here: translation is
+                // measured from the first touch down, not from activation, so a
+                // pan that activates after a pinch (or after the 6px threshold)
+                // already carries travel the surface has absorbed. Baselining
+                // against the current pan makes the first update a no-op.
+                panNeedsRebase.value = true
+            })
+            .onUpdate((e) => {
+                if (pinchActive.value) return
+                if (panNeedsRebase.value) {
+                    startPanX.value = panX.value - e.translationX
+                    startPanY.value = panY.value - e.translationY
+                    panNeedsRebase.value = false
+                }
+                panX.value = startPanX.value + e.translationX
+                panY.value = startPanY.value + e.translationY
+            })
+        const pinch = Gesture.Pinch()
+            .onStart((e) => {
+                pinchActive.value = true
+                pinchStartPanX.value = panX.value
+                pinchStartPanY.value = panY.value
+                startScale.value = scale.value
+                focalX0.value = e.focalX
+                focalY0.value = e.focalY
+            })
+            .onUpdate((e) => {
+                // When one finger lifts the focal collapses onto the remaining
+                // finger; applying that would jump the surface, so ignore it.
+                if (e.numberOfPointers < 2) return
+                const next = Math.max(minScale, Math.min(maxScale, startScale.value * e.scale))
+                // The scale transform pivots around the surface centre, so keep the
+                // point under the fingers fixed by compensating the pan:
+                //   screen = pan + c + scale * (p - c)  =>  pan = F - c - ratio * (F0 - pan0 - c)
+                const ratio = next / startScale.value
+                const cx = surfaceWidth / 2
+                const cy = surfaceHeight.value / 2
+                scale.value = next
+                panX.value = e.focalX + ratio * (pinchStartPanX.value - focalX0.value) + cx * (ratio - 1)
+                panY.value = e.focalY + ratio * (pinchStartPanY.value - focalY0.value) + cy * (ratio - 1)
+            })
+            .onFinalize(() => {
+                pinchActive.value = false
+                panNeedsRebase.value = true
+            })
+        return Gesture.Simultaneous(pan, pinch)
+    }, [focalX0, focalY0, maxScale, minScale, panNeedsRebase, panX, panY, pinchActive, pinchStartPanX, pinchStartPanY, scale, startPanX, startPanY, startScale, surfaceHeight, surfaceWidth])
+
+    const surfaceStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: panX.value }, { translateY: panY.value }, { scale: scale.value }],
+    }))
 
     return {
-        canvasRef,
-        onCanvasLayout,
-        pan,
-        panHandlers: panResponder.panHandlers,
+        canvasGesture,
+        surfaceStyle,
+        /** Current zoom; tile drags divide finger movement by this to get surface units. */
         scale,
         setSurfaceHeight,
+        resetViewport,
     }
 }

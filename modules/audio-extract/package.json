@@ -1,0 +1,10 @@
+{
+  "name": "audio-extract",
+  "version": "0.1.0",
+  "description": "Local Expo module: copy a video's audio track to an .m4a file on device (Fable v2).",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "author": "Spino",
+  "homepage": "https://spinodancemethod.com",
+  "private": true
+}

@@ -4,25 +4,6 @@
 
 BEGIN;
 
--- Legacy sequence names are preserved to match the current production schema.
-CREATE SEQUENCE IF NOT EXISTS public.deck_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.likes_id_seq;
-CREATE SEQUENCE IF NOT EXISTS public.positions_order_seq;
-
-CREATE TABLE IF NOT EXISTS public.positions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "order" integer NOT NULL DEFAULT nextval('public.positions_order_seq'),
-  name text NOT NULL,
-  description text,
-  -- Controls whether this position currently has associated videos to show.
-  has_videos boolean NOT NULL DEFAULT true,
-  -- Allows positions to be selectively available on the free tier or kept premium.
-  access_tier text NOT NULL DEFAULT 'paid',
-  CONSTRAINT positions_access_tier_check CHECK (access_tier IN ('free', 'paid')),
-  CONSTRAINT positions_order_unique UNIQUE ("order"),
-  CONSTRAINT positions_order_positive CHECK ("order" > 0)
-);
-
 CREATE TABLE IF NOT EXISTS public.user_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -34,77 +15,116 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   CONSTRAINT user_profiles_user_id_key UNIQUE (user_id)
 );
 
-CREATE TABLE IF NOT EXISTS public.videos (
+-- Stores metadata and local media references; source video files remain on the user's device.
+CREATE TABLE IF NOT EXISTS public.user_roadmaps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  name text NOT NULL,
   description text,
-  url text,
-  file_path text,
-  -- Supports roadmap-level categorization (for example salsa vs bachata).
-  dance_type text,
-  dance_style text,
-  -- Flags records that represent position-style entries.
-  is_position boolean NOT NULL DEFAULT false,
-  position_id uuid NOT NULL,
-  user_id uuid NOT NULL,
+  -- One roadmap per user may be the default; the Your Roadmaps tab opens it directly.
+  is_default boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  level smallint,
-  -- Determines content access tier: 'free' videos are visible to all authenticated users,
-  -- 'paid' videos require an active subscription.
-  access_tier text NOT NULL DEFAULT 'paid',
-  thumbnail_url text,
-  roadmap_preview_url text,
-  roadmap_gif_url text,
-  CONSTRAINT videos_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions (id) ON DELETE RESTRICT,
-  CONSTRAINT videos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT videos_access_tier_check CHECK (access_tier IN ('free', 'paid')),
-  CONSTRAINT videos_dance_type_check CHECK (dance_type IS NULL OR dance_type IN ('salsa', 'bachata'))
+  CONSTRAINT user_roadmaps_name_check CHECK (length(trim(name)) > 0),
+  CONSTRAINT user_roadmaps_user_name_unique UNIQUE (user_id, name)
 );
 
-CREATE TABLE IF NOT EXISTS public.deck (
-  id bigint NOT NULL DEFAULT nextval('public.deck_id_seq'::regclass),
-  user_id uuid NOT NULL,
-  video_id uuid NOT NULL,
-  CONSTRAINT deck_pkey PRIMARY KEY (id),
-  CONSTRAINT deck_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT deck_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE,
-  CONSTRAINT deck_user_video_unique UNIQUE (user_id, video_id)
-);
-
-CREATE TABLE IF NOT EXISTS public.favourites (
-  id bigint NOT NULL DEFAULT nextval('public.likes_id_seq'::regclass),
-  user_id uuid NOT NULL,
-  video_id uuid NOT NULL,
-  CONSTRAINT likes_pkey PRIMARY KEY (id),
-  CONSTRAINT likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT likes_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS public.notes (
-  user_id uuid NOT NULL,
-  video_id uuid NOT NULL,
-  note_text text,
+CREATE TABLE IF NOT EXISTS public.video_uploads (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  roadmap_id uuid NOT NULL REFERENCES public.user_roadmaps (id) ON DELETE CASCADE,
+  local_reference_key text NOT NULL,
+  platform text NOT NULL,
+  media_identifier text,
+  fallback_uri text,
+  name text,
+  filename text,
+  original_filename text,
+  content_hash text,
+  custom_title text,
+  duration_seconds double precision,
+  mime_type text,
+  file_size_bytes bigint,
+  width integer,
+  height integer,
+  creation_time timestamptz,
+  thumbnail_reference text,
+  status text NOT NULL DEFAULT 'UNKNOWN',
+  replacement_review_pending boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT notes_pkey PRIMARY KEY (user_id, video_id),
-  CONSTRAINT notes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT notes_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE
+  CONSTRAINT video_uploads_status_check CHECK (status IN ('AVAILABLE', 'MISSING', 'ACCESS_DENIED', 'UNKNOWN')),
+  CONSTRAINT video_uploads_local_reference_key_check CHECK (length(trim(local_reference_key)) > 0),
+  CONSTRAINT video_uploads_user_local_reference_key_unique UNIQUE (user_id, local_reference_key),
+  CONSTRAINT video_uploads_original_filename_check CHECK (original_filename IS NULL OR length(trim(original_filename)) > 0),
+  -- Legacy 64-hex whole-file hash, or the sampled 'v2-' fingerprint from lib/videoHash.ts.
+  CONSTRAINT video_uploads_content_hash_check CHECK (content_hash IS NULL OR content_hash ~ '^(v2-)?[a-f0-9]{64}$'),
+  CONSTRAINT video_uploads_custom_title_check CHECK (custom_title IS NULL OR length(trim(custom_title)) > 0)
 );
 
--- Stores per-user status for each video so roadmap completion stays user-specific.
-CREATE TABLE IF NOT EXISTS public.user_video_progress (
+CREATE TABLE IF NOT EXISTS public.video_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users (id) ON DELETE CASCADE,
+  roadmap_id uuid NOT NULL REFERENCES public.user_roadmaps (id) ON DELETE CASCADE,
+  name text NOT NULL,
+  description text,
+  -- Storage object path in the category-images bucket (see 20261105_category_images.sql).
+  image_path text,
+  system_category boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT video_categories_name_check CHECK (length(trim(name)) > 0),
+  CONSTRAINT video_categories_system_owner_check CHECK ((system_category AND user_id IS NULL) OR (NOT system_category AND user_id IS NOT NULL)),
+  CONSTRAINT video_categories_misc_reserved_check CHECK (system_category OR lower(trim(name)) <> 'misc')
+);
+
+INSERT INTO public.video_categories (user_id, roadmap_id, name, system_category)
+SELECT NULL, ur.id, 'Misc', true
+FROM public.user_roadmaps ur
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.video_categories vc
+  WHERE vc.roadmap_id = ur.id
+    AND lower(trim(vc.name)) = 'misc'
+)
+ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS public.segments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  video_upload_id uuid NOT NULL REFERENCES public.video_uploads (id) ON DELETE CASCADE,
+  sequence integer,
+  start_time double precision NOT NULL,
+  end_time double precision NOT NULL,
+  count_start integer,
+  count_end integer,
+  category_id uuid NOT NULL REFERENCES public.video_categories (id) ON DELETE CASCADE,
+  title text,
+  thumbnail_reference text,
+  user_notes text,
+  ai_confidence double precision,
+  ai_generated boolean NOT NULL DEFAULT false,
+  user_confirmed boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT segments_time_order_check CHECK (start_time >= 0 AND start_time < end_time),
+  CONSTRAINT segments_confidence_check CHECK (ai_confidence IS NULL OR (ai_confidence >= 0 AND ai_confidence <= 1)),
+  CONSTRAINT segments_title_non_empty_check CHECK (title IS NULL OR length(trim(title)) > 0)
+);
+
+-- Stores per-user status for each uploaded segment in the category roadmap flow.
+CREATE TABLE IF NOT EXISTS public.user_segment_progress (
   user_id uuid NOT NULL,
-  video_id uuid NOT NULL,
+  segment_id uuid NOT NULL,
   status text NOT NULL DEFAULT 'not_started',
   started_at timestamptz,
   completed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT user_video_progress_pkey PRIMARY KEY (user_id, video_id),
-  CONSTRAINT user_video_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT user_video_progress_video_id_fkey FOREIGN KEY (video_id) REFERENCES public.videos (id) ON DELETE CASCADE,
-  CONSTRAINT user_video_progress_status_check CHECK (
+  CONSTRAINT user_segment_progress_pkey PRIMARY KEY (user_id, segment_id),
+  CONSTRAINT user_segment_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
+  CONSTRAINT user_segment_progress_segment_id_fkey FOREIGN KEY (segment_id) REFERENCES public.segments (id) ON DELETE CASCADE,
+  CONSTRAINT user_segment_progress_status_check CHECK (
     status IN ('not_started', 'in_progress', 'completed')
   )
 );
@@ -185,9 +205,28 @@ CREATE TABLE IF NOT EXISTS public.client_error_logs (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Ensure legacy sequences are owned by their columns.
-ALTER SEQUENCE IF EXISTS public.deck_id_seq OWNED BY public.deck.id;
-ALTER SEQUENCE IF EXISTS public.likes_id_seq OWNED BY public.favourites.id;
-ALTER SEQUENCE IF EXISTS public.positions_order_seq OWNED BY public.positions."order";
-
 COMMIT;
+
+-- Fable v2 (2026-11-01): audio-only analysis. See sql/migrations/20261101_create_analysis_jobs.sql.
+ALTER TABLE public.video_uploads
+  ADD COLUMN IF NOT EXISTS analysis_status text NOT NULL DEFAULT 'none',
+  ADD COLUMN IF NOT EXISTS analysis_mode text,
+  ADD COLUMN IF NOT EXISTS count_grid jsonb,
+  ADD COLUMN IF NOT EXISTS analysed_at timestamptz;
+
+CREATE TABLE IF NOT EXISTS public.analysis_jobs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  video_upload_id uuid NOT NULL REFERENCES public.video_uploads (id) ON DELETE CASCADE,
+  audio_path text NOT NULL,
+  duration_seconds double precision,
+  status text NOT NULL DEFAULT 'queued',
+  attempts integer NOT NULL DEFAULT 0,
+  error text,
+  worker_id text,
+  created_at timestamptz NOT NULL DEFAULT timezone('utc'::text, now()),
+  started_at timestamptz,
+  finished_at timestamptz,
+  CONSTRAINT analysis_jobs_status_check CHECK (status IN ('queued', 'processing', 'done', 'failed')),
+  CONSTRAINT analysis_jobs_audio_path_check CHECK (length(trim(audio_path)) > 0)
+);

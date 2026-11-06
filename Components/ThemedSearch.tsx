@@ -16,7 +16,6 @@ const ThemedSearch: React.FC<Props> = ({ style, ...props }) => {
     return (
         <View style={[{ width: '100%' }, style]}>
             <TextInput
-                placeholderTextColor={colors.iconColor}
                 style={{
                     backgroundColor: colors.uiBackground,
                     color: colors.text,
@@ -26,6 +25,7 @@ const ThemedSearch: React.FC<Props> = ({ style, ...props }) => {
                     borderRadius: 10,
                 }}
                 {...props}
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={secureTextEntry}
             />
             {isPasswordField ? (

@@ -1,53 +1,58 @@
 # Observability Runbook
 
-## Edge function monitoring
+## RevenueCat webhook monitoring
 
-Monitor `verify-google-play-purchase` failures in Supabase logs and billing events.
+Monitor the `ingest-revenuecat-webhook` Supabase Edge Function and the
+`billing_events` rows it writes with `provider = 'revenuecat'`. The function
+stores RevenueCat's native event type in `event_type` and preserves the full
+webhook body in `payload`.
 
 ### Suggested alert thresholds
-- `verification.error` events > 5 in 10 minutes: investigate immediately.
-- `verification.request` events with 429 responses > 20 in 10 minutes: investigate abuse/throttling tuning.
-- Google API verification failures (`Google Play verification failed`) > 3 in 10 minutes: check service account health and package config.
+- Any sustained increase in webhook responses with status 400 or 500: inspect function logs and authorization/configuration secrets.
+- More than 5 RevenueCat `TEST` or `TRANSFER_ERROR` events in 10 minutes: investigate the affected product, customer, or store configuration.
+- More than 20 webhook events in 10 minutes for one user or product: investigate duplicate delivery or unexpected purchase activity.
 
 ## SQL queries
 
-### Error count in last 10 minutes
+### RevenueCat error-like events in the last 10 minutes
 ```sql
-select count(*) as error_count
+select event_type, count(*) as event_count
 from public.billing_events
-where provider = 'google_play'
-  and event_type = 'verification.error'
-  and processed_at >= now() - interval '10 minutes';
+where provider = 'revenuecat'
+  and event_type in ('TEST', 'TRANSFER_ERROR')
+  and processed_at >= now() - interval '10 minutes'
+group by event_type
+order by event_count desc;
 ```
 
-### High request volume in last 10 minutes
+### RevenueCat event volume in the last 10 minutes
 ```sql
-select count(*) as request_count
+select event_type, count(*) as event_count
 from public.billing_events
-where provider = 'google_play'
-  and event_type = 'verification.request'
-  and processed_at >= now() - interval '10 minutes';
+where provider = 'revenuecat'
+  and processed_at >= now() - interval '10 minutes'
+group by event_type
+order by event_count desc;
 ```
 
-### Top error payloads in last 24 hours
+### Recent RevenueCat event payloads
 ```sql
-select payload->>'error' as error_message, count(*)
+select event_type, event_id, payload, processed_at
 from public.billing_events
-where provider = 'google_play'
-  and event_type = 'verification.error'
+where provider = 'revenuecat'
   and processed_at >= now() - interval '24 hours'
-group by 1
-order by 2 desc;
+order by processed_at desc
+limit 100;
 ```
 
 ## Client app monitoring
 
-Ensure `sql/bootstrap/01_tables.sql` and `sql/bootstrap/04_rls_policies_grants.sql` are applied, then monitor auth/billing contexts:
+Ensure `sql/bootstrap/01_tables.sql` and `sql/bootstrap/04_rls_policies_grants.sql` are applied, then monitor auth and billing contexts:
 - `auth.signIn`
 - `auth.signUp`
 - `auth.signOut`
-- `auth.signInWithOAuth`
-- `billing.checkout`
+- `billing.purchase`
+- `billing.restore`
 
 ### Client error query
 ```sql
@@ -68,9 +73,10 @@ order by count(*) desc;
 
 ### Archive / delete queries
 
-#### Archive billing_events older than 90 days (optional)
+#### Archive or delete billing_events older than 90 days (optional)
 
-Before deletion, back up to a cold storage table if needed:
+Review retention, legal, and incident-response requirements before running this
+in production. If an archive table exists, back up rows before deletion:
 
 ```sql
 -- Copy to archive table (create billing_events_archive if not exists)

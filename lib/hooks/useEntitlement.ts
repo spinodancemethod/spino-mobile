@@ -28,10 +28,6 @@ async function fetchEntitlement(userId: string): Promise<boolean> {
 
 // Central entitlement hook for the app.
 //
-// Replaces the ad-hoc subscription checks that previously lived in:
-//   - app/(private)/(dashboard)/_layout.tsx  (fetchDashboardEntitlement)
-//   - app/(private)/video/[id].tsx           (useSubscriptionStatus)
-//
 // Usage:
 //   const { isSubscribed, planTier, isLoading } = useEntitlement();
 export function useEntitlement(): EntitlementResult {

@@ -4,6 +4,11 @@
     "strict": true,
     "jsx": "react-native",
     "ignoreDeprecations": "6.0",
+    // TypeScript 6 no longer auto-includes @types packages; list globals explicitly.
+    "types": [
+      "jest",
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
       "@/lib/*": [

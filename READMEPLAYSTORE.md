@@ -174,7 +174,7 @@ AAB output: `android/app/build/outputs/bundle/release/app-release.aab`
 - [ ] Invite test accounts (your own accounts or trusted testers).
 - [ ] Test on physical device or emulator:
   - Auth: sign up, email confirmation, sign in, sign out.
-  - Free content: browse library, add to favorites and deck, view notes.
+  - Local practice: choose device videos, save timestamped segments to a roadmap, add notes, and track completion.
   - Paid content: attempt access to restricted videos → redirected to subscribe.
   - Subscription: purchase through RevenueCat, verify completion, check entitlement state.
   - Restore: uninstall app, re-install, tap "Restore purchases".

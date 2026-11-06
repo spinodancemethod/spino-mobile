@@ -7,6 +7,7 @@ import { showSnack } from 'lib/snackbarService';
 import { isRecoveryAuthUrl, shouldHandleAuthUrl } from 'lib/authUrl';
 import { reportAppError } from 'lib/observability';
 import { clearRevenueCatAppUser, syncRevenueCatAppUser } from 'lib/billing/revenuecat';
+import { queryClient } from 'lib/queryClient';
 
 type LegacyAuthLinkResult = {
     error?: { message?: string | null } | null;
@@ -33,52 +34,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         async function readSessionWithRefreshFallback() {
             try {
-                console.log('[auth-debug] getSession() starting');
                 const { data } = await supabase.auth.getSession();
                 let nextSession = data?.session ?? null;
-                console.log('[auth-debug] getSession() completed, session exists:', !!nextSession);
 
                 // Only attempt a refresh if there IS a stored session with an expired token.
                 // Calling refreshSession() with no session makes a pointless network request
                 // and can hang indefinitely if the Supabase URL is unreachable.
                 if (nextSession && !nextSession.access_token) {
-                    console.log('[auth-debug] calling refreshSession()');
                     const { data: refreshed } = await supabase.auth.refreshSession();
                     nextSession = refreshed?.session ?? null;
-                    console.log('[auth-debug] refreshSession() completed');
                 } else {
-                    console.log('[auth-debug] skipping refreshSession() (no stored session or has token)');
                 }
 
                 return nextSession;
             } catch (e) {
-                console.error('[auth-debug] readSessionWithRefreshFallback error:', e);
                 throw e;
             }
         }
 
         async function init() {
             try {
-                console.log('[auth-debug] init() starting');
                 const nextSession = await readSessionWithRefreshFallback();
                 if (!mounted) {
-                    console.log('[auth-debug] unmounted before setSession');
                     return;
                 }
-                console.log('[auth-debug] setting session state');
                 setSession(nextSession);
                 setUser(nextSession?.user ?? null);
             } catch (e) {
-                console.error('[auth-debug] init() error:', e);
             } finally {
                 if (mounted) {
-                    console.log('[auth-debug] setting loading=false');
                     setLoading(false);
                 }
             }
         }
 
-        console.log('[auth-debug] AuthProvider effect mounted');
         init();
 
         const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -93,12 +82,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 });
             }
 
-            // navigate on important transitions
             if (event === 'SIGNED_OUT') {
+                // The query cache is persisted to disk; drop it so the next account never sees this one's data.
+                queryClient.clear();
                 void clearRevenueCatAppUser().catch(() => {
-                    // Ignore sign-out cleanup failures; auth navigation should still proceed.
+                    // Ignore sign-out cleanup failures; auth state remains authoritative.
                 });
-                router.replace('/login');
             }
             if (event === 'PASSWORD_RECOVERY') {
                 pendingRecoveryRef.current = false;
@@ -111,12 +100,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     router.replace('/reset-password');
                     return;
                 }
-                // Navigate to home on explicit sign-in. This fires only on actual
-                // sign-in actions, not on session restoration from storage, so it's
-                // safe to navigate here. Without this, a React state flush race on
-                // the private layout can redirect the user back to /login immediately
-                // after a successful login.
-                router.replace('/home');
             }
         });
 
@@ -256,6 +239,17 @@ export async function signOut() {
     }
 }
 
+export async function refreshCurrentUser() {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session?.user ?? null;
+}
+
+export async function requestPasswordReset(email: string, redirectTo: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+}
+
 export async function signIn(email: string, password: string) {
     try {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -310,35 +304,6 @@ export async function signUp(email: string, password: string) {
             context: 'auth.signUp',
             error: e,
             metadata: { email },
-        });
-        return { error: e };
-    }
-}
-
-export async function signInWithOAuth(provider: 'google' | 'apple') {
-    try {
-        const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'spino';
-        const redirectTo = `${scheme}://login`;
-        const res = await supabase.auth.signInWithOAuth({
-            provider,
-            options: { redirectTo },
-        });
-        if (res?.error) {
-            showSnack(res.error.message || 'OAuth sign-in failed');
-            void reportAppError({
-                context: 'auth.signInWithOAuth',
-                error: res.error,
-                metadata: { provider },
-            });
-            return { error: res.error };
-        }
-        return { error: null, data: res?.data };
-    } catch (e: any) {
-        showSnack(e?.message ?? 'OAuth sign-in failed');
-        void reportAppError({
-            context: 'auth.signInWithOAuth',
-            error: e,
-            metadata: { provider },
         });
         return { error: e };
     }

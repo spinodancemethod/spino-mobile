@@ -20,101 +20,34 @@ AS $$
   );
 $$;
 
--- Tier-aware position access helper used by the RLS SELECT policy on positions.
--- Returns true when the requesting user has an active subscription OR
--- the position is marked as free-tier content (access_tier = 'free').
-CREATE OR REPLACE FUNCTION public.can_access_position(p_user_id uuid, p_position_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT
-    EXISTS (
-      SELECT 1 FROM public.positions p
-      WHERE p.id = p_position_id AND p.access_tier = 'free'
-    )
-    OR
-    public.has_active_subscription(p_user_id);
-$$;
-
--- Tier-aware video access helper used by the RLS SELECT policy on videos.
--- Returns true when the requesting user has an active subscription OR
--- the video is marked as free-tier content (access_tier = 'free').
-CREATE OR REPLACE FUNCTION public.can_access_video(p_user_id uuid, p_video_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT
-    EXISTS (
-      SELECT 1
-      FROM public.videos v
-      WHERE v.id = p_video_id
-        AND public.can_access_position(p_user_id, v.position_id)
-        AND (
-          v.access_tier = 'free'
-          OR public.has_active_subscription(p_user_id)
-        )
-    );
-$$;
-
--- Atomic deck toggle RPC with a per-user advisory lock to avoid concurrent race issues.
-CREATE OR REPLACE FUNCTION public.toggle_deck_with_subscription_limit(
-  p_user uuid,
-  p_video uuid
-)
-RETURNS text
+COMMIT;
+-- Roadmap drag-reorder. Runs as definer so the per-roadmap system category
+-- (Misc, user_id NULL) can be ordered too; the roadmap must belong to the caller.
+CREATE OR REPLACE FUNCTION public.reorder_video_categories(p_roadmap_id uuid, p_ids uuid[])
+RETURNS integer
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
-  exists_row boolean;
-  current_count int;
-  lock_key bigint;
-  allowed int := 3;
+  v_owner uuid;
+  v_count integer := 0;
 BEGIN
-  IF p_user IS NULL THEN
-    RAISE EXCEPTION 'user required';
+  SELECT user_id INTO v_owner FROM public.user_roadmaps WHERE id = p_roadmap_id;
+  IF v_owner IS NULL OR v_owner <> auth.uid() THEN
+    RAISE EXCEPTION 'roadmap not found';
   END IF;
-
-  IF public.has_active_subscription(p_user) THEN
-    allowed := 10;
-  END IF;
-
-  SELECT ('x' || substr(md5(p_user::text), 1, 15))::bit(60)::bigint INTO lock_key;
-  PERFORM pg_advisory_xact_lock(lock_key);
-
-  SELECT EXISTS(
-    SELECT 1
-    FROM public.deck d
-    WHERE d.user_id = p_user
-      AND d.video_id = p_video
-  ) INTO exists_row;
-
-  IF exists_row THEN
-    DELETE FROM public.deck
-    WHERE user_id = p_user
-      AND video_id = p_video;
-    RETURN 'deleted';
-  END IF;
-
-  SELECT COUNT(*)
-  INTO current_count
-  FROM public.deck
-  WHERE user_id = p_user;
-
-  IF current_count >= allowed THEN
-    RAISE EXCEPTION 'deck limit reached';
-  END IF;
-
-  INSERT INTO public.deck (user_id, video_id)
-  VALUES (p_user, p_video);
-
-  RETURN 'inserted';
+  WITH ord AS (
+    SELECT id, (ordinality - 1) * 10 AS sort_order FROM unnest(p_ids) WITH ORDINALITY AS t(id, ordinality)
+  ), upd AS (
+    UPDATE public.video_categories c
+    SET sort_order = ord.sort_order, updated_at = timezone('utc'::text, now())
+    FROM ord
+    WHERE c.id = ord.id AND c.roadmap_id = p_roadmap_id
+    RETURNING 1
+  )
+  SELECT count(*) INTO v_count FROM upd;
+  RETURN v_count;
 END;
 $$;
-
-COMMIT;
+GRANT EXECUTE ON FUNCTION public.reorder_video_categories(uuid, uuid[]) TO authenticated;

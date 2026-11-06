@@ -1,46 +1,70 @@
-import { Tabs } from "expo-router"
+import { Tabs, router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useStyles } from "constants/styles";
+import { useSubscriptionStatus } from "lib/hooks/useSubscriptionStatus";
+import { requestOpenDefaultRoadmap } from "lib/defaultRoadmapIntent";
+import { showSnack } from "lib/snackbarService";
 import React from 'react'
-import { ActivityIndicator, View } from 'react-native';
-import ThemedText from 'Components/ThemedText';
-import { useEntitlement } from 'lib/hooks/useEntitlement';
 
 /*
     Dashboard tab layout.
 
     Main responsibilities:
-    - Render the bottom Tabs navigator for the main dashboard sections.
-    - Provide a small development-only theme toggle button positioned inside the
-        device safe area so it's always accessible across tabs.
+    - Render the bottom Tabs navigator for the main dashboard sections:
+      Home (landing page after login), Your Roadmaps, Add Video.
+    - Gate the Your Roadmaps and Add Video tabs behind the subscription: for free
+      users they are rendered dimmed/"blurred" and tapping them does not navigate.
+      Instead a snackbar explains and the user is sent to the subscribe screen.
 
     Implementation notes:
-    - The toggle is a floating button (absolutely positioned) rather than a header button
-        so it appears consistently regardless of which tab is active.
     - Tab icons use `useStyles()` theme tokens so their colors follow the active/inactive state.
-    - Free-tier users are admitted into the dashboard. The subscribe screen is reached
-        only via explicit upsell CTAs within the content screens.
+    - The gate is a tabPress listener with `preventDefault()`, which keeps the tab visible
+      (so users can see what they unlock) without rendering the underlying screen.
+    - While the entitlement check is still loading we leave the tabs enabled so a slow
+      RPC never locks out a paying user; the screens themselves are RLS-protected anyway.
 */
+
+// Expo Router 58 removed the `initialRouteName` navigator prop. `anchor` in
+// unstable_settings preserves the previous behavior: "home" is the landing tab
+// and is inserted as the back destination when deep linking into another tab.
+export const unstable_settings = {
+    anchor: 'home',
+};
+
+// Opacity applied to the locked tabs for free users.
+const LOCKED_TAB_OPACITY = 0.3;
 
 export default function DashboardLayout() {
     const styles = useStyles();
-    const { isLoading } = useEntitlement();
+    // Same source of truth as the Home tab's "Your workspace is ready" card (direct read of the
+    // subscriptions row), so the tabs can never disagree with what Home shows. The entitlement
+    // RPC query is kept for the cache guard in app/_layout.tsx only.
+    const { isActiveSubscription, isLoading, isError } = useSubscriptionStatus();
+    // Only lock once we know for sure the user is on the free tier. A failed fetch (network,
+    // expired token mid-refresh) never locks the tabs; RLS still protects the data.
+    const locked = !isLoading && !isError && !isActiveSubscription;
 
-    // Show a brief loading state while the entitlement check resolves.
-    // Free and paid users both proceed past this point — no redirect.
-    if (isLoading) {
-        return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: styles.container.backgroundColor }}>
-                <ActivityIndicator />
-                <ThemedText style={{ marginTop: 10 }}>Loading...</ThemedText>
-            </View>
-        );
-    }
+    // Shared options for the two subscription-gated tabs.
+    const gatedOptions = {
+        tabBarItemStyle: locked ? { opacity: LOCKED_TAB_OPACITY } : undefined,
+        tabBarAccessibilityLabel: locked ? 'Locked, subscription required' : undefined,
+    };
+    const gatedListeners = {
+        tabPress: (e: { preventDefault: () => void }) => {
+            if (!locked) return;
+            e.preventDefault();
+            showSnack('Subscribe to unlock this feature.');
+            router.push('/subscribe');
+        },
+    };
 
     return (
         <>
             <Tabs
-                initialRouteName="your-roadmap"
+                // Required for the "home" anchor above to take effect:
+                // non-stack navigators only return to the anchor when backBehavior
+                // is "initialRoute" (the default is "firstRoute").
+                backBehavior="initialRoute"
                 screenOptions={{
                     headerShown: false,
                     tabBarStyle: { paddingTop: 10, height: 105, backgroundColor: styles.card.backgroundColor },
@@ -49,48 +73,48 @@ export default function DashboardLayout() {
                 }}
             >
                 <Tabs.Screen
-                    name="your-roadmap"
+                    name="home"
                     options={{
-                        title: "Your Roadmap", tabBarIcon: ({ focused }) => (
+                        title: "Home", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
-                                name={focused ? 'map' : 'map-outline'}
+                                name={focused ? 'home' : 'home-outline'}
                                 color={focused ? styles.icon.color : styles.inactiveIcon.color}
                             />
                         )
                     }}
                 />
                 <Tabs.Screen
-                    name="library"
+                    name="your-roadmaps"
+                    listeners={{
+                        tabPress: (e) => {
+                            gatedListeners.tabPress(e);
+                            if (locked) return;
+                            // The list screen opens the starred roadmap (if any) on focus, so Back
+                            // still lands on the roadmap list. See lib/defaultRoadmapIntent.ts.
+                            requestOpenDefaultRoadmap();
+                        },
+                    }}
                     options={{
-                        title: "Library", tabBarIcon: ({ focused }) => (
+                        ...gatedOptions,
+                        title: "Your Roadmaps", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
-                                name={focused ? 'library' : 'library-outline'}
+                                name={locked ? 'lock-closed-outline' : focused ? 'map' : 'map-outline'}
                                 color={focused ? styles.icon.color : styles.inactiveIcon.color}
                             />
                         )
                     }}
                 />
                 <Tabs.Screen
-                    name="positions"
+                    name="add-video"
+                    listeners={gatedListeners}
                     options={{
-                        title: "Positions", tabBarIcon: ({ focused }) => (
+                        ...gatedOptions,
+                        title: "Add Video", tabBarIcon: ({ focused }) => (
                             <Ionicons
                                 size={24}
-                                name={focused ? 'accessibility' : 'accessibility-outline'}
-                                color={focused ? styles.icon.color : styles.inactiveIcon.color}
-                            />
-                        )
-                    }}
-                />
-                <Tabs.Screen
-                    name="position-list"
-                    options={{
-                        title: "Position List", tabBarIcon: ({ focused }) => (
-                            <Ionicons
-                                size={24}
-                                name={focused ? 'list' : 'list-outline'}
+                                name={locked ? 'lock-closed-outline' : focused ? 'add-circle' : 'add-circle-outline'}
                                 color={focused ? styles.icon.color : styles.inactiveIcon.color}
                             />
                         )

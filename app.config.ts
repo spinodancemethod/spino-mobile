@@ -11,6 +11,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ...staticExpoConfig,
     };
 
+    // Keep public Supabase configuration available through Expo runtime metadata
+    // as a fallback when a release bundle does not inline EXPO_PUBLIC_* values.
+    mergedConfig.extra = {
+        ...(mergedConfig.extra ?? {}),
+        ...(process.env.EXPO_PUBLIC_SUPABASE_URL
+            ? { supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL }
+            : {}),
+        ...(process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+            ? { supabasePublishableKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }
+            : {}),
+    };
+
     // Inject a real EAS updates URL at build time when a project id is provided.
     if (easProjectId) {
         mergedConfig.updates = {

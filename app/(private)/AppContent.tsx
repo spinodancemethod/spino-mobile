@@ -3,13 +3,10 @@ import { View } from 'react-native';
 import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from 'constants/useTheme';
-import { useStyles } from 'constants/styles';
-import Snackbar from 'Components/Snackbar';
 import GlobalMenu from 'Components/GlobalMenu';
 
 const AppContent: React.FC = () => {
     const { colors } = useTheme();
-    const styles = useStyles();
     const segments = useSegments();
     // hide the global menu on the root/login page (index or empty segments)
     const showGlobalMenu = !(Number(segments.length) === 0 || segments[0] === '/');
@@ -23,8 +20,6 @@ const AppContent: React.FC = () => {
             contentStyle: {
                 backgroundColor: colors.background,
             },
-
-
         }),
         [colors]
     );
@@ -33,11 +28,12 @@ const AppContent: React.FC = () => {
         <View style={{ flex: 1 }}>
             <StatusBar />
             <Stack screenOptions={screenOptions}>
-                <Stack.Screen name="home" options={{ headerShown: false }} />
                 <Stack.Screen name="account" options={{ title: 'Account' }} />
                 <Stack.Screen name="subscribe/index" options={{ title: 'Subscription' }} />
-                <Stack.Screen name="video/[id]" options={{ title: 'Video' }} />
-                <Stack.Screen name="position/[id]" options={{ title: 'Position' }} />
+                <Stack.Screen name="video-upload/[id]" options={{ title: 'Video Reference' }} />
+                <Stack.Screen name="snippet-builder/[id]" options={{ title: 'Build snippets' }} />
+                <Stack.Screen name="user-roadmap" options={{ title: 'Roadmap' }} />
+                <Stack.Screen name="local-videos" options={{ title: 'Missing videos' }} />
                 <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
             </Stack>
             {showGlobalMenu && <GlobalMenu />}

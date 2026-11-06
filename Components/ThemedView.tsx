@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, ViewStyle } from 'react-native';
-import { useTheme } from '../constants/useTheme';
-import { createStyles, useStyles } from '../constants/styles';
+import { useStyles } from '../constants/styles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
