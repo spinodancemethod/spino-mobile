@@ -55,11 +55,12 @@ Tick these off as you go. Each one is explained in detail below.
 - [ ] 15. Remove the keys from `app.json`
 - [ ] 16. Pull the dev keys to your laptop
 - [ ] 17. Clean up your local `.env`
-- [ ] 18. Build a new dev client
-- [ ] 19. Test it end to end
-- [ ] 20. Commit and open a pull request
+- [ ] 18. Run the dev app on your phone
+- [ ] 19. Test dev
+- [ ] 20. Build the prod `.aab` and test it from the Play Store
+- [ ] 21. Commit and open a pull request
 
-**Rough timing:** day 1 is steps 1–6, day 2 is steps 7–10, day 3 is steps 11–12, day 4 is steps 13–17, and day 5 is steps 18–20.
+**Rough timing:** day 1 is steps 1–6, day 2 is steps 7–10, day 3 is steps 11–12, day 4 is steps 13–17, and day 5 is steps 18–21.
 
 # Day 1: Prepare and protect prod
 
@@ -253,7 +254,7 @@ Every command below ends in `--remote=qvdacsdsxkrzceawchng`, so each one reads o
    git commit -m "chore: adopt Supabase CLI with baseline migration from prod"
    ```
 
-**Note:** `CLAUDE.md` still says to bootstrap from `sql/bootstrap/`. You can update that line in Step 20.
+**Note:** `CLAUDE.md` still says to bootstrap from `sql/bootstrap/`. You can update that line in Step 21.
 
 # Day 2: Build the dev database
 
@@ -430,7 +431,7 @@ Type `y` whenever these commands ask to confirm.
    - **Environment:** if there's an option, choose **Sandbox** (or Both).
 2. Save it, then click **Send test event**.
 3. Check it arrived: in the **dev** Supabase dashboard, open **Table Editor → `billing_events`**. You should see one new row.
-4. **Extra protection for prod:** open your **prod** RevenueCat project's webhook settings. If there's an environment option, set it to **Production only**. Then sandbox purchases can never reach prod, even by mistake.
+4. **Leave the prod webhook as it is for now.** At launch you'll set it to **Production only**, so test purchases can never reach prod. Not yet: in Step 20 you make a test purchase against prod on purpose.
 
 **Done when:** the test event shows up as a row in **dev** `billing_events`.
 
@@ -589,67 +590,145 @@ This writes a file called `.env.local`. It's already in `.gitignore`, so it won'
 
 # Day 5: Prove it works
 
-## Step 18. Build a new dev client
+From now on there are two ways to run the app. Both are built on your Mac. EAS is used only to store the keys.
 
-**What:** a fresh development build of the app with the dev keys baked in.
+| | **Dev** (everyday work) | **Prod** (store build) |
+| --- | --- | --- |
+| How it's built | `npm run android` (debug build) | Android Studio → **Generate Signed App Bundle** (`.aab`) |
+| How it gets on the phone | over USB, straight from your Mac | Play Console internal testing → Play Store |
+| Keys come from | `.env.local` (dev, Step 16) | `.env.production.local` (prod, Step 20) |
+| Talks to | `spino-dev` Supabase + Spino Dev RevenueCat | prod Supabase + prod RevenueCat |
+| Rebuild when | native code changes only | every release |
 
-**Why:** your current dev build on your phone was built with prod keys. It has to be rebuilt to pick up the new ones.
+> **Release builds read `.env.production.local` first.** That's why the prod keys go in that file: a release build then ignores the dev keys in `.env.local`. Debug builds (`npm run android`, `npm start`) never read it.
 
-**Do this:**
+> **One phone, one Spino at a time.** Both builds use the package name `com.spino.mobile` but are signed with different keys, so Android won't install one over the other. To switch, uninstall the one that's there.
 
-1. **iPhone only, first time:** register your phone so it can install internal builds:
-   ```bash
-   eas device:create
-   ```
-   Follow the link it gives you on your phone.
-2. Start the build. Pick the platform you test purchases on:
-   ```bash
-   eas build --profile development --platform android
-   # or
-   eas build --profile development --platform ios
-   ```
-   - It prints **"Environment: development"** near the start. That confirms it's using the dev variables.
-   - The build runs in Expo's cloud and takes about 10–25 minutes.
-3. When it finishes, scan the QR code with your phone to install it. **Delete the old dev build from your phone first**, so you don't mix them up.
+## Step 18. Run the dev app on your phone
 
-**Done when:** the new dev build is installed on your phone.
+**What:** build the debug app on your Mac, install it on your phone over USB, and connect it to your local code.
 
-## Step 19. Test it end to end
+**Why a build is needed once:** the app uses native code Expo Go doesn't have (RevenueCat purchases, the `audio-extract` module), so it can't run in Expo Go. After this first build, code and key changes need only `npm start`.
 
-**What:** confirm the dev build talks only to dev, and the purchase flow works.
+**Before you start:**
+- Turn on **USB debugging** on the phone: **Settings → About phone**, tap **Build number** 7 times, then **Settings → System → Developer options → USB debugging** on. Menu names vary a little by phone maker.
+- Plug the phone into the Mac and tap **Allow** on the "Allow USB debugging?" prompt.
+- **Uninstall any Spino** already on the phone. This also clears any saved prod login.
 
 **Do this:**
 
-1. Start the dev server:
+1. Build, install and start the dev server in one command:
    ```bash
-   npm start
+   npm run android
    ```
-   Open the app on your phone and connect to the server.
-2. **Login test:**
+   - Near the top it prints **`env: load .env.local`**. That means the dev keys are in use. If it says `.env` instead, go back to Steps 16–17.
+   - The first build takes 5–10 minutes. Later builds are faster.
+   - When it finishes, Spino opens on the phone, loaded from your Mac.
+
+**Done when:** Spino is open on the phone and the terminal shows the dev server running.
+
+**From now on:**
+- **Everyday work:** run `npm start` and open Spino on the phone. Code changes reload as you save. The phone needs to be on the same Wi-Fi as the Mac, or plugged in.
+- **Rebuild** with `npm run android` only after adding a native package or changing plugins in `app.json`. You'll know you need to when the app shows a red error about a missing native module.
+
+**If it goes wrong:**
+- **"No Android connected device found":** check the cable, unlock the phone and accept the USB debugging prompt.
+- **"SDK location not found":** open the `android` folder once in Android Studio and let it finish syncing. It writes the SDK path for you.
+- **"INSTALL_FAILED_UPDATE_INCOMPATIBLE":** another Spino is still on the phone. Uninstall it and run again.
+
+## Step 19. Test dev
+
+**What:** prove the dev app talks only to dev, and purchases work.
+
+**Before you start:** in Play Console (the all-apps home page, not inside Spino) go to **Settings → License testing**, add the Google account that's signed in on the phone, and save. Purchases from that account are free test purchases.
+
+**Do this** with the dev app running (Step 18):
+
+1. **Login test:**
    - Log in as `free-test@spinodancemethod.com`. It should work.
-   - Log out and try **your real prod account**. It should **fail**, because that user doesn't exist in dev. This is the proof you're on dev.
-3. **Data test:** while logged in as `free-test`, create a roadmap and a category, and add a video.
-   - Check the **dev** dashboard's Table Editor: the new rows are there.
-   - Check the **prod** dashboard: nothing new.
-4. **Purchase test:** set up a test account first.
-   - **Android:** in Play Console go to **Settings → License testing** and add your Google account as a license tester. Use that Google account on the phone.
-   - **iPhone:** in App Store Connect go to **Users and Access → Sandbox → Test accounts** and create a sandbox tester. On the phone, sign in under **Settings → App Store → Sandbox Account**.
+   - Log out and try **your real prod account**. It should **fail**, because that user only exists in prod. This is the proof you're on dev.
+2. **Data test:** as `free-test`, create a roadmap and a category, and add a video.
+   - **dev** dashboard → Table Editor: the new rows are there.
+   - **prod** dashboard: nothing new.
+3. **Purchase test:** log in as `paid-test@spinodancemethod.com` and buy a subscription. You're not charged.
+4. **Check the purchase landed in dev only:**
+   - **Spino Dev** RevenueCat → Customers (turn on "sandbox data") shows the purchase.
+   - **dev** Supabase: `billing_events` has a new row, and `subscriptions` has a row for `paid-test`.
+   - **prod** Supabase: `billing_events` has **no** new row.
+   - The app shows paid content for `paid-test`.
 
-   Then log in to the app as `paid-test@spinodancemethod.com` and buy a subscription. Test purchases aren't charged.
-5. **Check the purchase landed in the right place:**
-   - **Spino Dev** RevenueCat: Customers (switch the "sandbox data" toggle on) shows the purchase.
-   - **dev** Supabase `billing_events` has a new row, and `subscriptions` has a row for `paid-test`.
-   - **prod** Supabase `billing_events` has **no** new row.
-   - The app now shows paid content for `paid-test`.
-
-**Done when:** all four checks in item 5 pass.
+**Done when:** all four checks in item 4 pass.
 
 **If the purchase screen shows no products:**
 - Check the Spino Dev offering is set as **current** (Step 11.6).
-- Check the product IDs match the store exactly.
-- On Android, the app must have been uploaded at least once to a Play Console testing track. It already has, if you've released before.
+- Check the product IDs match Play Console exactly.
+- The app must have been uploaded at least once to a Play Console testing track (Step 20 does this if it hasn't been).
+- The Google account on the phone must be the license tester you added.
 
-## Step 20. Commit and open a pull request
+## Step 20. Build the prod `.aab` and test it from the Play Store
+
+**What:** build a signed release `.aab` with the prod keys, upload it to Play's **internal testing** track, install it from the Play Store, and test against prod. When you're happy, the same release can be promoted to production.
+
+**Why prod keys:** any build uploaded to Play Console can be promoted to production. So every upload uses prod keys, never dev.
+
+### First time only
+
+1. **Put the prod keys in their own file:**
+   ```bash
+   eas env:pull --environment production --path .env.production.local
+   ```
+   Open it and check the Supabase URL contains `qvdacsdsxkrzceawchng` (prod). The file is covered by `.env*.local` in `.gitignore`, so it won't be committed.
+2. **Find your upload keystore.** Play only accepts bundles signed with the app's **upload key**.
+   - **Uploaded to Play before:** in Play Console open Spino → **Test and release → App integrity → App signing** and note the **Upload key certificate SHA-1**. Then find the keystore file with the same SHA-1:
+     - The keystore stored on EAS: run `eas credentials -p android`, choose `production`, and compare its **SHA1 fingerprint**. If it matches, choose **Download credentials** in the same menu. You get the keystore file and its passwords.
+     - A keystore you made yourself: `keytool -list -v -keystore /path/to/file` prints its SHA1.
+     - None match: use **Request upload key reset** on that Play page, and wait for Google to approve it.
+   - **Never uploaded:** you'll create a keystore in the Android Studio wizard below (**Create new…**).
+   - Save the keystore file and its passwords in your password manager. **Never put the keystore in the project folder.** If you lose it, you need an upload key reset.
+3. **Check prod accepts test purchases.** The prod RevenueCat webhook must be set to **Both** (or have no environment option). If it's "Production only", your test purchase never reaches the prod database.
+
+### Every release
+
+1. **Raise the version code.** Play rejects a bundle whose version code it has seen before. In `app.json`, under `"android"`, set `"versionCode"` to one more than the last upload (Play Console → Spino → **Test and release → App bundle explorer** shows it; use `1` if you've never uploaded):
+   ```json
+   "android": {
+     "package": "com.spino.mobile",
+     "versionCode": 2,
+   ```
+   Change `"version"` (e.g. `1.0.1`) too when you want users to see a new version number.
+2. **Copy the change into the `android` folder:**
+   ```bash
+   NODE_ENV=production npx expo prebuild --platform android
+   ```
+   `NODE_ENV=production` makes it read the prod keys. If it asks about uncommitted changes, type `y`.
+3. **Build the signed bundle in Android Studio:**
+   - **File → Open** → the project's `android` folder. Wait for the Gradle sync to finish.
+   - **Build → Generate Signed App Bundle or APK…** → **Android App Bundle** → **Next**.
+   - Choose your keystore file from step 2 of "First time only", enter the passwords and the key alias → **Next**.
+   - Build variant: **release** → **Create**.
+   - The file lands at `android/app/release/app-release.aab`.
+4. **Check the bundle has the prod keys, before uploading:**
+   ```bash
+   unzip -p android/app/release/app-release.aab base/assets/index.android.bundle base/assets/app.config | grep -a -o '[a-z0-9]*\.supabase\.co' | sort -u
+   ```
+   It must print **only** `qvdacsdsxkrzceawchng.supabase.co`. If it prints your dev ref, **don't upload it**. Check `.env.production.local` exists and holds the prod keys, then rebuild.
+5. **Upload it:** Play Console → Spino → **Test and release → Testing → Internal testing**:
+   - **Testers** tab, first time only: create an email list with your Google account, save, and copy the **Join on the web** link.
+   - **Create new release** → drag in `app-release.aab` → **Next** → **Save and publish**. It's usually available within minutes.
+6. **Install it:** on the phone, uninstall the dev app, open the **Join on the web** link, accept, then install Spino from the Play Store.
+7. **Test prod:**
+   - Log in with your **prod** account. It should work. Log in as `free-test@…`: it should **fail**. That's the proof you're on prod.
+   - Buy a subscription (license tester, so free).
+   - **Prod** RevenueCat → Customers (sandbox data on) shows it, **prod** Supabase `billing_events` has a new row, and the app shows paid content.
+   - **dev** Supabase `billing_events`: no new row.
+8. **When you're happy:** in Play Console, promote this internal testing release to production.
+9. **Back to dev work:** uninstall the Play Store Spino and run `npm run android`.
+
+**Done when:** the internal testing build logs in with your prod account, the test purchase shows in prod, and nothing new appears in dev.
+
+**Before launch:** set the prod RevenueCat webhook to **Production only**, so test purchases can't reach prod once real users are there.
+
+## Step 21. Commit and open a pull request
 
 **Do this:**
 
@@ -665,7 +744,7 @@ This writes a file called `.env.local`. It's already in `.gitignore`, so it won'
    ```bash
    git status
    ```
-   Make sure there's **no** `.env`, `.env.local` or backup file in the list.
+   Make sure there's **no** `.env`, `.env.local`, `.env.production.local`, keystore or backup file in the list.
 4. Commit and push:
    ```bash
    git add -A
