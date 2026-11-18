@@ -13,8 +13,14 @@ describe('shouldHandleAuthUrl', () => {
         expect(shouldHandleAuthUrl('https://example.com/help')).toBe(false);
     });
 
-    it('returns false for route-only app links with no auth params', () => {
-        expect(shouldHandleAuthUrl('spino://login')).toBe(false);
-        expect(shouldHandleAuthUrl('spino://reset-password')).toBe(false);
+    // Bare login/reset links are handled on purpose (since 4991bb2): the auth handler
+    // runs for them and simply finds no tokens to apply.
+    it('returns true for login and reset-password app links even with no auth params', () => {
+        expect(shouldHandleAuthUrl('spino://login')).toBe(true);
+        expect(shouldHandleAuthUrl('spino://reset-password')).toBe(true);
+    });
+
+    it('returns false for other app links with no auth params', () => {
+        expect(shouldHandleAuthUrl('spino://roadmap')).toBe(false);
     });
 });

@@ -19,10 +19,9 @@ npx jest lib/subscriptionAccess.test.ts --runInBand
 
 ## Environment
 
-Copy `.env.example` and fill in:
+Keys are stored as EAS environment variables. Run `eas env:pull --environment development` to write `.env.local` (dev keys, gitignored); store builds (`eas build --profile production`) get the `production` values from EAS. The variables are:
 - `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase backend
 - `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` / `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` — in-app purchases
-- `EXPO_PUBLIC_DEV_USER_ID` — dev-only auth bypass for local testing
 
 ## Architecture
 
@@ -56,7 +55,7 @@ Copy `.env.example` and fill in:
 - `Components/Snackbar.tsx` + `lib/snackbarService.ts` — global imperative snackbar (`showSnack(message)`)
 
 **Database**
-- Bootstrap a fresh Supabase project by running `sql/bootstrap/` files in order: `00_extensions` → `01_tables` → `02_functions` → `03_indexes` → `04_rls_policies_grants`
+- Schema lives in `supabase/migrations/`. Apply with `supabase db push --remote=<ref>` (dev first, then prod). Supabase CLI 3: commands without `--remote` target the local stack.
 - RLS is enforced on all user data; entitlement-gated content is restricted at the DB level
 
 ## Conventions

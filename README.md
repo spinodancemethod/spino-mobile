@@ -7,26 +7,19 @@ This repository is a small Expo + React Native app (expo-router) focused on pers
 - Themed UI primitives — `Components/` contains `ThemedView`, `ThemedText`, `ThemedButton`, and other active shared controls.
 - Data fetching with React Query — centralized `queryClient` with hooks under `lib/hooks/` for roadmaps, local video references, categories, segments, and segment notes.
 - Supabase integration — `lib/supabase.ts` configures the Supabase client for auth and DB access; session persistence is enabled for the RN client.
-- Dev conveniences — `EXPO_PUBLIC_DEV_USER_ID` / `DEV_USER_ID` support for local testing (dev fallback for auth during development).
 
 Quick files of interest
 
 - Screens: `app/`, `app/(private)/(dashboard)/user-roadmap.tsx`, `app/(private)/video-upload/[id].tsx`
 - Hooks: `lib/hooks/useUserRoadmaps.ts`, `lib/hooks/useVideoUploads.ts`, `lib/hooks/useVideoSegments.ts`, `lib/hooks/useVideoUploadDetails.ts`
-- Supabase / SQL: `lib/supabase.ts`, `sql/bootstrap/`
+- Supabase / SQL: `lib/supabase.ts`, `supabase/migrations/`
 
 Developer notes
 
-- To run locally, provide your Supabase URL and publishable key via Expo environment variables (e.g. `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). See `lib/supabase.ts` for usage.
-- Copy `.env.example` and fill all required Expo public variables for your environment.
-- Apply the `sql/bootstrap/` files in order on a fresh database so roadmap, segment, and billing telemetry tables are created consistently.
-- For full schema bootstrap on a fresh Supabase project, run the files in `sql/bootstrap/` in this order:
-	1. `sql/bootstrap/00_extensions.sql`
-	2. `sql/bootstrap/01_tables.sql`
-	3. `sql/bootstrap/02_functions.sql`
-	4. `sql/bootstrap/03_indexes.sql`
-	5. `sql/bootstrap/04_rls_policies_grants.sql`
-	This recreates the current `public` schema tables, functions, indexes, RLS policies, and grants.
+- There are two environments: **dev** (`spino-dev` Supabase project + Spino Dev RevenueCat project) for everyday work, and **prod** for store builds only. Keys are stored as EAS environment variables, not in the repo.
+- To run locally, pull the dev keys with `eas env:pull --environment development`. This writes `.env.local` (gitignored), which `npm start` and `npm run android` read. See `lib/supabase.ts` for usage.
+- Store builds use `eas build -p android --profile production`, which gets the prod keys from the EAS `production` environment.
+- The database schema lives in `supabase/migrations/`. To build a fresh Supabase project or apply new migrations, run `supabase db push --remote=<ref>` (dev first, then prod). With Supabase CLI 3, commands without `--remote` target the local stack.
 - The app uses React Query; if you change query keys, update mutation invalidations accordingly.
 - Run `npm run typecheck` and `npm test` before releasing.
 

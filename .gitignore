@@ -95,3 +95,7 @@ modules/*/android/.cxx/
 # Python
 __pycache__/
 *.pyc
+
+# local EAS build outputs
+*.aab
+*.apk
