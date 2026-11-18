@@ -24,7 +24,9 @@ jobs:
         run: npm ci
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        # Fails on high/critical advisories, except those allowlisted in the script
+        # because no fixed version exists yet.
+        run: node scripts/audit-check.mjs
 
       - name: Typecheck
         run: npm run typecheck
