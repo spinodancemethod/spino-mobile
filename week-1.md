@@ -57,7 +57,7 @@ Tick these off as you go. Each one is explained in detail below.
 - [ ] 17. Clean up your local `.env`
 - [ ] 18. Run the dev app on your phone
 - [ ] 19. Test dev
-- [ ] 20. Build the prod `.aab` and test it from the Play Store
+- [ ] 20. Build the prod `.aab` with EAS and test it from the Play Store
 - [ ] 21. Commit and open a pull request
 
 **Rough timing:** day 1 is steps 1–6, day 2 is steps 7–10, day 3 is steps 11–12, day 4 is steps 13–17, and day 5 is steps 18–21.
@@ -590,17 +590,17 @@ This writes a file called `.env.local`. It's already in `.gitignore`, so it won'
 
 # Day 5: Prove it works
 
-From now on there are two ways to run the app. Both are built on your Mac. EAS is used only to store the keys.
+From now on there are two ways to run the app. Dev is built on your Mac. Prod is built by EAS in the cloud, the same way you've always done it.
 
 | | **Dev** (everyday work) | **Prod** (store build) |
 | --- | --- | --- |
-| How it's built | `npm run android` (debug build) | Android Studio → **Generate Signed App Bundle** (`.aab`) |
+| How it's built | `npm run android` (debug build) | `eas build -p android --profile production` (`.aab`) |
 | How it gets on the phone | over USB, straight from your Mac | Play Console internal testing → Play Store |
-| Keys come from | `.env.local` (dev, Step 16) | `.env.production.local` (prod, Step 20) |
+| Keys come from | `.env.local` (dev, Step 16) | EAS `production` environment variables (Step 13) |
 | Talks to | `spino-dev` Supabase + Spino Dev RevenueCat | prod Supabase + prod RevenueCat |
 | Rebuild when | native code changes only | every release |
 
-> **Release builds read `.env.production.local` first.** That's why the prod keys go in that file: a release build then ignores the dev keys in `.env.local`. Debug builds (`npm run android`, `npm start`) never read it.
+> **EAS picks the keys for you.** The `production` profile in `eas.json` uses the EAS `production` environment, so every store build gets prod keys. Nothing on your Mac decides which keys a store build uses. EAS also signs the bundle and raises the version code.
 
 > **One phone, one Spino at a time.** Both builds use the package name `com.spino.mobile` but are signed with different keys, so Android won't install one over the other. To switch, uninstall the one that's there.
 
@@ -665,56 +665,36 @@ From now on there are two ways to run the app. Both are built on your Mac. EAS i
 - The app must have been uploaded at least once to a Play Console testing track (Step 20 does this if it hasn't been).
 - The Google account on the phone must be the license tester you added.
 
-## Step 20. Build the prod `.aab` and test it from the Play Store
+## Step 20. Build the prod `.aab` with EAS and test it from the Play Store
 
-**What:** build a signed release `.aab` with the prod keys, upload it to Play's **internal testing** track, install it from the Play Store, and test against prod. When you're happy, the same release can be promoted to production.
+**What:** build the release `.aab` with EAS, upload it to Play's **internal testing** track, install it from the Play Store, and test against prod. When you're happy, the same release can be promoted to production.
 
-**Why prod keys:** any build uploaded to Play Console can be promoted to production. So every upload uses prod keys, never dev.
+**Why prod keys:** any build uploaded to Play Console can be promoted to production. So every upload uses prod keys, never dev. The `production` build profile takes care of that.
 
 ### First time only
 
-1. **Put the prod keys in their own file:**
-   ```bash
-   eas env:pull --environment production --path .env.production.local
-   ```
-   Open it and check the Supabase URL contains `qvdacsdsxkrzceawchng` (prod). The file is covered by `.env*.local` in `.gitignore`, so it won't be committed.
-2. **Find your upload keystore.** Play only accepts bundles signed with the app's **upload key**.
-   - **Uploaded to Play before:** in Play Console open Spino → **Test and release → App integrity → App signing** and note the **Upload key certificate SHA-1**. Then find the keystore file with the same SHA-1:
-     - The keystore stored on EAS: run `eas credentials -p android`, choose `production`, and compare its **SHA1 fingerprint**. If it matches, choose **Download credentials** in the same menu. You get the keystore file and its passwords.
-     - A keystore you made yourself: `keytool -list -v -keystore /path/to/file` prints its SHA1.
-     - None match: use **Request upload key reset** on that Play page, and wait for Google to approve it.
-   - **Never uploaded:** you'll create a keystore in the Android Studio wizard below (**Create new…**).
-   - Save the keystore file and its passwords in your password manager. **Never put the keystore in the project folder.** If you lose it, you need an upload key reset.
-3. **Check prod accepts test purchases.** The prod RevenueCat webhook must be set to **Both** (or have no environment option). If it's "Production only", your test purchase never reaches the prod database.
+1. **Check prod accepts test purchases.** In the **prod** RevenueCat project, open **Integrations → Webhooks**. The webhook's environment must be **Both** (or have no environment option). If it's "Production only", your test purchase never reaches the prod database.
+2. **Delete `.env.production.local` if you have one.** An earlier version of this guide created it. EAS builds don't use it.
 
 ### Every release
 
-1. **Raise the version code.** Play rejects a bundle whose version code it has seen before. In `app.json`, under `"android"`, set `"versionCode"` to one more than the last upload (Play Console → Spino → **Test and release → App bundle explorer** shows it; use `1` if you've never uploaded):
-   ```json
-   "android": {
-     "package": "com.spino.mobile",
-     "versionCode": 2,
-   ```
-   Change `"version"` (e.g. `1.0.1`) too when you want users to see a new version number.
-2. **Copy the change into the `android` folder:**
+1. **Commit your work.** EAS builds what's committed in git, so uncommitted changes are left out.
+2. **Start the build:**
    ```bash
-   NODE_ENV=production npx expo prebuild --platform android
+   eas build -p android --profile production
    ```
-   `NODE_ENV=production` makes it read the prod keys. If it asks about uncommitted changes, type `y`.
-3. **Build the signed bundle in Android Studio:**
-   - **File → Open** → the project's `android` folder. Wait for the Gradle sync to finish.
-   - **Build → Generate Signed App Bundle or APK…** → **Android App Bundle** → **Next**.
-   - Choose your keystore file from step 2 of "First time only", enter the passwords and the key alias → **Next**.
-   - Build variant: **release** → **Create**.
-   - The file lands at `android/app/release/app-release.aab`.
-4. **Check the bundle has the prod keys, before uploading:**
+   - Near the top it prints **`loaded from the "production" environment on EAS`** followed by the key names. That means the prod keys are in use.
+   - EAS signs the bundle with the keystore it stores for you and raises the version code by one. You don't set either.
+   - It takes roughly 10–20 minutes, plus any queue. You can close the terminal; the build carries on.
+3. **Download the `.aab`:** use the link printed at the end, or go to [expo.dev](https://expo.dev) → your project → **Builds** → the build → **Download**.
+4. **Check the bundle has the prod keys, before uploading.** Replace the path with your downloaded file:
    ```bash
-   unzip -p android/app/release/app-release.aab base/assets/index.android.bundle base/assets/app.config | grep -a -o '[a-z0-9]*\.supabase\.co' | sort -u
+   unzip -p ~/Downloads/<your-file>.aab base/assets/index.android.bundle base/assets/app.config | grep -a -o '[a-z0-9]*\.supabase\.co' | sort -u
    ```
-   It must print **only** `qvdacsdsxkrzceawchng.supabase.co`. If it prints your dev ref, **don't upload it**. Check `.env.production.local` exists and holds the prod keys, then rebuild.
+   It must print **only** `qvdacsdsxkrzceawchng.supabase.co`. If it prints your dev ref, **don't upload it**. Check the `production` values in Step 13, then rebuild.
 5. **Upload it:** Play Console → Spino → **Test and release → Testing → Internal testing**:
    - **Testers** tab, first time only: create an email list with your Google account, save, and copy the **Join on the web** link.
-   - **Create new release** → drag in `app-release.aab` → **Next** → **Save and publish**. It's usually available within minutes.
+   - **Create new release** → drag in the `.aab` → **Next** → **Save and publish**. It's usually available within minutes.
 6. **Install it:** on the phone, uninstall the dev app, open the **Join on the web** link, accept, then install Spino from the Play Store.
 7. **Test prod:**
    - Log in with your **prod** account. It should work. Log in as `free-test@…`: it should **fail**. That's the proof you're on prod.
@@ -725,6 +705,10 @@ From now on there are two ways to run the app. Both are built on your Mac. EAS i
 9. **Back to dev work:** uninstall the Play Store Spino and run `npm run android`.
 
 **Done when:** the internal testing build logs in with your prod account, the test purchase shows in prod, and nothing new appears in dev.
+
+**If it goes wrong:**
+- **Play says the version code has already been used:** run `eas build:version:set -p android`, enter a number higher than the one Play names, and build again.
+- **Play says the bundle is signed with the wrong key:** the message shows the SHA-1 it expected. Compare it with the one shown by `eas credentials -p android` → `production`.
 
 **Before launch:** set the prod RevenueCat webhook to **Production only**, so test purchases can't reach prod once real users are there.
 
@@ -744,7 +728,7 @@ From now on there are two ways to run the app. Both are built on your Mac. EAS i
    ```bash
    git status
    ```
-   Make sure there's **no** `.env`, `.env.local`, `.env.production.local`, keystore or backup file in the list.
+   Make sure there's **no** `.env`, `.env.local`, keystore or backup file in the list.
 4. Commit and push:
    ```bash
    git add -A
